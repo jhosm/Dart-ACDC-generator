@@ -7,6 +7,7 @@ import org.openapitools.codegen.SupportingFile;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Dart-ACDC OpenAPI Generator
@@ -18,10 +19,34 @@ import java.util.HashSet;
 public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     /**
+     * Dart reserved keywords that require escaping.
+     * These cannot be used as identifiers in Dart code.
+     */
+    protected static final Set<String> DART_RESERVED_WORDS = new HashSet<>(Arrays.asList(
+        // Keywords
+        "abstract", "as", "assert", "async", "await",
+        "break", "case", "catch", "class", "const",
+        "continue", "covariant", "default", "deferred", "do",
+        "dynamic", "else", "enum", "export", "extends",
+        "extension", "external", "factory", "false", "final",
+        "finally", "for", "Function", "get", "hide",
+        "if", "implements", "import", "in", "interface",
+        "is", "late", "library", "mixin", "new",
+        "null", "on", "operator", "part", "required",
+        "rethrow", "return", "set", "show", "static",
+        "super", "switch", "sync", "this", "throw",
+        "true", "try", "typedef", "var", "void",
+        "while", "with", "yield"
+    ));
+
+    /**
      * Constructor - configures the generator with Dart-ACDC specific settings.
      */
     public DartAcdcGenerator() {
         super();
+
+        // Set reserved words for the generator
+        reservedWords.addAll(DART_RESERVED_WORDS);
 
         // Basic configuration
         outputFolder = "generated-code/dart-acdc";
@@ -114,5 +139,51 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     @Override
     public CodegenType getTag() {
         return CodegenType.CLIENT;
+    }
+
+    /**
+     * Escapes a reserved word by suffixing it with an underscore.
+     * This is called for property/variable names.
+     *
+     * @param name the reserved word to escape
+     * @return the escaped name with underscore suffix
+     */
+    @Override
+    public String escapeReservedWord(String name) {
+        // For property names, suffix with underscore
+        return name + "_";
+    }
+
+    /**
+     * Escapes reserved words in model/class names.
+     * Dart reserved keywords are suffixed with "Model".
+     *
+     * @param name the model/class name
+     * @return the escaped name if it's a reserved word, otherwise the original name
+     */
+    @Override
+    public String toModelName(String name) {
+        // First apply standard sanitization from parent class
+        String sanitized = super.toModelName(name);
+
+        // If the sanitized name is a Dart reserved keyword (case-insensitive check), suffix with "Model"
+        if (isReservedWord(sanitized.toLowerCase())) {
+            return sanitized + "Model";
+        }
+
+        return sanitized;
+    }
+
+    /**
+     * Returns the file name for a model.
+     * Ensures file names match the escaped model names for Dart conventions.
+     *
+     * @param name the model name (from OpenAPI schema)
+     * @return the file name (without extension)
+     */
+    @Override
+    public String toModelFilename(String name) {
+        // Use the escaped model name for the file name to maintain Dart conventions
+        return toModelName(name);
     }
 }

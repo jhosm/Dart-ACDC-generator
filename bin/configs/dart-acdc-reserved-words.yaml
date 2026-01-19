@@ -1,0 +1,7 @@
+generatorName: dart-acdc
+inputSpec: samples/reserved-words.yaml
+outputDir: samples/generated/reserved-words
+additionalProperties:
+  pubName: reserved_words_test
+  pubVersion: 1.0.0
+  pubDescription: Test package for reserved keyword escaping

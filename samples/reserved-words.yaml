@@ -1,0 +1,52 @@
+openapi: 3.0.3
+info:
+  title: Reserved Words Test API
+  description: Tests Dart reserved keyword escaping
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api/v1
+paths:
+  /test:
+    get:
+      summary: Get test object with reserved word properties
+      operationId: getTest
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestObject'
+components:
+  schemas:
+    TestObject:
+      type: object
+      required:
+        - id
+        - class
+        - default
+      properties:
+        id:
+          type: string
+          description: Object identifier
+        class:
+          type: string
+          description: Property named 'class' (reserved keyword)
+        default:
+          type: string
+          description: Property named 'default' (reserved keyword)
+        switch:
+          type: string
+          description: Property named 'switch' (reserved keyword)
+        return:
+          type: integer
+          description: Property named 'return' (reserved keyword)
+        if:
+          type: boolean
+          description: Property named 'if' (reserved keyword)
+    Class:
+      type: object
+      description: Model named 'Class' (reserved keyword)
+      properties:
+        name:
+          type: string
