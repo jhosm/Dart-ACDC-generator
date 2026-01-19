@@ -186,4 +186,69 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         // Use the escaped model name for the file name to maintain Dart conventions
         return toModelName(name);
     }
+
+    /**
+     * Sanitizes a package name to follow Dart pub package naming conventions.
+     *
+     * Rules:
+     * - Convert to lowercase
+     * - Replace spaces and hyphens with underscores
+     * - Remove all characters except a-z, 0-9, and _
+     * - Collapse consecutive underscores to single underscore
+     * - Remove leading/trailing underscores
+     * - Prefix with 'api_' if name starts with a digit
+     * - Use 'openapi_client' if sanitization results in empty string
+     *
+     * @param name the package name to sanitize
+     * @return the sanitized package name following Dart conventions
+     */
+    protected String sanitizePubName(String name) {
+        if (name == null || name.isEmpty()) {
+            return "openapi_client";
+        }
+
+        // Convert to lowercase
+        String sanitized = name.toLowerCase();
+
+        // Replace spaces and hyphens with underscores
+        sanitized = sanitized.replaceAll("[ -]", "_");
+
+        // Remove all characters except a-z, 0-9, and _
+        sanitized = sanitized.replaceAll("[^a-z0-9_]", "");
+
+        // Collapse consecutive underscores to single underscore
+        sanitized = sanitized.replaceAll("_+", "_");
+
+        // Remove leading/trailing underscores
+        sanitized = sanitized.replaceAll("^_+|_+$", "");
+
+        // If empty after sanitization, use default
+        if (sanitized.isEmpty()) {
+            return "openapi_client";
+        }
+
+        // Prefix with 'api_' if name starts with a digit
+        if (sanitized.matches("^[0-9].*")) {
+            sanitized = "api_" + sanitized;
+        }
+
+        return sanitized;
+    }
+
+    /**
+     * Processes additional properties and applies sanitization where needed.
+     *
+     * @param objs the map of additional properties
+     */
+    @Override
+    public void processOpts() {
+        super.processOpts();
+
+        // Sanitize pubName if provided
+        if (additionalProperties.containsKey("pubName")) {
+            String pubName = (String) additionalProperties.get("pubName");
+            String sanitizedPubName = sanitizePubName(pubName);
+            additionalProperties.put("pubName", sanitizedPubName);
+        }
+    }
 }
