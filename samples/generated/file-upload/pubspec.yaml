@@ -1,0 +1,19 @@
+name: file_upload_client
+description: File upload API client (multipart testing)
+version: 1.0.0
+homepage: 
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  # TODO: Add dart_acdc, dio, and other dependencies
+  # dart_acdc: ^x.x.x
+  # dio: ^x.x.x
+  # json_annotation: ^x.x.x
+
+dev_dependencies:
+  # TODO: Add dev dependencies
+  # build_runner: ^x.x.x
+  # json_serializable: ^x.x.x
+  # test: ^x.x.x

@@ -1,4 +1,5 @@
 .gitignore
+.openapi-generator-ignore
 README.md
 analysis_options.yaml
 lib/api_client.dart
@@ -9,6 +10,8 @@ lib/config/config.dart
 lib/config/log_config.dart
 lib/config/offline_config.dart
 lib/config/security_config.dart
-lib/models/Ping200Response.dart
+lib/models/Color.dart
+lib/models/EnumTestModel.dart
+lib/models/Size.dart
 lib/remote_data_sources/DefaultApi.dart
 pubspec.yaml
