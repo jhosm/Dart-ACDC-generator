@@ -1,6 +1,6 @@
 # Research Documentation
 
-This folder contains comprehensive research documentation for the Dart-ACDC-FAST Generator project.
+This folder contains comprehensive research documentation for the Dart-ACDC-generator Generator project.
 
 ## Documents Overview
 
@@ -122,7 +122,7 @@ Complete documentation of the Dart-ACDC library - the foundation for integration
 ### 3. Project Vision
 
 #### [project-vision.md](./project-vision.md)
-The strategic vision for the Dart-ACDC-FAST Generator project.
+The strategic vision for the Dart-ACDC-generator Generator project.
 
 **Topics covered**:
 - The problem we're solving
@@ -141,7 +141,7 @@ The strategic vision for the Dart-ACDC-FAST Generator project.
 **Key sections**:
 - The Problem (gap between generated clients and production apps)
 - The Opportunity (automatic integration)
-- The Dart-ACDC-FAST Generator Vision
+- The Dart-ACDC-generator Generator Vision
 - Generated Code Example
 - Key Features to Generate
 - Generator Options (configuration)
@@ -194,7 +194,7 @@ The strategic vision for the Dart-ACDC-FAST Generator project.
 
 ### What We're Building
 
-**Dart-ACDC-FAST Generator** = Custom OpenAPI Generator that produces:
+**Dart-ACDC-generator Generator** = Custom OpenAPI Generator that produces:
 - Dart API clients
 - Fully integrated with Dart-ACDC
 - Production-ready code
@@ -261,19 +261,19 @@ The strategic vision for the Dart-ACDC-FAST Generator project.
 ### Development Workflow
 
 1. Clone OpenAPI Generator repo
-2. Run `./new.sh -n dart-acdc-fast -c -t`
+2. Run `./new.sh -n dart-acdC-generator -c -t`
 3. Implement Codegen class
 4. Create Mustache templates
 5. Build: `mvn clean package -DskipTests`
-6. Test: `./bin/generate-samples.sh ./bin/configs/dart-acdc-fast-petstore.yaml`
-7. Verify: `cd samples/client/petstore/dart-acdc-fast && dart analyze`
+6. Test: `./bin/generate-samples.sh ./bin/configs/dart-acdC-generator-petstore.yaml`
+7. Verify: `cd samples/client/petstore/dart-acdC-generator && dart analyze`
 
 ### Key Files to Create
 
 - `modules/openapi-generator/src/main/java/org/openapitools/codegen/languages/DartAcdcFastGenerator.java`
 - `modules/openapi-generator/src/main/resources/META-INF/services/org.openapitools.codegen.CodegenConfig`
-- `modules/openapi-generator/src/main/resources/dart-acdc-fast/*.mustache`
-- `bin/configs/dart-acdc-fast-petstore.yaml`
+- `modules/openapi-generator/src/main/resources/dart-acdC-generator/*.mustache`
+- `bin/configs/dart-acdC-generator-petstore.yaml`
 
 ### Testing Strategy
 
