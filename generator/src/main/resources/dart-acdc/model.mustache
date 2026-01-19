@@ -1,2 +1,14 @@
+{{#isEnum}}
+/// Enum for {{classname}}
+enum {{classname}} {
+{{#allowableValues}}
+{{#enumVars}}
+  {{name}}{{^-last}},{{/-last}}
+{{/enumVars}}
+{{/allowableValues}}
+}
+{{/isEnum}}
+{{^isEnum}}
 // TODO: Implement {{classname}} model with json_serializable
 // This file will contain the data model for {{classname}}
+{{/isEnum}}

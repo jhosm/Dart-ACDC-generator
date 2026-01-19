@@ -1,13 +1,11 @@
 package org.openapitools.codegen.languages;
 
-import org.openapitools.codegen.CodegenConfig;
-import org.openapitools.codegen.CodegenType;
-import org.openapitools.codegen.DefaultCodegen;
-import org.openapitools.codegen.SupportingFile;
+import org.openapitools.codegen.*;
+import org.openapitools.codegen.model.ModelsMap;
+import io.swagger.v3.oas.models.media.Schema;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * Dart-ACDC OpenAPI Generator
@@ -53,6 +51,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         modelTemplateFiles.put("model.mustache", ".dart");
         apiTemplateFiles.put("api.mustache", ".dart");
         embeddedTemplateDir = templateDir = "dart-acdc";
+
+        // Enable enum generation as separate models
+        setLegacyDiscriminatorBehavior(false);
 
         // Package configuration following Flutter/Dart conventions
         apiPackage = "lib.remote_data_sources";
@@ -251,4 +252,135 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             additionalProperties.put("pubName", sanitizedPubName);
         }
     }
+
+    /**
+     * Converts an enum value to a valid Dart identifier using camelCase.
+     *
+     * Rules:
+     * - Convert to camelCase
+     * - Remove/replace invalid characters
+     * - Prefix numeric values with 'value'
+     * - Handle empty strings as 'empty'
+     *
+     * @param value the original enum value
+     * @param datatype the data type (e.g., String, int)
+     * @return the sanitized enum identifier
+     */
+    @Override
+    public String toEnumVarName(String value, String datatype) {
+        if (value == null || value.isEmpty()) {
+            return "empty";
+        }
+
+        // Check if value is numeric
+        if (value.matches("^-?\\d+(\\.\\d+)?$")) {
+            // Numeric value - prefix with 'value' and remove any decimals/negatives
+            String sanitized = value.replaceAll("[^0-9]", "");
+            if (sanitized.isEmpty()) {
+                sanitized = "0";
+            }
+            return "value" + sanitized;
+        }
+
+        // Convert to camelCase
+        String identifier = toCamelCase(value);
+
+        // If empty after sanitization, use 'empty'
+        if (identifier.isEmpty()) {
+            return "empty";
+        }
+
+        // If starts with digit, prefix with 'value'
+        if (identifier.matches("^\\d.*")) {
+            identifier = "value" + capitalize(identifier);
+        }
+
+        // Handle reserved words - suffix with underscore for enum values
+        if (isReservedWord(identifier)) {
+            identifier = identifier + "_";
+        }
+
+        return identifier;
+    }
+
+    /**
+     * Converts a string to camelCase, handling various input formats.
+     *
+     * @param input the string to convert
+     * @return camelCase version of the string
+     */
+    private String toCamelCase(String input) {
+        if (input == null || input.isEmpty()) {
+            return "";
+        }
+
+        // Replace various separators with spaces
+        String processed = input
+            .replaceAll("[-_./\\s]+", " ")  // Replace separators with space
+            .trim();
+
+        if (processed.isEmpty()) {
+            return "";
+        }
+
+        // Split into words
+        String[] words = processed.split("\\s+");
+        StringBuilder result = new StringBuilder();
+
+        for (int i = 0; i < words.length; i++) {
+            String word = words[i];
+            if (word.isEmpty()) {
+                continue;
+            }
+
+            if (i == 0) {
+                // First word: lowercase
+                result.append(word.toLowerCase());
+            } else {
+                // Subsequent words: capitalize first letter
+                result.append(capitalize(word.toLowerCase()));
+            }
+        }
+
+        // Remove any remaining non-alphanumeric characters
+        String sanitized = result.toString().replaceAll("[^a-zA-Z0-9]", "");
+
+        return sanitized;
+    }
+
+    /**
+     * Capitalizes the first letter of a string.
+     *
+     * @param str the string to capitalize
+     * @return the capitalized string
+     */
+    private String capitalize(String str) {
+        if (str == null || str.isEmpty()) {
+            return str;
+        }
+        return str.substring(0, 1).toUpperCase() + str.substring(1);
+    }
+
+    /**
+     * Overrides fromModel to properly handle enum schemas.
+     * Ensures that schemas with enum values are marked as enums.
+     *
+     * @param name the model name
+     * @param schema the schema
+     * @return the codegen model
+     */
+    @Override
+    public CodegenModel fromModel(String name, Schema schema) {
+        CodegenModel model = super.fromModel(name, schema);
+
+        // Check if this schema has enum values and no properties (simple enum)
+        if (schema != null && schema.getEnum() != null && !schema.getEnum().isEmpty()) {
+            if (schema.getProperties() == null || schema.getProperties().isEmpty()) {
+                model.isEnum = true;
+            }
+        }
+
+        return model;
+    }
+
 }
