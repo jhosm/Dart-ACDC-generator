@@ -322,3 +322,7 @@ To create a custom Dart/Flutter client generator:
 - [Customization Guide](https://openapi-generator.tech/docs/customization/)
 - [Templating Documentation](https://openapi-generator.tech/docs/templating/)
 - [GitHub Repository](https://github.com/OpenAPITools/openapi-generator)
+
+### Project-Specific
+
+- [ADR-001: Generated Code Architecture](./adr-001-generated-code-architecture.md) - Architectural decisions for the dart-acdc-generator including naming conventions, mocking support, and configuration classes

@@ -1,5 +1,7 @@
 # Dart/Flutter Generator Quick Reference
 
+> **Note**: This guide uses the `http` package in examples for simplicity and to demonstrate basic OpenAPI Generator concepts. The actual **dart-acdc-generator** project uses **Dio** (via Dart-ACDC) as the HTTP client. See [ADR-001](./adr-001-generated-code-architecture.md) for the production architecture decisions.
+
 ## Quick Start: Creating a Dart Client Generator
 
 ### Step 1: Bootstrap the Generator

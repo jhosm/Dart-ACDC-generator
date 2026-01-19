@@ -63,7 +63,7 @@ Add to `pubspec.yaml`:
 ```yaml
 dependencies:
   dart_acdc: ^0.2.0
-  dio: ^5.0.0
+  dio: ^5.4.0
 ```
 
 Then run:
