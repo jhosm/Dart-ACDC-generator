@@ -1,8 +1,13 @@
+{{#models}}
+{{#model}}
 {{#isEnum}}
-/// Enum for {{classname}}
+/// Enum {{classname}}
+///
+/// Generated from OpenAPI enum schema.
 enum {{classname}} {
 {{#allowableValues}}
 {{#enumVars}}
+  /// Original value: {{value}}
   {{name}}{{^-last}},{{/-last}}
 {{/enumVars}}
 {{/allowableValues}}
@@ -12,3 +17,5 @@ enum {{classname}} {
 // TODO: Implement {{classname}} model with json_serializable
 // This file will contain the data model for {{classname}}
 {{/isEnum}}
+{{/model}}
+{{/models}}

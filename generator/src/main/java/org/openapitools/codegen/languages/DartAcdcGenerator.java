@@ -2,6 +2,7 @@ package org.openapitools.codegen.languages;
 
 import org.openapitools.codegen.*;
 import org.openapitools.codegen.model.ModelsMap;
+import org.openapitools.codegen.model.ModelMap;
 import io.swagger.v3.oas.models.media.Schema;
 
 import java.util.*;
@@ -362,8 +363,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
-     * Overrides fromModel to properly handle enum schemas.
-     * Ensures that schemas with enum values are marked as enums.
+     * Overrides fromModel to properly handle standalone enum schemas.
+     * Ensures that schemas with enum values are properly processed as enums
+     * with populated allowableValues and enumVars for template rendering.
      *
      * @param name the model name
      * @param schema the schema
@@ -373,14 +375,85 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     public CodegenModel fromModel(String name, Schema schema) {
         CodegenModel model = super.fromModel(name, schema);
 
-        // Check if this schema has enum values and no properties (simple enum)
+        // Check if this schema has enum values and no properties (standalone enum)
         if (schema != null && schema.getEnum() != null && !schema.getEnum().isEmpty()) {
             if (schema.getProperties() == null || schema.getProperties().isEmpty()) {
                 model.isEnum = true;
+                // Note: allowableValues and enumVars are processed in postProcessModels
             }
         }
 
         return model;
+    }
+
+    /**
+     * Post-processes models to ensure enum data is properly structured for templates.
+     * This runs after all model processing and right before template rendering.
+     *
+     * @param objs the models map containing all model data
+     * @return the processed models map
+     */
+    @Override
+    public ModelsMap postProcessModels(ModelsMap objs) {
+        ModelsMap result = super.postProcessModels(objs);
+
+        // Process each model to add enum variables with collision-resistant naming
+        for (ModelMap modelMap : result.getModels()) {
+            CodegenModel model = modelMap.getModel();
+
+            if (model.isEnum && model.allowableValues != null) {
+                @SuppressWarnings("unchecked")
+                List<Object> values = (List<Object>) model.allowableValues.get("values");
+
+                if (values != null && !values.isEmpty()) {
+                    // Determine datatype from model
+                    String datatype = model.dataType != null ? model.dataType : "string";
+
+                    // Create enumVars with collision-resistant naming
+                    List<Map<String, Object>> enumVars = createEnumVars(values, datatype);
+                    model.allowableValues.put("enumVars", enumVars);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Creates enumVars list with collision-resistant naming.
+     * Handles collisions by appending numeric suffixes (e.g., value, value2, value3).
+     *
+     * @param values the enum values from the schema
+     * @param datatype the datatype for toEnumVarName processing
+     * @return list of enumVar maps with 'name' and 'value' keys
+     */
+    private List<Map<String, Object>> createEnumVars(List<Object> values, String datatype) {
+        List<Map<String, Object>> enumVars = new ArrayList<>();
+        Map<String, Integer> nameCount = new HashMap<>();
+
+        for (Object value : values) {
+            String valueStr = String.valueOf(value);
+            String baseName = toEnumVarName(valueStr, datatype);
+
+            // Handle collision resolution
+            String finalName;
+            if (nameCount.containsKey(baseName)) {
+                int count = nameCount.get(baseName) + 1;
+                nameCount.put(baseName, count);
+                finalName = baseName + count;
+            } else {
+                nameCount.put(baseName, 1);
+                finalName = baseName;
+            }
+
+            Map<String, Object> enumVar = new HashMap<>();
+            enumVar.put("name", finalName);
+            enumVar.put("value", valueStr);
+            enumVar.put("isString", "string".equalsIgnoreCase(datatype));
+            enumVars.add(enumVar);
+        }
+
+        return enumVars;
     }
 
 }
