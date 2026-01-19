@@ -1,0 +1,7 @@
+generatorName: dart-acdc
+outputDir: samples/generated/minimal
+inputSpec: samples/minimal.yaml
+additionalProperties:
+  pubName: minimal_client
+  pubVersion: 1.0.0
+  pubDescription: "Minimal API client for edge case testing"

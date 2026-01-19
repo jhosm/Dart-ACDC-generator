@@ -1,0 +1,9 @@
+generatorName: dart-acdc
+outputDir: samples/generated/petstore
+inputSpec: samples/petstore.yaml
+additionalProperties:
+  pubName: petstore_client
+  pubVersion: 1.0.0
+  pubDescription: "Petstore API client generated with Dart-ACDC"
+  pubAuthor: OpenAPI Generator
+  pubAuthorEmail: team@openapitools.org

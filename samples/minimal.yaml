@@ -1,0 +1,28 @@
+openapi: 3.0.3
+info:
+  title: Minimal API
+  version: 1.0.0
+  description: Minimal OpenAPI spec for edge case testing (no paths, minimal schema)
+servers:
+  - url: https://api.example.com
+paths:
+  /ping:
+    get:
+      summary: Health check endpoint
+      operationId: ping
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+components:
+  schemas:
+    EmptyModel:
+      type: object
+      description: An empty model for edge case testing

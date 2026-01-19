@@ -1,0 +1,131 @@
+openapi: 3.0.3
+info:
+  title: File Upload API
+  version: 1.0.0
+  description: OpenAPI spec for testing multipart file uploads
+servers:
+  - url: https://api.example.com
+paths:
+  /upload:
+    post:
+      summary: Upload a single file
+      operationId: uploadFile
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                description:
+                  type: string
+      responses:
+        '200':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+
+  /upload/multiple:
+    post:
+      summary: Upload multiple files
+      operationId: uploadMultipleFiles
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - files
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Files uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UploadResponse'
+
+  /upload/profile:
+    post:
+      summary: Upload profile with avatar
+      operationId: uploadProfile
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+                - avatar
+              properties:
+                name:
+                  type: string
+                bio:
+                  type: string
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Profile created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+
+components:
+  schemas:
+    UploadResponse:
+      type: object
+      required:
+        - id
+        - filename
+        - url
+      properties:
+        id:
+          type: string
+        filename:
+          type: string
+        url:
+          type: string
+        size:
+          type: integer
+          format: int64
+        mimeType:
+          type: string
+
+    Profile:
+      type: object
+      required:
+        - id
+        - name
+        - avatarUrl
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        bio:
+          type: string
+        avatarUrl:
+          type: string

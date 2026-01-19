@@ -1,0 +1,7 @@
+generatorName: dart-acdc
+outputDir: samples/generated/enums
+inputSpec: samples/enums.yaml
+additionalProperties:
+  pubName: enums_client
+  pubVersion: 1.0.0
+  pubDescription: "Enum test client (collision resolution, numeric enums)"

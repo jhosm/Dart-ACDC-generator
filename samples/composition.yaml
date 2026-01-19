@@ -1,0 +1,170 @@
+openapi: 3.0.3
+info:
+  title: Composition Test API
+  version: 1.0.0
+  description: OpenAPI spec for testing allOf, oneOf, and anyOf compositions
+servers:
+  - url: https://api.example.com
+paths:
+  /entities:
+    get:
+      summary: Get entities
+      operationId: getEntities
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Entity'
+components:
+  schemas:
+    # Base schemas
+    BaseEntity:
+      type: object
+      required:
+        - id
+        - type
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+
+    Timestamped:
+      type: object
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # allOf: Merge properties (Entity = BaseEntity + Timestamped + name)
+    Entity:
+      allOf:
+        - $ref: '#/components/schemas/BaseEntity'
+        - $ref: '#/components/schemas/Timestamped'
+        - type: object
+          properties:
+            name:
+              type: string
+
+    # oneOf with discriminator: Sealed class with type-based switching
+    Animal:
+      oneOf:
+        - $ref: '#/components/schemas/Dog'
+        - $ref: '#/components/schemas/Cat'
+      discriminator:
+        propertyName: animalType
+        mapping:
+          dog: '#/components/schemas/Dog'
+          cat: '#/components/schemas/Cat'
+
+    Dog:
+      type: object
+      required:
+        - animalType
+        - breed
+      properties:
+        animalType:
+          type: string
+          enum: [dog]
+        breed:
+          type: string
+        barkVolume:
+          type: integer
+
+    Cat:
+      type: object
+      required:
+        - animalType
+        - color
+      properties:
+        animalType:
+          type: string
+          enum: [cat]
+        color:
+          type: string
+        clawSharpness:
+          type: integer
+
+    # oneOf without discriminator: Try-each-alternative
+    Payment:
+      oneOf:
+        - $ref: '#/components/schemas/CreditCardPayment'
+        - $ref: '#/components/schemas/BankTransferPayment'
+
+    CreditCardPayment:
+      type: object
+      required:
+        - cardNumber
+      properties:
+        cardNumber:
+          type: string
+        cvv:
+          type: string
+
+    BankTransferPayment:
+      type: object
+      required:
+        - accountNumber
+      properties:
+        accountNumber:
+          type: string
+        routingNumber:
+          type: string
+
+    # oneOf with primitives: Wrapper classes
+    StringOrNumber:
+      oneOf:
+        - type: string
+        - type: number
+
+    # anyOf: Same as oneOf (documented as "can be any of")
+    Notification:
+      anyOf:
+        - $ref: '#/components/schemas/EmailNotification'
+        - $ref: '#/components/schemas/SmsNotification'
+
+    EmailNotification:
+      type: object
+      properties:
+        email:
+          type: string
+        subject:
+          type: string
+
+    SmsNotification:
+      type: object
+      properties:
+        phoneNumber:
+          type: string
+        message:
+          type: string
+
+    # Nested composition: allOf containing oneOf
+    VerifiedAnimal:
+      allOf:
+        - $ref: '#/components/schemas/Animal'
+        - type: object
+          properties:
+            verified:
+              type: boolean
+            verifiedAt:
+              type: string
+              format: date-time
+
+    # Circular reference
+    Node:
+      type: object
+      properties:
+        value:
+          type: string
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/Node'

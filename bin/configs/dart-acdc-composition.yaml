@@ -1,0 +1,7 @@
+generatorName: dart-acdc
+outputDir: samples/generated/composition
+inputSpec: samples/composition.yaml
+additionalProperties:
+  pubName: composition_client
+  pubVersion: 1.0.0
+  pubDescription: "Composition test client (allOf/oneOf/anyOf)"

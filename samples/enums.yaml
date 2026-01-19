@@ -1,0 +1,108 @@
+openapi: 3.0.3
+info:
+  title: Enum Test API
+  version: 1.0.0
+  description: OpenAPI spec for testing enum generation, collision resolution, and numeric enums
+servers:
+  - url: https://api.example.com
+paths:
+  /test:
+    get:
+      summary: Test endpoint
+      operationId: testEnums
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnumTestModel'
+components:
+  schemas:
+    EnumTestModel:
+      type: object
+      properties:
+        # Basic string enum
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - pending
+
+        # Enum with collision (same values after camelCase conversion)
+        priority:
+          type: string
+          enum:
+            - high
+            - HIGH
+            - High
+            - high_priority
+
+        # Numeric enum (should be prefixed with 'value')
+        level:
+          type: integer
+          enum:
+            - 1
+            - 2
+            - 3
+            - 10
+            - 100
+
+        # Enum with special characters (need escaping/sanitization)
+        category:
+          type: string
+          enum:
+            - foo-bar
+            - foo_bar
+            - "foo bar"
+            - "foo/bar"
+            - "foo.bar"
+            - "123invalid"
+
+        # Enum with reserved keywords
+        type:
+          type: string
+          enum:
+            - class
+            - abstract
+            - if
+            - else
+            - return
+            - void
+
+        # Mixed case enum (test camelCase conversion)
+        role:
+          type: string
+          enum:
+            - ADMIN
+            - User
+            - guest
+            - Super_Admin
+            - power-user
+
+        # Empty string enum (edge case)
+        emptyTest:
+          type: string
+          enum:
+            - ""
+            - "value"
+
+    # Separate enum schemas
+    Color:
+      type: string
+      enum:
+        - red
+        - green
+        - blue
+        - RED
+        - Green
+        - BLUE
+
+    Size:
+      type: integer
+      enum:
+        - 0
+        - 1
+        - 2
+        - 10
