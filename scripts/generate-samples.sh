@@ -54,7 +54,7 @@ generate_spec() {
 }
 
 # List of all specs
-ALL_SPECS=("petstore" "minimal" "composition" "file-upload" "enums")
+ALL_SPECS=("petstore" "minimal" "composition" "file-upload" "enums" "reserved-words")
 
 # If a specific spec is provided, generate only that one
 if [ -n "$1" ]; then
