@@ -178,15 +178,39 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     /**
      * Returns the file name for a model.
-     * Ensures file names match the escaped model names for Dart conventions.
+     * Converts model names to snake_case following Dart file naming conventions.
      *
      * @param name the model name (from OpenAPI schema)
-     * @return the file name (without extension)
+     * @return the file name in snake_case (without extension)
      */
     @Override
     public String toModelFilename(String name) {
-        // Use the escaped model name for the file name to maintain Dart conventions
-        return toModelName(name);
+        // Convert the model name to snake_case for Dart file naming conventions
+        // e.g., "UserProfile" -> "user_profile"
+        return underscore(toModelName(name));
+    }
+
+    /**
+     * Generates the import statement for a model reference.
+     * Creates proper package-relative import paths for Dart.
+     *
+     * @param name the model name
+     * @return the import path (e.g., "package:my_api/models/user.dart")
+     */
+    @Override
+    public String toModelImport(String name) {
+        // Get the pubName from additional properties, or use default
+        String pubName = (String) additionalProperties.get("pubName");
+        if (pubName == null || pubName.isEmpty()) {
+            pubName = "openapi_client";
+        }
+
+        // Convert model name to filename
+        String filename = toModelFilename(name);
+
+        // Generate Dart package import path
+        // Format: package:{pubName}/models/{filename}.dart
+        return "package:" + pubName + "/models/" + filename + ".dart";
     }
 
     /**
@@ -360,6 +384,28 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             return str;
         }
         return str.substring(0, 1).toUpperCase() + str.substring(1);
+    }
+
+    /**
+     * Converts a string from PascalCase/camelCase to snake_case.
+     * Used for generating Dart file names from model class names.
+     *
+     * @param name the name in PascalCase or camelCase
+     * @return the name in snake_case
+     */
+    private String underscore(String name) {
+        if (name == null || name.isEmpty()) {
+            return name;
+        }
+
+        // Insert underscore before uppercase letters (except at the start)
+        // and convert to lowercase
+        // e.g., "UserProfile" -> "user_profile", "HTTPResponse" -> "http_response"
+        String result = name.replaceAll("([a-z0-9])([A-Z])", "$1_$2")
+                            .replaceAll("([A-Z])([A-Z][a-z])", "$1_$2")
+                            .toLowerCase();
+
+        return result;
     }
 
     /**
