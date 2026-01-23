@@ -1,2 +1,25 @@
-// TODO: Implement Animal model with json_serializable
-// This file will contain the data model for Animal
+/// oneOf composition: Animal
+///
+/// Generated from OpenAPI oneOf schema.
+/// Represents a value that can be one of several alternatives.
+sealed class Animal {
+  /// Creates an instance from JSON using the discriminator property.
+  factory Animal.fromJson(Map<String, dynamic> json) {
+    final discriminator = json['animalType'];
+    switch (discriminator) {
+      case 'dog':
+        return AnimalDog.fromJson(json);
+      case 'cat':
+        return AnimalCat.fromJson(json);
+      default:
+        throw FormatException('Unknown animalType: $discriminator');
+    }
+  }
+
+  Map<String, dynamic> toJson();
+}
+
+// Subclass AnimalDog is defined in package:composition_client/models/dog.dart
+// It should extend Animal
+// Subclass AnimalCat is defined in package:composition_client/models/cat.dart
+// It should extend Animal

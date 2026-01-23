@@ -610,12 +610,17 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
-     * Overrides fromModel to properly handle standalone enum schemas.
+     * Overrides fromModel to properly handle standalone enum schemas and composition schemas (oneOf/anyOf).
      * allOf composition is now handled in preprocessOpenAPI() which runs before model generation.
      *
      * For enum schemas:
      * - Ensures that schemas with enum values are properly processed as enums
      *   with populated allowableValues and enumVars for template rendering.
+     *
+     * For oneOf/anyOf schemas:
+     * - Detects composition and marks the model appropriately
+     * - Processes alternatives and discriminator information
+     * - Adds metadata for sealed class generation in templates
      *
      * @param name the model name
      * @param schema the schema
@@ -633,7 +638,200 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             }
         }
 
+        // Check for oneOf composition
+        if (schema != null && schema.getOneOf() != null && !schema.getOneOf().isEmpty()) {
+            processOneOfComposition(name, schema, model);
+        }
+
+        // Check for anyOf composition
+        if (schema != null && schema.getAnyOf() != null && !schema.getAnyOf().isEmpty()) {
+            processAnyOfComposition(name, schema, model);
+        }
+
         return model;
+    }
+
+    /**
+     * Processes a oneOf composition schema and adds metadata to the CodegenModel.
+     *
+     * @param name the schema name
+     * @param schema the schema with oneOf
+     * @param model the codegen model to update
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void processOneOfComposition(String name, Schema schema, CodegenModel model) {
+        LOGGER.info("Processing oneOf composition for schema: {}", name);
+
+        // Mark this model as a oneOf composition
+        model.vendorExtensions.put("x-is-one-of", true);
+
+        // Process discriminator if present
+        if (schema.getDiscriminator() != null) {
+            model.vendorExtensions.put("x-has-discriminator", true);
+            String discriminatorPropertyName = schema.getDiscriminator().getPropertyName();
+            model.vendorExtensions.put("x-discriminator-name", discriminatorPropertyName);
+
+            // Process discriminator mapping
+            if (schema.getDiscriminator().getMapping() != null) {
+                List<Map<String, Object>> discriminatorMapping = new ArrayList<>();
+                Map<String, String> mapping = schema.getDiscriminator().getMapping();
+
+                for (Map.Entry<String, String> entry : mapping.entrySet()) {
+                    String mappingKey = entry.getKey();
+                    String schemaRef = entry.getValue();
+
+                    // Extract schema name from $ref (e.g., "#/components/schemas/Dog" -> "Dog")
+                    String schemaName = schemaRef.substring(schemaRef.lastIndexOf('/') + 1);
+                    String subclassName = toModelName(name + capitalize(schemaName));
+
+                    Map<String, Object> mappingEntry = new HashMap<>();
+                    mappingEntry.put("mappingKey", mappingKey);
+                    mappingEntry.put("schemaName", schemaName);
+                    mappingEntry.put("subclassName", subclassName);
+                    discriminatorMapping.add(mappingEntry);
+                }
+
+                model.vendorExtensions.put("x-discriminator-mapping", discriminatorMapping);
+            }
+        } else {
+            model.vendorExtensions.put("x-has-discriminator", false);
+        }
+
+        // Process oneOf alternatives
+        List<Map<String, Object>> alternatives = new ArrayList<>();
+        List<Schema> oneOfSchemas = (List<Schema>) schema.getOneOf();
+
+        for (int i = 0; i < oneOfSchemas.size(); i++) {
+            Schema oneOfSchema = oneOfSchemas.get(i);
+            Map<String, Object> alternative = new HashMap<>();
+
+            // Add parent class name for template reference
+            alternative.put("parentClassName", name);
+
+            if (oneOfSchema.get$ref() != null) {
+                // Reference to another schema
+                String ref = oneOfSchema.get$ref();
+                String schemaName = ref.substring(ref.lastIndexOf('/') + 1);
+                String subclassName = toModelName(name + capitalize(schemaName));
+
+                alternative.put("isRef", true);
+                alternative.put("schemaName", schemaName);
+                alternative.put("subclassName", subclassName);
+                alternative.put("importPath", toModelImport(schemaName));
+            } else if (oneOfSchema.getType() != null) {
+                // Inline schema (primitive or object)
+                String type = oneOfSchema.getType();
+                boolean isPrimitive = isPrimitiveType(type);
+
+                if (isPrimitive) {
+                    // Wrapper class for primitive
+                    String dartType = getTypeDeclaration(oneOfSchema);
+                    String wrapperName = toModelName(name + capitalize(dartType));
+
+                    alternative.put("isPrimitive", true);
+                    alternative.put("dartType", dartType);
+                    alternative.put("subclassName", wrapperName);
+                } else {
+                    // Inline complex type - use Option naming
+                    String subclassName = toModelName(name + "Option" + (i + 1));
+                    alternative.put("isInline", true);
+                    alternative.put("subclassName", subclassName);
+                    alternative.put("index", i + 1);
+                }
+            }
+
+            // Set hasNext flag for all but the last alternative
+            alternative.put("hasNext", i < oneOfSchemas.size() - 1);
+
+            alternatives.add(alternative);
+        }
+
+        model.vendorExtensions.put("x-one-of-alternatives", alternatives);
+        LOGGER.info("Processed oneOf for '{}': {} alternatives", name, alternatives.size());
+    }
+
+    /**
+     * Processes an anyOf composition schema and adds metadata to the CodegenModel.
+     * anyOf is treated identically to oneOf without discriminator.
+     *
+     * @param name the schema name
+     * @param schema the schema with anyOf
+     * @param model the codegen model to update
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void processAnyOfComposition(String name, Schema schema, CodegenModel model) {
+        LOGGER.info("Processing anyOf composition for schema: {}", name);
+
+        // Mark this model as an anyOf composition
+        model.vendorExtensions.put("x-is-any-of", true);
+
+        // anyOf never has discriminator (treat as try-each)
+        model.vendorExtensions.put("x-has-discriminator", false);
+
+        // Process anyOf alternatives (same as oneOf)
+        List<Map<String, Object>> alternatives = new ArrayList<>();
+        List<Schema> anyOfSchemas = (List<Schema>) schema.getAnyOf();
+
+        for (int i = 0; i < anyOfSchemas.size(); i++) {
+            Schema anyOfSchema = anyOfSchemas.get(i);
+            Map<String, Object> alternative = new HashMap<>();
+
+            // Add parent class name for template reference
+            alternative.put("parentClassName", name);
+
+            if (anyOfSchema.get$ref() != null) {
+                // Reference to another schema
+                String ref = anyOfSchema.get$ref();
+                String schemaName = ref.substring(ref.lastIndexOf('/') + 1);
+                String subclassName = toModelName(name + capitalize(schemaName));
+
+                alternative.put("isRef", true);
+                alternative.put("schemaName", schemaName);
+                alternative.put("subclassName", subclassName);
+                alternative.put("importPath", toModelImport(schemaName));
+            } else if (anyOfSchema.getType() != null) {
+                // Inline schema (primitive or object)
+                String type = anyOfSchema.getType();
+                boolean isPrimitive = isPrimitiveType(type);
+
+                if (isPrimitive) {
+                    // Wrapper class for primitive
+                    String dartType = getTypeDeclaration(anyOfSchema);
+                    String wrapperName = toModelName(name + capitalize(dartType));
+
+                    alternative.put("isPrimitive", true);
+                    alternative.put("dartType", dartType);
+                    alternative.put("subclassName", wrapperName);
+                } else {
+                    // Inline complex type - use Option naming
+                    String subclassName = toModelName(name + "Option" + (i + 1));
+                    alternative.put("isInline", true);
+                    alternative.put("subclassName", subclassName);
+                    alternative.put("index", i + 1);
+                }
+            }
+
+            // Set hasNext flag for all but the last alternative
+            alternative.put("hasNext", i < anyOfSchemas.size() - 1);
+
+            alternatives.add(alternative);
+        }
+
+        model.vendorExtensions.put("x-any-of-alternatives", alternatives);
+        LOGGER.info("Processed anyOf for '{}': {} alternatives", name, alternatives.size());
+    }
+
+    /**
+     * Checks if a type is a primitive type (not array or object).
+     *
+     * @param type the OpenAPI type
+     * @return true if primitive, false otherwise
+     */
+    private boolean isPrimitiveType(String type) {
+        return "string".equals(type) ||
+               "integer".equals(type) ||
+               "number".equals(type) ||
+               "boolean".equals(type);
     }
 
     /**

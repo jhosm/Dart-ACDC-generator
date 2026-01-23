@@ -14,8 +14,130 @@ enum {{classname}} {
 }
 {{/isEnum}}
 {{^isEnum}}
+{{#vendorExtensions}}
+{{#x-is-one-of}}
+/// oneOf composition: {{classname}}
+///
+/// Generated from OpenAPI oneOf schema.
+/// Represents a value that can be one of several alternatives.
+sealed class {{classname}} {
+{{#x-has-discriminator}}
+  /// Creates an instance from JSON using the discriminator property.
+  factory {{classname}}.fromJson(Map<String, dynamic> json) {
+    final discriminator = json['{{x-discriminator-name}}'];
+    switch (discriminator) {
+{{#x-discriminator-mapping}}
+      case '{{mappingKey}}':
+        return {{subclassName}}.fromJson(json);
+{{/x-discriminator-mapping}}
+      default:
+        throw FormatException('Unknown {{x-discriminator-name}}: $discriminator');
+    }
+  }
+{{/x-has-discriminator}}
+{{^x-has-discriminator}}
+  /// Creates an instance from JSON by trying each alternative.
+  /// Uses the first alternative that successfully deserializes.
+  factory {{classname}}.fromJson(dynamic json) {
+{{#x-one-of-alternatives}}
+    // Try {{subclassName}}
+    try {
+      return {{subclassName}}.fromJson(json);
+    } catch (_) {}
+{{/x-one-of-alternatives}}
+    throw FormatException('No matching oneOf alternative for {{classname}}');
+  }
+{{/x-has-discriminator}}
+
+  Map<String, dynamic> toJson();
+}
+
+{{#x-one-of-alternatives}}
+{{#isRef}}
+// Subclass {{subclassName}} is defined in {{importPath}}
+// It should extend {{parentClassName}}
+{{/isRef}}
+{{#isPrimitive}}
+/// Wrapper class for primitive type {{dartType}}
+class {{subclassName}} extends {{parentClassName}} {
+  final {{dartType}} value;
+
+  {{subclassName}}(this.value);
+
+  factory {{subclassName}}.fromJson(dynamic json) {
+    if (json is {{dartType}}) {
+      return {{subclassName}}(json);
+    }
+    throw FormatException('Expected {{dartType}}');
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {'value': value};
+}
+{{/isPrimitive}}
+{{#isInline}}
+// TODO: Implement inline schema {{subclassName}} extending {{parentClassName}}
+{{/isInline}}
+{{/x-one-of-alternatives}}
+{{/x-is-one-of}}
+{{#x-is-any-of}}
+/// anyOf composition: {{classname}}
+///
+/// Generated from OpenAPI anyOf schema.
+/// Represents a value that can match any of several alternatives.
+/// Note: At runtime, Dart cannot distinguish between oneOf and anyOf semantics.
+/// The first matching alternative will be used during deserialization.
+sealed class {{classname}} {
+  /// Creates an instance from JSON by trying each alternative.
+  /// Uses the first alternative that successfully deserializes.
+  factory {{classname}}.fromJson(dynamic json) {
+{{#x-any-of-alternatives}}
+    // Try {{subclassName}}
+    try {
+      return {{subclassName}}.fromJson(json);
+    } catch (_) {}
+{{/x-any-of-alternatives}}
+    throw FormatException('No matching anyOf alternative for {{classname}}');
+  }
+
+  Map<String, dynamic> toJson();
+}
+
+{{#x-any-of-alternatives}}
+{{#isRef}}
+// Subclass {{subclassName}} is defined in {{importPath}}
+// It should extend {{parentClassName}}
+{{/isRef}}
+{{#isPrimitive}}
+/// Wrapper class for primitive type {{dartType}}
+class {{subclassName}} extends {{parentClassName}} {
+  final {{dartType}} value;
+
+  {{subclassName}}(this.value);
+
+  factory {{subclassName}}.fromJson(dynamic json) {
+    if (json is {{dartType}}) {
+      return {{subclassName}}(json);
+    }
+    throw FormatException('Expected {{dartType}}');
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {'value': value};
+}
+{{/isPrimitive}}
+{{#isInline}}
+// TODO: Implement inline schema {{subclassName}} extending {{parentClassName}}
+{{/isInline}}
+{{/x-any-of-alternatives}}
+{{/x-is-any-of}}
+{{^x-is-one-of}}
+{{^x-is-any-of}}
 // TODO: Implement {{classname}} model with json_serializable
 // This file will contain the data model for {{classname}}
+{{/x-is-any-of}}
+{{/x-is-one-of}}
+{{/vendorExtensions}}
 {{/isEnum}}
 {{/model}}
 {{/models}}
