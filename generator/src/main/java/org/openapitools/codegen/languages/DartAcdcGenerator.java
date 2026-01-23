@@ -24,6 +24,50 @@ import java.util.regex.Pattern;
  */
 public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
+    // Constants for content types
+    private static final String CONTENT_TYPE_MULTIPART_FORM_DATA = "multipart/form-data";
+    private static final String MEDIA_TYPE_KEY = "mediaType";
+
+    // Constants for vendor extensions
+    private static final String VENDOR_EXTENSION_IS_MULTIPART = "x-is-multipart";
+    private static final String VENDOR_EXTENSION_IS_MULTIPART_CONTEXT = "x-is-multipart-context";
+    private static final String VENDOR_EXTENSION_IS_MULTIPART_FILE = "x-is-multipart-file";
+    private static final String VENDOR_EXTENSION_DART_IMPORT = "x-dart-import";
+
+    // Constants for Dart types and imports
+    private static final String DART_TYPE_MULTIPART_FILE = "MultipartFile";
+    private static final String DART_TYPE_LIST_INT = "List<int>";
+    private static final String DART_IMPORT_DIO = "package:dio/dio.dart";
+
+    // Constants for default values
+    private static final String DEFAULT_PACKAGE_NAME = "openapi_client";
+    private static final String DEFAULT_ENUM_VALUE = "empty";
+    private static final String NUMERIC_ENUM_PREFIX = "value";
+    private static final String RESERVED_WORD_MODEL_SUFFIX = "Model";
+    private static final String RESERVED_WORD_VAR_SUFFIX = "_";
+    private static final String NUMERIC_PACKAGE_PREFIX = "api_";
+
+    // Pre-compiled regex patterns for performance
+    // Package name sanitization patterns
+    private static final Pattern PATTERN_SPACES_HYPHENS = Pattern.compile("[ -]");
+    private static final Pattern PATTERN_NON_ALPHANUMERIC_PACKAGE = Pattern.compile("[^a-z0-9_]");
+    private static final Pattern PATTERN_CONSECUTIVE_UNDERSCORES = Pattern.compile("_+");
+    private static final Pattern PATTERN_LEADING_TRAILING_UNDERSCORES = Pattern.compile("^_+|_+$");
+    private static final Pattern PATTERN_STARTS_WITH_DIGIT = Pattern.compile("^[0-9].*");
+
+    // Enum value patterns
+    private static final Pattern PATTERN_NUMERIC_VALUE = Pattern.compile("^-?\\d+(\\.\\d+)?$");
+    private static final Pattern PATTERN_NON_DIGITS = Pattern.compile("[^0-9]");
+
+    // CamelCase conversion patterns
+    private static final Pattern PATTERN_SEPARATORS = Pattern.compile("[-_./\\s]+");
+    private static final Pattern PATTERN_WHITESPACE = Pattern.compile("\\s+");
+    private static final Pattern PATTERN_NON_ALPHANUMERIC_CAMEL = Pattern.compile("[^a-zA-Z0-9]");
+
+    // Underscore conversion patterns
+    private static final Pattern PATTERN_LOWERCASE_UPPERCASE = Pattern.compile("([a-z0-9])([A-Z])");
+    private static final Pattern PATTERN_UPPERCASE_SEQUENCE = Pattern.compile("([A-Z])([A-Z][a-z])");
+
     /**
      * ThreadLocal to track whether we're currently processing a multipart/form-data request body.
      * This allows context-aware type mapping for file/binary types.
@@ -116,8 +160,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         typeMapping.put("DateTime", "DateTime");
         typeMapping.put("date-time", "DateTime");
         typeMapping.put("password", "String");
-        typeMapping.put("binary", "List<int>");
-        typeMapping.put("ByteArray", "List<int>");
+        typeMapping.put("binary", DART_TYPE_LIST_INT);
+        typeMapping.put("ByteArray", DART_TYPE_LIST_INT);
         // Note: "file" type mapping is context-aware - see getTypeDeclaration()
         // In multipart/form-data context: MultipartFile
         // In non-multipart context: List<int>
@@ -168,7 +212,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     @Override
     public String escapeReservedWord(String name) {
         // For property names, suffix with underscore
-        return name + "_";
+        return name + RESERVED_WORD_VAR_SUFFIX;
     }
 
     /**
@@ -185,7 +229,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
         // If the sanitized name is a Dart reserved keyword (case-insensitive check), suffix with "Model"
         if (isReservedWord(sanitized.toLowerCase())) {
-            return sanitized + "Model";
+            return sanitized + RESERVED_WORD_MODEL_SUFFIX;
         }
 
         return sanitized;
@@ -217,7 +261,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         // Get the pubName from additional properties, or use default
         String pubName = (String) additionalProperties.get("pubName");
         if (pubName == null || pubName.isEmpty()) {
-            pubName = "openapi_client";
+            pubName = DEFAULT_PACKAGE_NAME;
         }
 
         // Convert model name to filename
@@ -245,32 +289,32 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      */
     protected String sanitizePubName(String name) {
         if (name == null || name.isEmpty()) {
-            return "openapi_client";
+            return DEFAULT_PACKAGE_NAME;
         }
 
         // Convert to lowercase
         String sanitized = name.toLowerCase();
 
         // Replace spaces and hyphens with underscores
-        sanitized = sanitized.replaceAll("[ -]", "_");
+        sanitized = PATTERN_SPACES_HYPHENS.matcher(sanitized).replaceAll("_");
 
         // Remove all characters except a-z, 0-9, and _
-        sanitized = sanitized.replaceAll("[^a-z0-9_]", "");
+        sanitized = PATTERN_NON_ALPHANUMERIC_PACKAGE.matcher(sanitized).replaceAll("");
 
         // Collapse consecutive underscores to single underscore
-        sanitized = sanitized.replaceAll("_+", "_");
+        sanitized = PATTERN_CONSECUTIVE_UNDERSCORES.matcher(sanitized).replaceAll("_");
 
         // Remove leading/trailing underscores
-        sanitized = sanitized.replaceAll("^_+|_+$", "");
+        sanitized = PATTERN_LEADING_TRAILING_UNDERSCORES.matcher(sanitized).replaceAll("");
 
         // If empty after sanitization, use default
         if (sanitized.isEmpty()) {
-            return "openapi_client";
+            return DEFAULT_PACKAGE_NAME;
         }
 
         // Prefix with 'api_' if name starts with a digit
-        if (sanitized.matches("^[0-9].*")) {
-            sanitized = "api_" + sanitized;
+        if (PATTERN_STARTS_WITH_DIGIT.matcher(sanitized).matches()) {
+            sanitized = NUMERIC_PACKAGE_PREFIX + sanitized;
         }
 
         return sanitized;
@@ -309,17 +353,17 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     @Override
     public String toEnumVarName(String value, String datatype) {
         if (value == null || value.isEmpty()) {
-            return "empty";
+            return DEFAULT_ENUM_VALUE;
         }
 
         // Check if value is numeric
-        if (value.matches("^-?\\d+(\\.\\d+)?$")) {
+        if (PATTERN_NUMERIC_VALUE.matcher(value).matches()) {
             // Numeric value - prefix with 'value' and remove any decimals/negatives
-            String sanitized = value.replaceAll("[^0-9]", "");
+            String sanitized = PATTERN_NON_DIGITS.matcher(value).replaceAll("");
             if (sanitized.isEmpty()) {
                 sanitized = "0";
             }
-            return "value" + sanitized;
+            return NUMERIC_ENUM_PREFIX + sanitized;
         }
 
         // Convert to camelCase
@@ -327,17 +371,17 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
         // If empty after sanitization, use 'empty'
         if (identifier.isEmpty()) {
-            return "empty";
+            return DEFAULT_ENUM_VALUE;
         }
 
         // If starts with digit, prefix with 'value'
-        if (identifier.matches("^\\d.*")) {
-            identifier = "value" + capitalize(identifier);
+        if (PATTERN_STARTS_WITH_DIGIT.matcher(identifier).matches()) {
+            identifier = NUMERIC_ENUM_PREFIX + capitalize(identifier);
         }
 
         // Handle reserved words - suffix with underscore for enum values
         if (isReservedWord(identifier)) {
-            identifier = identifier + "_";
+            identifier = identifier + RESERVED_WORD_VAR_SUFFIX;
         }
 
         return identifier;
@@ -355,16 +399,14 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         }
 
         // Replace various separators with spaces
-        String processed = input
-            .replaceAll("[-_./\\s]+", " ")  // Replace separators with space
-            .trim();
+        String processed = PATTERN_SEPARATORS.matcher(input).replaceAll(" ").trim();
 
         if (processed.isEmpty()) {
             return "";
         }
 
         // Split into words
-        String[] words = processed.split("\\s+");
+        String[] words = PATTERN_WHITESPACE.split(processed);
         StringBuilder result = new StringBuilder();
 
         for (int i = 0; i < words.length; i++) {
@@ -383,7 +425,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         }
 
         // Remove any remaining non-alphanumeric characters
-        String sanitized = result.toString().replaceAll("[^a-zA-Z0-9]", "");
+        String sanitized = PATTERN_NON_ALPHANUMERIC_CAMEL.matcher(result.toString()).replaceAll("");
 
         return sanitized;
     }
@@ -416,9 +458,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         // Insert underscore before uppercase letters (except at the start)
         // and convert to lowercase
         // e.g., "UserProfile" -> "user_profile", "HTTPResponse" -> "http_response"
-        String result = name.replaceAll("([a-z0-9])([A-Z])", "$1_$2")
-                            .replaceAll("([A-Z])([A-Z][a-z])", "$1_$2")
-                            .toLowerCase();
+        String result = PATTERN_LOWERCASE_UPPERCASE.matcher(name).replaceAll("$1_$2");
+        result = PATTERN_UPPERCASE_SEQUENCE.matcher(result).replaceAll("$1_$2");
+        result = result.toLowerCase();
 
         return result;
     }
@@ -449,6 +491,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     /**
      * Post-processes models to ensure enum data is properly structured for templates.
+     * Also ensures that properties requiring special imports (like MultipartFile) have
+     * their imports properly tracked.
      * This runs after all model processing and right before template rendering.
      *
      * @param objs the models map containing all model data
@@ -473,6 +517,18 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                     // Create enumVars with collision-resistant naming
                     List<Map<String, Object>> enumVars = createEnumVars(values, datatype);
                     model.allowableValues.put("enumVars", enumVars);
+                }
+            }
+
+            // Scan model properties for any that require special imports (e.g., MultipartFile)
+            if (model.vars != null) {
+                for (CodegenProperty prop : model.vars) {
+                    if (prop.vendorExtensions.containsKey(VENDOR_EXTENSION_DART_IMPORT)) {
+                        String dartImport = (String) prop.vendorExtensions.get(VENDOR_EXTENSION_DART_IMPORT);
+                        if (dartImport != null && !dartImport.isEmpty()) {
+                            model.imports.add(dartImport);
+                        }
+                    }
                 }
             }
         }
@@ -527,7 +583,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         if (content == null) {
             return false;
         }
-        return content.containsKey("multipart/form-data");
+        return content.containsKey(CONTENT_TYPE_MULTIPART_FORM_DATA);
     }
 
     /**
@@ -562,11 +618,11 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
             // Mark the parameter with multipart context information
             if (IS_MULTIPART_CONTEXT.get()) {
-                parameter.vendorExtensions.put("x-is-multipart-context", true);
+                parameter.vendorExtensions.put(VENDOR_EXTENSION_IS_MULTIPART_CONTEXT, true);
 
                 // If this parameter itself is a file/binary type, mark it specifically
                 if (parameter.isBinary || "file".equals(parameter.baseType)) {
-                    parameter.vendorExtensions.put("x-is-multipart-file", true);
+                    parameter.vendorExtensions.put(VENDOR_EXTENSION_IS_MULTIPART_FILE, true);
                 }
             }
 
@@ -603,7 +659,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             // However, at this point we don't have access to the parameter context
             // So we'll use the default mapping (List<int>) here
             // The multipart-specific mapping will be handled in fromProperty
-            return "List<int>";
+            return DART_TYPE_LIST_INT;
         }
 
         return super.getTypeDeclaration(schema);
@@ -638,14 +694,14 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
         if (isBinary && IS_MULTIPART_CONTEXT.get()) {
             // We're in multipart/form-data context - use MultipartFile
-            property.dataType = "MultipartFile";
-            property.datatypeWithEnum = "MultipartFile";
-            property.baseType = "MultipartFile";
+            property.dataType = DART_TYPE_MULTIPART_FILE;
+            property.datatypeWithEnum = DART_TYPE_MULTIPART_FILE;
+            property.baseType = DART_TYPE_MULTIPART_FILE;
             property.isBinary = true;
 
             // Mark for template usage
-            property.vendorExtensions.put("x-is-multipart-file", true);
-            property.vendorExtensions.put("x-dart-import", "package:dio/dio.dart");
+            property.vendorExtensions.put(VENDOR_EXTENSION_IS_MULTIPART_FILE, true);
+            property.vendorExtensions.put(VENDOR_EXTENSION_DART_IMPORT, DART_IMPORT_DIO);
         }
         // else: non-multipart context - keep the default List<int> from typeMapping
 
@@ -654,11 +710,14 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     /**
      * Post-processes operations to apply context-aware type mapping for file parameters.
+     * Also ensures that parameters requiring special imports (like MultipartFile) have
+     * their imports properly tracked.
      *
      * For operations with multipart/form-data request bodies, this method changes
-     * binary parameters from List<int> to MultipartFile.
+     * binary parameters from List<int> to MultipartFile and adds the necessary imports.
      *
      * @param objs the operations map
+     * @param allModels all models for cross-referencing
      * @return the processed operations map
      */
     @Override
@@ -672,27 +731,44 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         for (CodegenOperation operation : ops) {
             // Check if this operation has multipart/form-data content
             boolean isMultipartOperation = operation.hasConsumes && operation.consumes != null &&
-                    operation.consumes.stream().anyMatch(consume ->
-                        "multipart/form-data".equals(consume.get("mediaType"))
-                    );
+                    operation.consumes.stream().anyMatch(consume -> {
+                        Object mediaType = consume.get(MEDIA_TYPE_KEY);
+                        return mediaType instanceof String && CONTENT_TYPE_MULTIPART_FORM_DATA.equals(mediaType);
+                    });
 
             if (isMultipartOperation) {
                 // Mark the operation
-                operation.vendorExtensions.put("x-is-multipart", true);
+                operation.vendorExtensions.put(VENDOR_EXTENSION_IS_MULTIPART, true);
+
+                // Add MultipartFile import for this operation
+                operation.imports.add(DART_IMPORT_DIO);
 
                 // Process all parameters to change binary types to MultipartFile
                 if (operation.allParams != null) {
                     for (CodegenParameter param : operation.allParams) {
                         // Check if this is a binary parameter (List<int> indicates binary)
-                        if (param.isBinary || "List<int>".equals(param.dataType)) {
+                        if (param.isBinary || DART_TYPE_LIST_INT.equals(param.dataType)) {
                             // Change to MultipartFile for multipart context
-                            param.dataType = "MultipartFile";
-                            param.datatypeWithEnum = "MultipartFile";
-                            param.baseType = "MultipartFile";
-                            param.vendorExtensions.put("x-is-multipart-file", true);
+                            param.dataType = DART_TYPE_MULTIPART_FILE;
+                            param.datatypeWithEnum = DART_TYPE_MULTIPART_FILE;
+                            param.baseType = DART_TYPE_MULTIPART_FILE;
+                            param.vendorExtensions.put(VENDOR_EXTENSION_IS_MULTIPART_FILE, true);
+                            param.vendorExtensions.put(VENDOR_EXTENSION_DART_IMPORT, DART_IMPORT_DIO);
 
                             // Update in all parameter lists
                             updateParameterInLists(operation, param);
+                        }
+                    }
+                }
+            }
+
+            // Scan all parameters for any that require special imports
+            if (operation.allParams != null) {
+                for (CodegenParameter param : operation.allParams) {
+                    if (param.vendorExtensions.containsKey(VENDOR_EXTENSION_DART_IMPORT)) {
+                        String dartImport = (String) param.vendorExtensions.get(VENDOR_EXTENSION_DART_IMPORT);
+                        if (dartImport != null && !dartImport.isEmpty()) {
+                            operation.imports.add(dartImport);
                         }
                     }
                 }
@@ -703,15 +779,23 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
-     * Helper method to update a parameter in all parameter lists of an operation.
+     * Helper method to update a parameter's type information across all parameter lists.
      *
-     * @param operation the operation
-     * @param param the parameter to update (by reference)
+     * OpenAPI Generator creates separate CodegenParameter instances for different
+     * parameter lists (allParams, bodyParams, formParams), even for the same logical parameter.
+     * This means updating a parameter in allParams doesn't automatically update the
+     * corresponding parameter in bodyParams or formParams.
+     *
+     * This method ensures consistency by finding parameters with matching names in all
+     * lists and synchronizing their type information (dataType, datatypeWithEnum, baseType).
+     *
+     * This is necessary when we transform parameter types based on context
+     * (e.g., List&lt;int&gt; → MultipartFile for multipart/form-data requests).
+     *
+     * @param operation the operation containing the parameter lists
+     * @param param the parameter with updated type information (used as the source)
      */
     private void updateParameterInLists(CodegenOperation operation, CodegenParameter param) {
-        // The parameter object is already updated by reference, but we need to ensure
-        // consistency across all lists (bodyParams, formParams, etc.)
-
         // Update in bodyParams if present
         if (operation.bodyParams != null) {
             for (CodegenParameter p : operation.bodyParams) {
