@@ -471,9 +471,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
-     * Preprocesses the OpenAPI specification to flatten allOf compositions.
+     * Preprocesses the OpenAPI specification to flatten allOf compositions and detect circular references.
      * This runs before model generation, allowing us to resolve and merge allOf schemas
-     * directly in the spec.
+     * directly in the spec and mark circular properties as nullable.
      *
      * @param openAPI the OpenAPI specification
      */
@@ -492,6 +492,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         Map<String, Schema> schemas = openAPI.getComponents().getSchemas();
         LOGGER.info("Found {} schemas to process", schemas.size());
 
+        // First pass: flatten allOf compositions
         for (Map.Entry<String, Schema> entry : schemas.entrySet()) {
             String schemaName = entry.getKey();
             Schema schema = entry.getValue();
@@ -505,11 +506,81 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                 LOGGER.info("Replaced schema {} with flattened version", schemaName);
             }
         }
+
+        // Second pass: detect and mark circular references
+        LOGGER.info("Detecting circular references");
+        for (Map.Entry<String, Schema> entry : schemas.entrySet()) {
+            String schemaName = entry.getKey();
+            Schema schema = entry.getValue();
+            detectCircularReferences(schemaName, schema, schemas, new HashSet<>());
+        }
+    }
+
+    /**
+     * Detects circular references in a schema by traversing the property graph.
+     * Marks properties involved in circular references as nullable.
+     *
+     * @param schemaName the current schema name
+     * @param schema the current schema
+     * @param allSchemas all available schemas for reference resolution
+     * @param visitedPath set of schema names in the current path (for cycle detection)
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void detectCircularReferences(String schemaName, Schema schema, Map<String, Schema> allSchemas, Set<String> visitedPath) {
+        if (schema == null || schema.getProperties() == null) {
+            return;
+        }
+
+        // Add current schema to path
+        visitedPath.add(schemaName);
+
+        Map<String, Schema> properties = (Map<String, Schema>) schema.getProperties();
+
+        for (Map.Entry<String, Schema> propEntry : properties.entrySet()) {
+            String propName = propEntry.getKey();
+            Schema propSchema = propEntry.getValue();
+
+            // Check if this property references another schema
+            String referencedSchemaName = null;
+
+            if (propSchema.get$ref() != null) {
+                // Direct reference
+                String ref = propSchema.get$ref();
+                referencedSchemaName = ref.substring(ref.lastIndexOf('/') + 1);
+            } else if ("array".equals(propSchema.getType()) && propSchema.getItems() != null && propSchema.getItems().get$ref() != null) {
+                // Array of references
+                String ref = propSchema.getItems().get$ref();
+                referencedSchemaName = ref.substring(ref.lastIndexOf('/') + 1);
+            }
+
+            if (referencedSchemaName != null) {
+                // Check if this creates a cycle
+                if (visitedPath.contains(referencedSchemaName)) {
+                    // Circular reference detected!
+                    LOGGER.info("Circular reference detected: {} -> {} (in property '{}')", schemaName, referencedSchemaName, propName);
+
+                    // Mark property as nullable
+                    propSchema.setNullable(true);
+                    LOGGER.info("Marked property '{}' in schema '{}' as nullable", propName, schemaName);
+                } else {
+                    // Continue traversal
+                    Schema referencedSchema = allSchemas.get(referencedSchemaName);
+                    if (referencedSchema != null) {
+                        // Create a new visited set for this branch (copy current path)
+                        Set<String> newPath = new HashSet<>(visitedPath);
+                        detectCircularReferences(referencedSchemaName, referencedSchema, allSchemas, newPath);
+                    }
+                }
+            }
+        }
     }
 
     /**
      * Composes an allOf schema during preprocessing by merging all properties.
      * This version works with the raw schema map during preprocessing.
+     *
+     * Handles nested composition: when allOf contains a reference to a oneOf/anyOf schema,
+     * creates a property typed as that schema instead of trying to merge properties.
      *
      * @param name the schema name
      * @param schema the schema with allOf
@@ -534,13 +605,14 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         LOGGER.info("allOf has {} schemas to merge", allOfSchemas.size());
         for (Schema allOfSchema : allOfSchemas) {
             Schema resolvedSchema = allOfSchema;
+            String referencedSchemaName = null;
 
             // Resolve $ref if present
             if (allOfSchema.get$ref() != null) {
                 // Extract schema name from $ref (e.g., "#/components/schemas/BaseEntity" -> "BaseEntity")
                 String ref = allOfSchema.get$ref();
-                String schemaName = ref.substring(ref.lastIndexOf('/') + 1);
-                resolvedSchema = allSchemas.get(schemaName);
+                referencedSchemaName = ref.substring(ref.lastIndexOf('/') + 1);
+                resolvedSchema = allSchemas.get(referencedSchemaName);
 
                 if (resolvedSchema == null) {
                     LOGGER.warn("Unable to resolve $ref: {} in allOf for schema: {}", ref, name);
@@ -548,7 +620,28 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                 }
             }
 
-            // Merge properties
+            // Check if this is a oneOf/anyOf composition schema (nested composition)
+            boolean isOneOfOrAnyOf = (resolvedSchema.getOneOf() != null && !resolvedSchema.getOneOf().isEmpty()) ||
+                                      (resolvedSchema.getAnyOf() != null && !resolvedSchema.getAnyOf().isEmpty());
+
+            if (isOneOfOrAnyOf && referencedSchemaName != null) {
+                // Nested composition: Create a property typed as the oneOf/anyOf sealed class
+                LOGGER.info("Detected nested composition: allOf contains oneOf/anyOf reference to '{}'", referencedSchemaName);
+
+                // Create a property with type = the referenced schema name
+                Schema propertySchema = new Schema();
+                propertySchema.set$ref("#/components/schemas/" + referencedSchemaName);
+
+                // Use camelCase schema name as property name
+                String propertyName = toCamelCase(referencedSchemaName);
+                mergedProperties.put(propertyName, propertySchema);
+                mergedRequired.add(propertyName);
+
+                LOGGER.info("Created property '{}' typed as '{}'", propertyName, referencedSchemaName);
+                continue;
+            }
+
+            // Regular object schema: Merge properties
             if (resolvedSchema.getProperties() != null) {
                 Map<String, Schema> properties = (Map<String, Schema>) resolvedSchema.getProperties();
                 for (Map.Entry<String, Schema> propEntry : properties.entrySet()) {

@@ -318,4 +318,167 @@ class DartAcdcGeneratorTest {
         String result = generator.sanitizePubName("My-API@2.0_Client!");
         assertEquals("my_api20_client", result);
     }
+
+    // ========================================
+    // Schema Composition Tests
+    // ========================================
+
+    @Test
+    @DisplayName("oneOf with primitives: should create wrapper classes")
+    void testOneOfWithPrimitives() {
+        // Create a oneOf schema with primitive alternatives
+        io.swagger.v3.oas.models.media.Schema stringSchema = new io.swagger.v3.oas.models.media.Schema();
+        stringSchema.setType("string");
+
+        io.swagger.v3.oas.models.media.Schema numberSchema = new io.swagger.v3.oas.models.media.Schema();
+        numberSchema.setType("number");
+
+        io.swagger.v3.oas.models.media.Schema compositeSchema = new io.swagger.v3.oas.models.media.Schema();
+        compositeSchema.setOneOf(java.util.Arrays.asList(stringSchema, numberSchema));
+
+        // Process through the generator
+        CodegenModel model = generator.fromModel("StringOrNumber", compositeSchema);
+
+        // Verify it's marked as oneOf
+        assertTrue((Boolean) model.vendorExtensions.getOrDefault("x-is-one-of", false),
+                "Model should be marked as oneOf composition");
+
+        // Verify alternatives are processed
+        @SuppressWarnings("unchecked")
+        java.util.List<java.util.Map<String, Object>> alternatives =
+                (java.util.List<java.util.Map<String, Object>>) model.vendorExtensions.get("x-one-of-alternatives");
+
+        assertNotNull(alternatives, "Should have oneOf alternatives");
+        assertEquals(2, alternatives.size(), "Should have 2 alternatives");
+
+        // First alternative should be a primitive wrapper for String
+        java.util.Map<String, Object> firstAlt = alternatives.get(0);
+        assertTrue((Boolean) firstAlt.getOrDefault("isPrimitive", false),
+                "First alternative should be primitive");
+        assertEquals("String", firstAlt.get("dartType"), "Should be String type");
+
+        // Second alternative should be a primitive wrapper for number
+        java.util.Map<String, Object> secondAlt = alternatives.get(1);
+        assertTrue((Boolean) secondAlt.getOrDefault("isPrimitive", false),
+                "Second alternative should be primitive");
+        assertEquals("double", secondAlt.get("dartType"), "Should be double type");
+    }
+
+    @Test
+    @DisplayName("oneOf without discriminator: should not have discriminator flag")
+    void testOneOfWithoutDiscriminator() {
+        io.swagger.v3.oas.models.media.Schema catSchema = new io.swagger.v3.oas.models.media.Schema();
+        catSchema.set$ref("#/components/schemas/Cat");
+
+        io.swagger.v3.oas.models.media.Schema dogSchema = new io.swagger.v3.oas.models.media.Schema();
+        dogSchema.set$ref("#/components/schemas/Dog");
+
+        io.swagger.v3.oas.models.media.Schema petSchema = new io.swagger.v3.oas.models.media.Schema();
+        petSchema.setOneOf(java.util.Arrays.asList(catSchema, dogSchema));
+
+        CodegenModel model = generator.fromModel("Pet", petSchema);
+
+        assertFalse((Boolean) model.vendorExtensions.getOrDefault("x-has-discriminator", true),
+                "Should not have discriminator");
+    }
+
+    @Test
+    @DisplayName("oneOf with discriminator: should have discriminator metadata")
+    void testOneOfWithDiscriminator() {
+        io.swagger.v3.oas.models.media.Schema catSchema = new io.swagger.v3.oas.models.media.Schema();
+        catSchema.set$ref("#/components/schemas/Cat");
+
+        io.swagger.v3.oas.models.media.Schema dogSchema = new io.swagger.v3.oas.models.media.Schema();
+        dogSchema.set$ref("#/components/schemas/Dog");
+
+        io.swagger.v3.oas.models.media.Schema petSchema = new io.swagger.v3.oas.models.media.Schema();
+        petSchema.setOneOf(java.util.Arrays.asList(catSchema, dogSchema));
+
+        // Add discriminator
+        io.swagger.v3.oas.models.media.Discriminator discriminator =
+                new io.swagger.v3.oas.models.media.Discriminator();
+        discriminator.setPropertyName("petType");
+        discriminator.setMapping(java.util.Map.of(
+                "cat", "#/components/schemas/Cat",
+                "dog", "#/components/schemas/Dog"
+        ));
+        petSchema.setDiscriminator(discriminator);
+
+        CodegenModel model = generator.fromModel("Pet", petSchema);
+
+        assertTrue((Boolean) model.vendorExtensions.getOrDefault("x-has-discriminator", false),
+                "Should have discriminator");
+        assertEquals("petType", model.vendorExtensions.get("x-discriminator-name"),
+                "Discriminator name should match");
+    }
+
+    @Test
+    @DisplayName("anyOf: should be handled like oneOf")
+    void testAnyOfComposition() {
+        io.swagger.v3.oas.models.media.Schema emailSchema = new io.swagger.v3.oas.models.media.Schema();
+        emailSchema.set$ref("#/components/schemas/EmailNotification");
+
+        io.swagger.v3.oas.models.media.Schema smsSchema = new io.swagger.v3.oas.models.media.Schema();
+        smsSchema.set$ref("#/components/schemas/SmsNotification");
+
+        io.swagger.v3.oas.models.media.Schema notificationSchema = new io.swagger.v3.oas.models.media.Schema();
+        notificationSchema.setAnyOf(java.util.Arrays.asList(emailSchema, smsSchema));
+
+        CodegenModel model = generator.fromModel("Notification", notificationSchema);
+
+        assertTrue((Boolean) model.vendorExtensions.getOrDefault("x-is-any-of", false),
+                "Model should be marked as anyOf composition");
+
+        @SuppressWarnings("unchecked")
+        java.util.List<java.util.Map<String, Object>> alternatives =
+                (java.util.List<java.util.Map<String, Object>>) model.vendorExtensions.get("x-any-of-alternatives");
+
+        assertNotNull(alternatives, "Should have anyOf alternatives");
+        assertEquals(2, alternatives.size(), "Should have 2 alternatives");
+    }
+
+    @Test
+    @DisplayName("Circular reference: should mark property as nullable")
+    void testCircularReferenceDetection() {
+        // Create a Node schema with circular reference
+        io.swagger.v3.oas.models.media.Schema valueSchema = new io.swagger.v3.oas.models.media.Schema();
+        valueSchema.setType("string");
+
+        io.swagger.v3.oas.models.media.Schema nodeRefSchema = new io.swagger.v3.oas.models.media.Schema();
+        nodeRefSchema.set$ref("#/components/schemas/Node");
+
+        io.swagger.v3.oas.models.media.Schema childrenSchema = new io.swagger.v3.oas.models.media.Schema();
+        childrenSchema.setType("array");
+        childrenSchema.setItems(nodeRefSchema);
+
+        io.swagger.v3.oas.models.media.Schema nodeSchema = new io.swagger.v3.oas.models.media.Schema();
+        nodeSchema.setType("object");
+        nodeSchema.setProperties(java.util.Map.of(
+                "value", valueSchema,
+                "children", childrenSchema
+        ));
+
+        // Create OpenAPI with the Node schema
+        io.swagger.v3.oas.models.OpenAPI openAPI = new io.swagger.v3.oas.models.OpenAPI();
+        io.swagger.v3.oas.models.Components components = new io.swagger.v3.oas.models.Components();
+        components.setSchemas(java.util.Map.of("Node", nodeSchema));
+        openAPI.setComponents(components);
+
+        // Preprocess the OpenAPI spec
+        generator.preprocessOpenAPI(openAPI);
+
+        // Verify that the children property was marked as nullable
+        io.swagger.v3.oas.models.media.Schema processedNodeSchema =
+                openAPI.getComponents().getSchemas().get("Node");
+
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, io.swagger.v3.oas.models.media.Schema> properties =
+                (java.util.Map<String, io.swagger.v3.oas.models.media.Schema>) processedNodeSchema.getProperties();
+
+        io.swagger.v3.oas.models.media.Schema childrenProperty = properties.get("children");
+
+        assertNotNull(childrenProperty, "Children property should exist");
+        assertTrue(childrenProperty.getNullable() != null && childrenProperty.getNullable(),
+                "Circular reference property should be marked as nullable");
+    }
 }
