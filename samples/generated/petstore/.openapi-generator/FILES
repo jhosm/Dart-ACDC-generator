@@ -9,8 +9,8 @@ lib/config/config.dart
 lib/config/log_config.dart
 lib/config/offline_config.dart
 lib/config/security_config.dart
-lib/models/Error.dart
-lib/models/NewPet.dart
-lib/models/Pet.dart
+lib/models/error.dart
+lib/models/new_pet.dart
+lib/models/pet.dart
 lib/remote_data_sources/PetsApi.dart
 pubspec.yaml

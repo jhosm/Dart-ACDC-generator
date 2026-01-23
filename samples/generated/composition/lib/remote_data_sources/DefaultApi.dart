@@ -1,2 +1,11 @@
-// TODO: Implement DefaultApiRemoteDataSource interface and implementation
-// This file will contain the API client methods for DefaultApi
+// DefaultApi - API client for DefaultApi
+//
+// AUTO-GENERATED FILE - DO NOT EDIT
+
+/// Get entities
+/// 
+Future<List> getEntities() async {
+  // TODO: Implement getEntities
+  // Parameters:
+}
+

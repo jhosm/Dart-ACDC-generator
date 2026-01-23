@@ -5,12 +5,15 @@ import org.openapitools.codegen.model.ModelsMap;
 import org.openapitools.codegen.model.ModelMap;
 import org.openapitools.codegen.model.OperationsMap;
 import org.openapitools.codegen.model.OperationMap;
+import org.openapitools.codegen.utils.ModelUtils;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.Operation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.regex.Pattern;
@@ -23,6 +26,8 @@ import java.util.regex.Pattern;
  * @see <a href="https://github.com/jhosm/Dart-ACDC">Dart-ACDC Library</a>
  */
 public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(DartAcdcGenerator.class);
 
     // Constants for content types
     private static final String CONTENT_TYPE_MULTIPART_FORM_DATA = "multipart/form-data";
@@ -466,9 +471,151 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
+     * Preprocesses the OpenAPI specification to flatten allOf compositions.
+     * This runs before model generation, allowing us to resolve and merge allOf schemas
+     * directly in the spec.
+     *
+     * @param openAPI the OpenAPI specification
+     */
+    @Override
+    public void preprocessOpenAPI(io.swagger.v3.oas.models.OpenAPI openAPI) {
+        super.preprocessOpenAPI(openAPI);
+
+        LOGGER.info("Preprocessing OpenAPI spec for allOf composition");
+
+        if (openAPI == null || openAPI.getComponents() == null || openAPI.getComponents().getSchemas() == null) {
+            LOGGER.info("No schemas to preprocess");
+            return;
+        }
+
+        // Process each schema in components/schemas
+        Map<String, Schema> schemas = openAPI.getComponents().getSchemas();
+        LOGGER.info("Found {} schemas to process", schemas.size());
+
+        for (Map.Entry<String, Schema> entry : schemas.entrySet()) {
+            String schemaName = entry.getKey();
+            Schema schema = entry.getValue();
+
+            // If this schema has allOf, flatten it
+            if (schema.getAllOf() != null && !schema.getAllOf().isEmpty()) {
+                LOGGER.info("Processing allOf for schema: {}", schemaName);
+                Schema flattenedSchema = composeAllOfSchemaPreprocess(schemaName, schema, schemas);
+                // Replace the schema with the flattened version
+                schemas.put(schemaName, flattenedSchema);
+                LOGGER.info("Replaced schema {} with flattened version", schemaName);
+            }
+        }
+    }
+
+    /**
+     * Composes an allOf schema during preprocessing by merging all properties.
+     * This version works with the raw schema map during preprocessing.
+     *
+     * @param name the schema name
+     * @param schema the schema with allOf
+     * @param allSchemas all available schemas for $ref resolution
+     * @return a new flattened schema
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private Schema composeAllOfSchemaPreprocess(String name, Schema schema, Map<String, Schema> allSchemas) {
+        if (schema.getAllOf() == null || schema.getAllOf().isEmpty()) {
+            return schema;
+        }
+
+        LOGGER.info("Composing allOf schema for: {}", name);
+
+        // Create a new schema to hold the composed result
+        Schema composedSchema = new Schema();
+        Map<String, Schema> mergedProperties = new LinkedHashMap<>();
+        Set<String> mergedRequired = new LinkedHashSet<>();
+
+        // Process each schema in the allOf array
+        List<Schema> allOfSchemas = (List<Schema>) schema.getAllOf();
+        LOGGER.info("allOf has {} schemas to merge", allOfSchemas.size());
+        for (Schema allOfSchema : allOfSchemas) {
+            Schema resolvedSchema = allOfSchema;
+
+            // Resolve $ref if present
+            if (allOfSchema.get$ref() != null) {
+                // Extract schema name from $ref (e.g., "#/components/schemas/BaseEntity" -> "BaseEntity")
+                String ref = allOfSchema.get$ref();
+                String schemaName = ref.substring(ref.lastIndexOf('/') + 1);
+                resolvedSchema = allSchemas.get(schemaName);
+
+                if (resolvedSchema == null) {
+                    LOGGER.warn("Unable to resolve $ref: {} in allOf for schema: {}", ref, name);
+                    continue;
+                }
+            }
+
+            // Merge properties
+            if (resolvedSchema.getProperties() != null) {
+                Map<String, Schema> properties = (Map<String, Schema>) resolvedSchema.getProperties();
+                for (Map.Entry<String, Schema> propEntry : properties.entrySet()) {
+                    String propName = propEntry.getKey();
+                    Schema propSchema = propEntry.getValue();
+
+                    // Check for property conflict
+                    if (mergedProperties.containsKey(propName)) {
+                        Schema existingSchema = mergedProperties.get(propName);
+                        String existingType = existingSchema.getType();
+                        String newType = propSchema.getType();
+
+                        if (!Objects.equals(existingType, newType)) {
+                            LOGGER.warn("Property conflict in allOf for schema '{}': property '{}' " +
+                                       "has different types ({} vs {}). Using last definition.",
+                                       name, propName, existingType, newType);
+                        }
+                    }
+
+                    // Last definition wins
+                    mergedProperties.put(propName, propSchema);
+                }
+            }
+
+            // Merge required arrays (union: property is required if ANY schema requires it)
+            if (resolvedSchema.getRequired() != null) {
+                mergedRequired.addAll(resolvedSchema.getRequired());
+            }
+        }
+
+        // Apply merged properties and required to the composed schema
+        if (!mergedProperties.isEmpty()) {
+            composedSchema.setProperties(mergedProperties);
+        }
+
+        if (!mergedRequired.isEmpty()) {
+            composedSchema.setRequired(new ArrayList<>(mergedRequired));
+        }
+
+        // Copy other relevant attributes from the original schema
+        if (schema.getType() != null) {
+            composedSchema.setType(schema.getType());
+        } else {
+            composedSchema.setType("object");
+        }
+
+        if (schema.getDescription() != null) {
+            composedSchema.setDescription(schema.getDescription());
+        }
+
+        if (schema.getTitle() != null) {
+            composedSchema.setTitle(schema.getTitle());
+        }
+
+        LOGGER.info("Composed allOf schema for '{}': {} properties, {} required",
+                    name, mergedProperties.size(), mergedRequired.size());
+
+        return composedSchema;
+    }
+
+    /**
      * Overrides fromModel to properly handle standalone enum schemas.
-     * Ensures that schemas with enum values are properly processed as enums
-     * with populated allowableValues and enumVars for template rendering.
+     * allOf composition is now handled in preprocessOpenAPI() which runs before model generation.
+     *
+     * For enum schemas:
+     * - Ensures that schemas with enum values are properly processed as enums
+     *   with populated allowableValues and enumVars for template rendering.
      *
      * @param name the model name
      * @param schema the schema
