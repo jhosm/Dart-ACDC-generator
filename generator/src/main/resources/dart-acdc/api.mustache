@@ -1,2 +1,18 @@
-// TODO: Implement {{classname}}RemoteDataSource interface and implementation
-// This file will contain the API client methods for {{classname}}
+// {{classname}} - API client for {{classname}}
+//
+// AUTO-GENERATED FILE - DO NOT EDIT
+
+{{#operations}}
+{{#operation}}
+/// {{summary}}
+/// {{notes}}
+Future<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}> {{operationId}}({{#allParams}}{{^-first}}, {{/-first}}{{{dataType}}} {{paramName}}{{/allParams}}) async {
+  // TODO: Implement {{operationId}}
+  // Parameters:
+  {{#allParams}}
+  //   - {{paramName}}: {{{dataType}}} {{#description}}// {{.}}{{/description}}
+  {{/allParams}}
+}
+
+{{/operation}}
+{{/operations}}

@@ -3,7 +3,14 @@ package org.openapitools.codegen.languages;
 import org.openapitools.codegen.*;
 import org.openapitools.codegen.model.ModelsMap;
 import org.openapitools.codegen.model.ModelMap;
+import org.openapitools.codegen.model.OperationsMap;
+import org.openapitools.codegen.model.OperationMap;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.media.Content;
+import io.swagger.v3.oas.models.media.MediaType;
+import io.swagger.v3.oas.models.parameters.RequestBody;
+import io.swagger.v3.oas.models.parameters.Parameter;
+import io.swagger.v3.oas.models.Operation;
 
 import java.util.*;
 import java.util.regex.Pattern;
@@ -16,6 +23,12 @@ import java.util.regex.Pattern;
  * @see <a href="https://github.com/jhosm/Dart-ACDC">Dart-ACDC Library</a>
  */
 public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
+
+    /**
+     * ThreadLocal to track whether we're currently processing a multipart/form-data request body.
+     * This allows context-aware type mapping for file/binary types.
+     */
+    private static final ThreadLocal<Boolean> IS_MULTIPART_CONTEXT = ThreadLocal.withInitial(() -> false);
 
     /**
      * Dart reserved keywords that require escaping.
@@ -105,7 +118,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         typeMapping.put("password", "String");
         typeMapping.put("binary", "List<int>");
         typeMapping.put("ByteArray", "List<int>");
-        typeMapping.put("file", "MultipartFile");
+        // Note: "file" type mapping is context-aware - see getTypeDeclaration()
+        // In multipart/form-data context: MultipartFile
+        // In non-multipart context: List<int>
         typeMapping.put("object", "Map<String, dynamic>");
         typeMapping.put("array", "List");
         typeMapping.put("map", "Map<String, dynamic>");
@@ -500,6 +515,224 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         }
 
         return enumVars;
+    }
+
+    /**
+     * Detects if the given content map contains multipart/form-data media type.
+     *
+     * @param content the content map from a request body
+     * @return true if multipart/form-data is present, false otherwise
+     */
+    private boolean isMultipartContent(Content content) {
+        if (content == null) {
+            return false;
+        }
+        return content.containsKey("multipart/form-data");
+    }
+
+    /**
+     * Overrides the base implementation to detect multipart/form-data context
+     * and set ThreadLocal context for property processing.
+     *
+     * @param name the parameter name
+     * @param requestBody the request body specification
+     * @param imports the imports set
+     * @param bodyParameterName the body parameter name
+     * @return the CodegenParameter with multipart context information
+     */
+    @Override
+    public CodegenParameter fromRequestBody(RequestBody requestBody, Set<String> imports, String bodyParameterName) {
+        try {
+            // Detect if this is a multipart/form-data request BEFORE calling super
+            if (requestBody != null) {
+                Content content = requestBody.getContent();
+                boolean isMultipart = isMultipartContent(content);
+
+                if (isMultipart) {
+                    // Set ThreadLocal context for property processing
+                    IS_MULTIPART_CONTEXT.set(true);
+                }
+            }
+
+            CodegenParameter parameter = super.fromRequestBody(requestBody, imports, bodyParameterName);
+
+            if (parameter == null) {
+                return parameter;
+            }
+
+            // Mark the parameter with multipart context information
+            if (IS_MULTIPART_CONTEXT.get()) {
+                parameter.vendorExtensions.put("x-is-multipart-context", true);
+
+                // If this parameter itself is a file/binary type, mark it specifically
+                if (parameter.isBinary || "file".equals(parameter.baseType)) {
+                    parameter.vendorExtensions.put("x-is-multipart-file", true);
+                }
+            }
+
+            return parameter;
+        } finally {
+            // Always clear ThreadLocal after processing to avoid memory leaks
+            IS_MULTIPART_CONTEXT.remove();
+        }
+    }
+
+    /**
+     * Overrides type declaration to provide context-aware mapping for file/binary types.
+     *
+     * In multipart/form-data context: binary/file → MultipartFile
+     * In non-multipart context: binary/file → List<int>
+     *
+     * @param schema the schema
+     * @return the Dart type declaration
+     */
+    @Override
+    public String getTypeDeclaration(Schema schema) {
+        if (schema == null) {
+            return super.getTypeDeclaration(schema);
+        }
+
+        // Check if this is a binary/file type
+        String format = schema.getFormat();
+        String type = schema.getType();
+
+        boolean isBinary = "string".equals(type) && "binary".equals(format);
+
+        if (isBinary) {
+            // For binary types, we need to check the context
+            // However, at this point we don't have access to the parameter context
+            // So we'll use the default mapping (List<int>) here
+            // The multipart-specific mapping will be handled in fromProperty
+            return "List<int>";
+        }
+
+        return super.getTypeDeclaration(schema);
+    }
+
+    /**
+     * Overrides fromProperty to apply context-aware type mapping for binary/file properties.
+     *
+     * Checks the ThreadLocal context to determine if we're in a multipart/form-data request,
+     * and maps binary/file types accordingly:
+     * - Multipart context: type=string,format=binary → MultipartFile
+     * - Non-multipart context: type=string,format=binary → List<int>
+     *
+     * @param name the property name
+     * @param schema the property schema
+     * @param required whether the property is required
+     * @param schemaIsFromAdditionalProperties whether this schema comes from additionalProperties
+     * @return the CodegenProperty with correct type based on context
+     */
+    @Override
+    public CodegenProperty fromProperty(String name, Schema schema, boolean required, boolean schemaIsFromAdditionalProperties) {
+        CodegenProperty property = super.fromProperty(name, schema, required, schemaIsFromAdditionalProperties);
+
+        if (property == null || schema == null) {
+            return property;
+        }
+
+        // Check if this is a binary type (type=string, format=binary)
+        String format = schema.getFormat();
+        String type = schema.getType();
+        boolean isBinary = "string".equals(type) && "binary".equals(format);
+
+        if (isBinary && IS_MULTIPART_CONTEXT.get()) {
+            // We're in multipart/form-data context - use MultipartFile
+            property.dataType = "MultipartFile";
+            property.datatypeWithEnum = "MultipartFile";
+            property.baseType = "MultipartFile";
+            property.isBinary = true;
+
+            // Mark for template usage
+            property.vendorExtensions.put("x-is-multipart-file", true);
+            property.vendorExtensions.put("x-dart-import", "package:dio/dio.dart");
+        }
+        // else: non-multipart context - keep the default List<int> from typeMapping
+
+        return property;
+    }
+
+    /**
+     * Post-processes operations to apply context-aware type mapping for file parameters.
+     *
+     * For operations with multipart/form-data request bodies, this method changes
+     * binary parameters from List<int> to MultipartFile.
+     *
+     * @param objs the operations map
+     * @return the processed operations map
+     */
+    @Override
+    public OperationsMap postProcessOperationsWithModels(OperationsMap objs, List<ModelMap> allModels) {
+        OperationsMap result = super.postProcessOperationsWithModels(objs, allModels);
+
+        // Get the operations list
+        OperationMap operations = result.getOperations();
+        List<CodegenOperation> ops = operations.getOperation();
+
+        for (CodegenOperation operation : ops) {
+            // Check if this operation has multipart/form-data content
+            boolean isMultipartOperation = operation.hasConsumes && operation.consumes != null &&
+                    operation.consumes.stream().anyMatch(consume ->
+                        "multipart/form-data".equals(consume.get("mediaType"))
+                    );
+
+            if (isMultipartOperation) {
+                // Mark the operation
+                operation.vendorExtensions.put("x-is-multipart", true);
+
+                // Process all parameters to change binary types to MultipartFile
+                if (operation.allParams != null) {
+                    for (CodegenParameter param : operation.allParams) {
+                        // Check if this is a binary parameter (List<int> indicates binary)
+                        if (param.isBinary || "List<int>".equals(param.dataType)) {
+                            // Change to MultipartFile for multipart context
+                            param.dataType = "MultipartFile";
+                            param.datatypeWithEnum = "MultipartFile";
+                            param.baseType = "MultipartFile";
+                            param.vendorExtensions.put("x-is-multipart-file", true);
+
+                            // Update in all parameter lists
+                            updateParameterInLists(operation, param);
+                        }
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Helper method to update a parameter in all parameter lists of an operation.
+     *
+     * @param operation the operation
+     * @param param the parameter to update (by reference)
+     */
+    private void updateParameterInLists(CodegenOperation operation, CodegenParameter param) {
+        // The parameter object is already updated by reference, but we need to ensure
+        // consistency across all lists (bodyParams, formParams, etc.)
+
+        // Update in bodyParams if present
+        if (operation.bodyParams != null) {
+            for (CodegenParameter p : operation.bodyParams) {
+                if (p.paramName.equals(param.paramName)) {
+                    p.dataType = param.dataType;
+                    p.datatypeWithEnum = param.datatypeWithEnum;
+                    p.baseType = param.baseType;
+                }
+            }
+        }
+
+        // Update in formParams if present
+        if (operation.formParams != null) {
+            for (CodegenParameter p : operation.formParams) {
+                if (p.paramName.equals(param.paramName)) {
+                    p.dataType = param.dataType;
+                    p.datatypeWithEnum = param.datatypeWithEnum;
+                    p.baseType = param.baseType;
+                }
+            }
+        }
     }
 
 }

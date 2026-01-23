@@ -1,0 +1,7 @@
+generatorName: dart-acdc
+outputDir: samples/generated/file-upload-test
+inputSpec: samples/file-upload-test.yaml
+additionalProperties:
+  pubName: file_upload_test
+  pubVersion: 1.0.0
+  pubDescription: "File Upload Test API client"

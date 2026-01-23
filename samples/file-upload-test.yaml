@@ -1,0 +1,152 @@
+openapi: 3.0.3
+info:
+  title: File Upload Test API
+  version: 1.0.0
+  description: API for testing file upload type mapping (multipart vs non-multipart contexts)
+servers:
+  - url: https://api.example.com/v1
+paths:
+  /upload/avatar:
+    post:
+      summary: Upload user avatar (multipart/form-data)
+      operationId: uploadAvatar
+      tags:
+        - uploads
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The avatar image file
+                description:
+                  type: string
+                  description: Optional description
+      responses:
+        '200':
+          description: Avatar uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+
+  /upload/document:
+    post:
+      summary: Upload document with metadata (multipart/form-data)
+      operationId: uploadDocument
+      tags:
+        - uploads
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - document
+                - title
+              properties:
+                document:
+                  type: string
+                  format: binary
+                  description: The document file
+                title:
+                  type: string
+                  description: Document title
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  description: Document tags
+      responses:
+        '201':
+          description: Document uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+
+  /download/file/{fileId}:
+    get:
+      summary: Download file (non-multipart binary response)
+      operationId: downloadFile
+      tags:
+        - downloads
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+
+  /upload/raw:
+    post:
+      summary: Upload raw binary data (non-multipart)
+      operationId: uploadRawBinary
+      tags:
+        - uploads
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: Binary data uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+
+components:
+  schemas:
+    UploadResponse:
+      type: object
+      required:
+        - id
+        - url
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+        size:
+          type: integer
+          format: int64
+
+    DocumentResponse:
+      type: object
+      required:
+        - id
+        - title
+        - url
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        url:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        uploadedAt:
+          type: string
+          format: date-time
