@@ -33,7 +33,7 @@ A step-by-step guide for generating production-ready Dart API clients from OpenA
 
 Before you begin, ensure you have:
 
-- **Java 11+** installed (required to run OpenAPI Generator)
+- **Java 21+** installed (required to run OpenAPI Generator)
 - **Dart SDK 3.0+** or **Flutter 3.10+**
 - An **OpenAPI specification** file (YAML or JSON) for your API
 

@@ -181,7 +181,7 @@ object → Map<String, dynamic>
 
 ## Development Prerequisites
 
-- Java Development Kit (JDK) 11+
+- Java Development Kit (JDK) 21+
 - Maven 3.8+ (for building the generator)
 - Git
 - Dart SDK 3.0+ (for testing generated code)
