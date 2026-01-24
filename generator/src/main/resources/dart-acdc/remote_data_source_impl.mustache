@@ -36,7 +36,7 @@ class {{classname}}RemoteDataSourceImpl implements {{classname}}RemoteDataSource
 {{/headerParams}}
 
 {{/hasHeaderParams}}
-      final response = await _dio.{{#isGet}}get{{/isGet}}{{#isPost}}post{{/isPost}}{{#isPut}}put{{/isPut}}{{#isDelete}}delete{{/isDelete}}{{#isPatch}}patch{{/isPatch}}(
+      final response = await _dio.{{httpMethod}}(
         '{{path}}'{{#pathParams}}.replaceAll('{' + '{{baseName}}' + '}', {{paramName}}.toString()){{/pathParams}},
 {{#hasQueryParams}}
         queryParameters: queryParameters,

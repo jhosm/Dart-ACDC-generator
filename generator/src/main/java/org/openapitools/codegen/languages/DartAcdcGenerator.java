@@ -1360,6 +1360,11 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         List<CodegenOperation> ops = operations.getOperation();
 
         for (CodegenOperation operation : ops) {
+            // Convert HTTP method to lowercase for Dio method calls (GET -> get, POST -> post, etc.)
+            if (operation.httpMethod != null) {
+                operation.httpMethod = operation.httpMethod.toLowerCase();
+            }
+
             // Check if this operation has multipart/form-data content
             boolean isMultipartOperation = operation.hasConsumes && operation.consumes != null &&
                     operation.consumes.stream().anyMatch(consume -> {
