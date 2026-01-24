@@ -2,17 +2,17 @@
 ///
 /// Generated from OpenAPI oneOf schema.
 /// Represents a value that can be one of several alternatives.
-sealed class Payment {
+abstract class Payment {
   /// Creates an instance from JSON by trying each alternative.
   /// Uses the first alternative that successfully deserializes.
   factory Payment.fromJson(dynamic json) {
-    // Try PaymentCreditCardPayment
+    // Try CreditCardPayment
     try {
-      return PaymentCreditCardPayment.fromJson(json);
+      return CreditCardPayment.fromJson(json);
     } catch (_) {}
-    // Try PaymentBankTransferPayment
+    // Try BankTransferPayment
     try {
-      return PaymentBankTransferPayment.fromJson(json);
+      return BankTransferPayment.fromJson(json);
     } catch (_) {}
     throw FormatException('No matching oneOf alternative for Payment');
   }
@@ -20,7 +20,7 @@ sealed class Payment {
   Map<String, dynamic> toJson();
 }
 
-// Subclass PaymentCreditCardPayment is defined in package:composition_client/models/credit_card_payment.dart
+// Subclass CreditCardPayment is defined in package:composition_client/models/credit_card_payment.dart
 // It should extend Payment
-// Subclass PaymentBankTransferPayment is defined in package:composition_client/models/bank_transfer_payment.dart
+// Subclass BankTransferPayment is defined in package:composition_client/models/bank_transfer_payment.dart
 // It should extend Payment

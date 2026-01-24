@@ -80,6 +80,12 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     private static final ThreadLocal<Boolean> IS_MULTIPART_CONTEXT = ThreadLocal.withInitial(() -> false);
 
     /**
+     * Map to track which schemas should extend sealed classes.
+     * Key: schema name (e.g., "Dog"), Value: parent sealed class name (e.g., "Animal")
+     */
+    private final Map<String, String> sealedClassExtensions = new HashMap<>();
+
+    /**
      * Dart reserved keywords that require escaping.
      * These cannot be used as identifiers in Dart code.
      */
@@ -849,6 +855,16 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             processAnyOfComposition(name, schema, model);
         }
 
+        // Check if this model should extend a sealed class
+        String parentSealedClass = sealedClassExtensions.get(model.classname);
+        if (parentSealedClass != null) {
+            model.parent = parentSealedClass;
+            model.vendorExtensions.put("x-extends-sealed-class", true);
+            model.vendorExtensions.put("x-sealed-parent", parentSealedClass);
+            model.vendorExtensions.put("x-sealed-parent-filename", toModelFilename(parentSealedClass));
+            LOGGER.info("Model {} will extend sealed class {}", model.classname, parentSealedClass);
+        }
+
         return model;
     }
 
@@ -872,6 +888,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         // Process oneOf alternatives
         List<Schema> oneOfSchemas = (List<Schema>) schema.getOneOf();
         List<Map<String, Object>> alternatives = processCompositionAlternatives(name, oneOfSchemas, "oneOf");
+
+        // Track which schemas should extend this sealed class
+        registerSealedClassExtensions(name, oneOfSchemas);
 
         model.vendorExtensions.put("x-one-of-alternatives", alternatives);
         LOGGER.info("Processed oneOf for '{}': {} alternatives", name, alternatives.size());
@@ -898,6 +917,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         // Process anyOf alternatives (same as oneOf)
         List<Schema> anyOfSchemas = (List<Schema>) schema.getAnyOf();
         List<Map<String, Object>> alternatives = processCompositionAlternatives(name, anyOfSchemas, "anyOf");
+
+        // Track which schemas should extend this sealed class
+        registerSealedClassExtensions(name, anyOfSchemas);
 
         model.vendorExtensions.put("x-any-of-alternatives", alternatives);
         LOGGER.info("Processed anyOf for '{}': {} alternatives", name, alternatives.size());
@@ -941,7 +963,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
                 // Extract schema name from $ref (e.g., "#/components/schemas/Dog" -> "Dog")
                 String schemaName = extractSchemaNameFromRef(schemaRef);
-                String subclassName = toModelName(name + capitalize(schemaName));
+                // Use the actual schema name as the subclass name (e.g., "Dog", not "AnimalDog")
+                String subclassName = toModelName(schemaName);
 
                 Map<String, Object> mappingEntry = new HashMap<>();
                 mappingEntry.put("mappingKey", mappingKey);
@@ -999,7 +1022,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             // Reference to another schema
             String ref = schema.get$ref();
             String schemaName = extractSchemaNameFromRef(ref);
-            String subclassName = toModelName(parentName + capitalize(schemaName));
+            // Use the actual schema name as the subclass name (e.g., "Dog", not "AnimalDog")
+            String subclassName = toModelName(schemaName);
 
             alternative.put("isRef", true);
             alternative.put("schemaName", schemaName);
@@ -1033,6 +1057,26 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         }
 
         return alternative;
+    }
+
+    /**
+     * Registers schemas referenced in oneOf/anyOf to extend the parent sealed class.
+     *
+     * @param parentName the parent sealed class name
+     * @param schemas the list of referenced schemas
+     */
+    @SuppressWarnings("rawtypes")
+    private void registerSealedClassExtensions(String parentName, List<Schema> schemas) {
+        for (Schema schema : schemas) {
+            if (schema.get$ref() != null) {
+                // Only register for references (not inline primitives or objects)
+                String ref = schema.get$ref();
+                String childSchemaName = extractSchemaNameFromRef(ref);
+                String childModelName = toModelName(childSchemaName);
+                sealedClassExtensions.put(childModelName, parentName);
+                LOGGER.info("Registered {} to extend sealed class {}", childModelName, parentName);
+            }
+        }
     }
 
     /**

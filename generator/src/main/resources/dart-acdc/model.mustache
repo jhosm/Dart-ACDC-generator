@@ -5,6 +5,9 @@
 {{^vendorExtensions.x-is-any-of}}
 // AUTO-GENERATED FILE - DO NOT EDIT
 import 'package:json_annotation/json_annotation.dart';
+{{#vendorExtensions.x-extends-sealed-class}}
+import '{{vendorExtensions.x-sealed-parent-filename}}.dart';
+{{/vendorExtensions.x-extends-sealed-class}}
 
 part '{{classFilename}}.g.dart';
 
@@ -31,7 +34,7 @@ enum {{classname}} {
 ///
 /// Generated from OpenAPI oneOf schema.
 /// Represents a value that can be one of several alternatives.
-sealed class {{classname}} {
+abstract class {{classname}} {
 {{#x-has-discriminator}}
   /// Creates an instance from JSON using the discriminator property.
   factory {{classname}}.fromJson(Map<String, dynamic> json) {
@@ -98,7 +101,7 @@ class {{subclassName}} extends {{parentClassName}} {
 /// Represents a value that can match any of several alternatives.
 /// Note: At runtime, Dart cannot distinguish between oneOf and anyOf semantics.
 /// The first matching alternative will be used during deserialization.
-sealed class {{classname}} {
+abstract class {{classname}} {
   /// Creates an instance from JSON by trying each alternative.
   /// Uses the first alternative that successfully deserializes.
   factory {{classname}}.fromJson(dynamic json) {
@@ -153,7 +156,7 @@ class {{subclassName}} extends {{parentClassName}} {
 ///
 /// Generated from OpenAPI schema.
 @JsonSerializable()
-class {{classname}} {
+class {{classname}}{{#vendorExtensions.x-extends-sealed-class}} extends {{vendorExtensions.x-sealed-parent}}{{/vendorExtensions.x-extends-sealed-class}} {
 {{#vars}}
 {{#description}}
   /// {{{description}}}
@@ -175,6 +178,9 @@ class {{classname}} {
 
   factory {{classname}}.fromJson(Map<String, dynamic> json) => _${{classname}}FromJson(json);
 
+{{#vendorExtensions.x-extends-sealed-class}}
+  @override
+{{/vendorExtensions.x-extends-sealed-class}}
   Map<String, dynamic> toJson() => _${{classname}}ToJson(this);
 }
 {{/x-is-any-of}}

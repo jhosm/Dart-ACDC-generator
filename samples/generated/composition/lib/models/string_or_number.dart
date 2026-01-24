@@ -2,7 +2,7 @@
 ///
 /// Generated from OpenAPI oneOf schema.
 /// Represents a value that can be one of several alternatives.
-sealed class StringOrNumber {
+abstract class StringOrNumber {
   /// Creates an instance from JSON by trying each alternative.
   /// Uses the first alternative that successfully deserializes.
   factory StringOrNumber.fromJson(dynamic json) {

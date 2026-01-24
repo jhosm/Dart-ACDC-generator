@@ -1,4 +1,5 @@
 .gitignore
+.openapi-generator-ignore
 README.md
 analysis_options.yaml
 lib/api_client.dart
@@ -17,6 +18,7 @@ lib/models/credit_card_payment.dart
 lib/models/dog.dart
 lib/models/email_notification.dart
 lib/models/entity.dart
+lib/models/models.dart
 lib/models/node.dart
 lib/models/notification.dart
 lib/models/payment.dart
@@ -24,5 +26,8 @@ lib/models/sms_notification.dart
 lib/models/string_or_number.dart
 lib/models/timestamped.dart
 lib/models/verified_animal.dart
-lib/remote_data_sources/DefaultApi.dart
+lib/remote_data_sources/DefaultApi_remote_data_source.dart
+lib/remote_data_sources/DefaultApi_remote_data_source_impl.dart
+lib/remote_data_sources/remote_data_sources.dart
+lib/{{pubName}}.dart
 pubspec.yaml
