@@ -112,7 +112,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         // Basic configuration
         outputFolder = "generated-code/dart-acdc";
         modelTemplateFiles.put("model.mustache", ".dart");
-        apiTemplateFiles.put("api.mustache", ".dart");
+        apiTemplateFiles.put("remote_data_source.mustache", "_remote_data_source.dart");
+        apiTemplateFiles.put("remote_data_source_impl.mustache", "_remote_data_source_impl.dart");
         embeddedTemplateDir = templateDir = "dart-acdc";
 
         // Enable enum generation as separate models
@@ -128,6 +129,11 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         supportingFiles.add(new SupportingFile("analysis_options.mustache", "", "analysis_options.yaml"));
         supportingFiles.add(new SupportingFile("gitignore.mustache", "", ".gitignore"));
         supportingFiles.add(new SupportingFile("api_client.mustache", "lib", "api_client.dart"));
+
+        // Barrel export files
+        supportingFiles.add(new SupportingFile("models.mustache", "lib/models", "models.dart"));
+        supportingFiles.add(new SupportingFile("remote_data_sources.mustache", "lib/remote_data_sources", "remote_data_sources.dart"));
+        supportingFiles.add(new SupportingFile("library.mustache", "lib", "{{pubName}}.dart"));
 
         // Config supporting files
         supportingFiles.add(new SupportingFile("config.mustache", "lib/config", "config.dart"));

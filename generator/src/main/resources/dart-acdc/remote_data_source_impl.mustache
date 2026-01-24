@@ -1,0 +1,85 @@
+// AUTO-GENERATED FILE - DO NOT EDIT
+import 'package:dio/dio.dart';
+import 'package:dart_acdc/dart_acdc.dart';
+{{#imports}}
+import '{{.}}';
+{{/imports}}
+
+{{#operations}}
+/// Implementation of [{{classname}}RemoteDataSource] using Dio
+class {{classname}}RemoteDataSourceImpl implements {{classname}}RemoteDataSource {
+  final Dio _dio;
+
+  {{classname}}RemoteDataSourceImpl(this._dio);
+
+{{#operation}}
+  @override
+  Future<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/returnType}}> {{operationId}}({{#allParams}}{{^-first}}, {{/-first}}{{#isPathParam}}{{{dataType}}} {{paramName}}{{/isPathParam}}{{#isBodyParam}}{{{dataType}}} {{paramName}}{{/isBodyParam}}{{#isQueryParam}}{{#required}}{required {{{dataType}}} {{paramName}}}{{/required}}{{^required}}{{{dataType}}}? {{paramName}}{{/required}}{{/isQueryParam}}{{#isHeaderParam}}{{#required}}{required {{{dataType}}} {{paramName}}}{{/required}}{{^required}}{{{dataType}}}? {{paramName}}{{/required}}{{/isHeaderParam}}{{/allParams}}) async {
+    try {
+{{#hasQueryParams}}
+      // Build query parameters, filtering out nulls
+      final queryParameters = <String, dynamic>{};
+{{#queryParams}}
+      if ({{paramName}} != null) {
+        queryParameters['{{baseName}}'] = {{paramName}};
+      }
+{{/queryParams}}
+
+{{/hasQueryParams}}
+{{#hasHeaderParams}}
+      // Build header parameters
+      final headers = <String, dynamic>{};
+{{#headerParams}}
+      if ({{paramName}} != null) {
+        headers['{{baseName}}'] = {{paramName}};
+      }
+{{/headerParams}}
+
+{{/hasHeaderParams}}
+      final response = await _dio.{{#isGet}}get{{/isGet}}{{#isPost}}post{{/isPost}}{{#isPut}}put{{/isPut}}{{#isDelete}}delete{{/isDelete}}{{#isPatch}}patch{{/isPatch}}(
+        '{{path}}'{{#pathParams}}.replaceAll('{' + '{{baseName}}' + '}', {{paramName}}.toString()){{/pathParams}},
+{{#hasQueryParams}}
+        queryParameters: queryParameters,
+{{/hasQueryParams}}
+{{#hasBodyParam}}
+{{#bodyParam}}
+        data: {{paramName}}.toJson(),
+{{/bodyParam}}
+{{/hasBodyParam}}
+{{#hasHeaderParams}}
+        options: Options(headers: headers),
+{{/hasHeaderParams}}
+      );
+
+{{#returnType}}
+{{#isListContainer}}
+      // Handle List response
+      if (response.data is List) {
+        return (response.data as List)
+            .map((item) => {{{returnBaseType}}}.fromJson(item as Map<String, dynamic>))
+            .toList();
+      }
+      throw AcdcClientException('Expected List response but got: ${response.data.runtimeType}');
+{{/isListContainer}}
+{{^isListContainer}}
+{{#returnTypeIsPrimitive}}
+      // Handle primitive response
+      return response.data as {{{returnType}}};
+{{/returnTypeIsPrimitive}}
+{{^returnTypeIsPrimitive}}
+      // Handle single object response
+      return {{{returnType}}}.fromJson(response.data as Map<String, dynamic>);
+{{/returnTypeIsPrimitive}}
+{{/isListContainer}}
+{{/returnType}}
+{{^returnType}}
+      // Void return type - no deserialization needed
+{{/returnType}}
+    } on DioException catch (e) {
+      throw AcdcException.fromDioException(e);
+    }
+  }
+
+{{/operation}}
+}
+{{/operations}}

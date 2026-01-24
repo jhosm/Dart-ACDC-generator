@@ -1,0 +1,29 @@
+// AUTO-GENERATED FILE - DO NOT EDIT
+{{#operations}}
+{{#description}}
+/// {{{description}}}
+{{/description}}
+{{^description}}
+/// Remote data source for {{classname}}
+{{/description}}
+///
+/// All methods may throw the following exceptions:
+/// - [AcdcAuthException] - Authentication/authorization failures
+/// - [AcdcNetworkException] - Network connectivity issues
+/// - [AcdcServerException] - Server errors (5xx responses)
+/// - [AcdcClientException] - Client errors (4xx responses)
+/// - [AcdcSecurityException] - Certificate pinning or security violations
+abstract class {{classname}}RemoteDataSource {
+{{#operation}}
+{{#summary}}
+  /// {{{summary}}}
+{{/summary}}
+{{#notes}}
+  ///
+  /// {{{notes}}}
+{{/notes}}
+  Future<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/returnType}}> {{operationId}}({{#allParams}}{{^-first}}, {{/-first}}{{#isPathParam}}{{{dataType}}} {{paramName}}{{/isPathParam}}{{#isBodyParam}}{{{dataType}}} {{paramName}}{{/isBodyParam}}{{#isQueryParam}}{{#required}}{required {{{dataType}}} {{paramName}}}{{/required}}{{^required}}{{{dataType}}}? {{paramName}}{{/required}}{{/isQueryParam}}{{#isHeaderParam}}{{#required}}{required {{{dataType}}} {{paramName}}}{{/required}}{{^required}}{{{dataType}}}? {{paramName}}{{/required}}{{/isHeaderParam}}{{/allParams}});
+
+{{/operation}}
+}
+{{/operations}}

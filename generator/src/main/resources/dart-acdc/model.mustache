@@ -1,5 +1,16 @@
 {{#models}}
 {{#model}}
+{{^isEnum}}
+{{^vendorExtensions.x-is-one-of}}
+{{^vendorExtensions.x-is-any-of}}
+// AUTO-GENERATED FILE - DO NOT EDIT
+import 'package:json_annotation/json_annotation.dart';
+
+part '{{classFilename}}.g.dart';
+
+{{/vendorExtensions.x-is-any-of}}
+{{/vendorExtensions.x-is-one-of}}
+{{/isEnum}}
 {{#isEnum}}
 /// Enum {{classname}}
 ///
@@ -133,8 +144,39 @@ class {{subclassName}} extends {{parentClassName}} {
 {{/x-is-any-of}}
 {{^x-is-one-of}}
 {{^x-is-any-of}}
-// TODO: Implement {{classname}} model with json_serializable
-// This file will contain the data model for {{classname}}
+{{#description}}
+/// {{{description}}}
+{{/description}}
+{{^description}}
+/// {{classname}} model
+{{/description}}
+///
+/// Generated from OpenAPI schema.
+@JsonSerializable()
+class {{classname}} {
+{{#vars}}
+{{#description}}
+  /// {{{description}}}
+{{/description}}
+  @JsonKey(name: '{{baseName}}')
+  final {{dataType}}{{^required}}?{{/required}} {{name}};
+{{/vars}}
+
+  {{classname}}({
+{{#vars}}
+{{#required}}
+    required this.{{name}},
+{{/required}}
+{{^required}}
+    this.{{name}},
+{{/required}}
+{{/vars}}
+  });
+
+  factory {{classname}}.fromJson(Map<String, dynamic> json) => _${{classname}}FromJson(json);
+
+  Map<String, dynamic> toJson() => _${{classname}}ToJson(this);
+}
 {{/x-is-any-of}}
 {{/x-is-one-of}}
 {{/vendorExtensions}}
