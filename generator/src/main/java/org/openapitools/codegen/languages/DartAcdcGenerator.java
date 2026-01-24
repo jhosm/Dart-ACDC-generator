@@ -1137,6 +1137,35 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         for (ModelMap modelMap : result.getModels()) {
             CodegenModel model = modelMap.getModel();
 
+            // Fix model imports: convert from simple model names to proper import paths
+            if (model.imports != null && !model.imports.isEmpty()) {
+                Set<String> fixedImports = new HashSet<>();
+                for (Object importObj : model.imports) {
+                    if (importObj instanceof String) {
+                        String importStr = (String) importObj;
+                        // Check if this is already a full path (starts with package:)
+                        if (importStr.startsWith("package:")) {
+                            fixedImports.add(importStr);
+                        } else {
+                            // Convert model name to import path
+                            String importPath = toModelImport(importStr);
+                            if (importPath != null && !importPath.isEmpty()) {
+                                fixedImports.add(importPath);
+                            }
+                        }
+                    } else if (importObj instanceof Map) {
+                        // Similar to operations fix - extract import path from map
+                        Map<?, ?> importMap = (Map<?, ?>) importObj;
+                        Object importPath = importMap.get("import");
+                        if (importPath != null) {
+                            fixedImports.add(importPath.toString());
+                        }
+                    }
+                }
+                model.imports.clear();
+                model.imports.addAll(fixedImports);
+            }
+
             if (model.isEnum && model.allowableValues != null) {
                 @SuppressWarnings("unchecked")
                 List<Object> values = (List<Object>) model.allowableValues.get("values");
@@ -1158,6 +1187,15 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                         String dartImport = (String) prop.vendorExtensions.get(VENDOR_EXTENSION_DART_IMPORT);
                         if (dartImport != null && !dartImport.isEmpty()) {
                             model.imports.add(dartImport);
+                        }
+                    }
+
+                    // Add imports for oneOf/anyOf composition properties
+                    if (prop.vendorExtensions.containsKey("x-is-composition-property")) {
+                        // The property's complexType contains the model name that needs to be imported
+                        String importPath = toModelImport(prop.complexType);
+                        if (importPath != null && !importPath.isEmpty()) {
+                            model.imports.add(importPath);
                         }
                     }
                 }
@@ -1335,6 +1373,25 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             property.vendorExtensions.put(VENDOR_EXTENSION_DART_IMPORT, DART_IMPORT_DIO);
         }
         // else: non-multipart context - keep the default List<int> from typeMapping
+
+        // Check if this property references a oneOf/anyOf/allOf composition
+        // These need custom JSON converters since they're abstract/sealed classes
+        if (schema.getOneOf() != null && !schema.getOneOf().isEmpty()) {
+            property.vendorExtensions.put("x-is-one-of-property", true);
+        } else if (schema.getAnyOf() != null && !schema.getAnyOf().isEmpty()) {
+            property.vendorExtensions.put("x-is-any-of-property", true);
+        } else if (schema.get$ref() != null) {
+            // Check if this $ref points to a oneOf/anyOf schema by checking the dataType
+            // against our tracking maps
+            String refName = property.dataType;
+            if (refName != null) {
+                // Check if this type is a sealed class parent (oneOf/anyOf schema)
+                boolean isCompositionType = sealedClassExtensions.containsValue(refName);
+                if (isCompositionType) {
+                    property.vendorExtensions.put("x-is-composition-property", true);
+                }
+            }
+        }
 
         return property;
     }

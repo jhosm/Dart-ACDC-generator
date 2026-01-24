@@ -8,6 +8,9 @@ import 'package:json_annotation/json_annotation.dart';
 {{#vendorExtensions.x-extends-sealed-class}}
 import '{{vendorExtensions.x-sealed-parent-filename}}.dart';
 {{/vendorExtensions.x-extends-sealed-class}}
+{{#imports}}
+import '{{.}}';
+{{/imports}}
 
 part '{{classFilename}}.g.dart';
 
@@ -161,7 +164,12 @@ class {{classname}}{{#vendorExtensions.x-extends-sealed-class}} extends {{vendor
 {{#description}}
   /// {{{description}}}
 {{/description}}
+{{#vendorExtensions.x-is-composition-property}}
+  @JsonKey(name: '{{baseName}}', fromJson: _{{name}}FromJson, toJson: _{{name}}ToJson)
+{{/vendorExtensions.x-is-composition-property}}
+{{^vendorExtensions.x-is-composition-property}}
   @JsonKey(name: '{{baseName}}')
+{{/vendorExtensions.x-is-composition-property}}
   final {{dataType}}{{^required}}?{{/required}} {{name}};
 {{/vars}}
 
@@ -176,6 +184,30 @@ class {{classname}}{{#vendorExtensions.x-extends-sealed-class}} extends {{vendor
 {{/vars}}
   });
 
+{{#vars}}
+{{#vendorExtensions.x-is-composition-property}}
+  /// Custom JSON converter for oneOf/anyOf property: {{name}}
+  static {{dataType}}{{^required}}?{{/required}} _{{name}}FromJson(Map<String, dynamic>{{^required}}?{{/required}} json) {
+{{#required}}
+    return {{dataType}}.fromJson(json);
+{{/required}}
+{{^required}}
+    if (json == null) return null;
+    return {{dataType}}.fromJson(json);
+{{/required}}
+  }
+
+  static Map<String, dynamic>{{^required}}?{{/required}} _{{name}}ToJson({{dataType}}{{^required}}?{{/required}} value) {
+{{#required}}
+    return value.toJson();
+{{/required}}
+{{^required}}
+    return value?.toJson();
+{{/required}}
+  }
+
+{{/vendorExtensions.x-is-composition-property}}
+{{/vars}}
   factory {{classname}}.fromJson(Map<String, dynamic> json) => _${{classname}}FromJson(json);
 
 {{#vendorExtensions.x-extends-sealed-class}}
