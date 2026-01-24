@@ -1355,6 +1355,25 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     public OperationsMap postProcessOperationsWithModels(OperationsMap objs, List<ModelMap> allModels) {
         OperationsMap result = super.postProcessOperationsWithModels(objs, allModels);
 
+        // Fix imports: OpenAPI Generator populates the imports list with Map objects
+        // Extract the actual import paths from these maps for template rendering
+        List<?> imports = (List<?>) result.get("imports");
+        if (imports != null && !imports.isEmpty()) {
+            List<String> fixedImports = new ArrayList<>();
+            for (Object importObj : imports) {
+                if (importObj instanceof String) {
+                    fixedImports.add((String) importObj);
+                } else if (importObj instanceof Map) {
+                    Map<?, ?> importMap = (Map<?, ?>) importObj;
+                    Object importPath = importMap.get("import");
+                    if (importPath != null) {
+                        fixedImports.add(importPath.toString());
+                    }
+                }
+            }
+            result.put("imports", fixedImports);
+        }
+
         // Get the operations list
         OperationMap operations = result.getOperations();
         List<CodegenOperation> ops = operations.getOperation();
