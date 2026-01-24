@@ -546,11 +546,11 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             if (propSchema.get$ref() != null) {
                 // Direct reference
                 String ref = propSchema.get$ref();
-                referencedSchemaName = ref.substring(ref.lastIndexOf('/') + 1);
+                referencedSchemaName = extractSchemaNameFromRef(ref);
             } else if ("array".equals(propSchema.getType()) && propSchema.getItems() != null && propSchema.getItems().get$ref() != null) {
                 // Array of references
                 String ref = propSchema.getItems().get$ref();
-                referencedSchemaName = ref.substring(ref.lastIndexOf('/') + 1);
+                referencedSchemaName = extractSchemaNameFromRef(ref);
             }
 
             if (referencedSchemaName != null) {
@@ -611,7 +611,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             if (allOfSchema.get$ref() != null) {
                 // Extract schema name from $ref (e.g., "#/components/schemas/BaseEntity" -> "BaseEntity")
                 String ref = allOfSchema.get$ref();
-                referencedSchemaName = ref.substring(ref.lastIndexOf('/') + 1);
+                referencedSchemaName = extractSchemaNameFromRef(ref);
                 resolvedSchema = allSchemas.get(referencedSchemaName);
 
                 if (resolvedSchema == null) {
@@ -760,12 +760,18 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
         // Process discriminator if present
         if (schema.getDiscriminator() != null) {
-            model.vendorExtensions.put("x-has-discriminator", true);
             String discriminatorPropertyName = schema.getDiscriminator().getPropertyName();
-            model.vendorExtensions.put("x-discriminator-name", discriminatorPropertyName);
 
-            // Process discriminator mapping
-            if (schema.getDiscriminator().getMapping() != null) {
+            // Validate discriminator property name
+            if (discriminatorPropertyName == null || discriminatorPropertyName.isEmpty()) {
+                LOGGER.warn("Discriminator property name is null or empty for schema: {}", name);
+                model.vendorExtensions.put("x-has-discriminator", false);
+            } else {
+                model.vendorExtensions.put("x-has-discriminator", true);
+                model.vendorExtensions.put("x-discriminator-name", discriminatorPropertyName);
+
+                // Process discriminator mapping
+                if (schema.getDiscriminator().getMapping() != null) {
                 List<Map<String, Object>> discriminatorMapping = new ArrayList<>();
                 Map<String, String> mapping = schema.getDiscriminator().getMapping();
 
@@ -774,7 +780,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                     String schemaRef = entry.getValue();
 
                     // Extract schema name from $ref (e.g., "#/components/schemas/Dog" -> "Dog")
-                    String schemaName = schemaRef.substring(schemaRef.lastIndexOf('/') + 1);
+                    String schemaName = extractSchemaNameFromRef(schemaRef);
                     String subclassName = toModelName(name + capitalize(schemaName));
 
                     Map<String, Object> mappingEntry = new HashMap<>();
@@ -784,7 +790,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                     discriminatorMapping.add(mappingEntry);
                 }
 
-                model.vendorExtensions.put("x-discriminator-mapping", discriminatorMapping);
+                    model.vendorExtensions.put("x-discriminator-mapping", discriminatorMapping);
+                }
             }
         } else {
             model.vendorExtensions.put("x-has-discriminator", false);
@@ -804,7 +811,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             if (oneOfSchema.get$ref() != null) {
                 // Reference to another schema
                 String ref = oneOfSchema.get$ref();
-                String schemaName = ref.substring(ref.lastIndexOf('/') + 1);
+                String schemaName = extractSchemaNameFromRef(ref);
                 String subclassName = toModelName(name + capitalize(schemaName));
 
                 alternative.put("isRef", true);
@@ -831,6 +838,10 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                     alternative.put("subclassName", subclassName);
                     alternative.put("index", i + 1);
                 }
+            } else {
+                // Schema has neither $ref nor type - log warning and skip
+                LOGGER.warn("oneOf schema at index {} has neither $ref nor type for schema '{}'. Skipping.", i, name);
+                continue;
             }
 
             // Set hasNext flag for all but the last alternative
@@ -875,7 +886,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             if (anyOfSchema.get$ref() != null) {
                 // Reference to another schema
                 String ref = anyOfSchema.get$ref();
-                String schemaName = ref.substring(ref.lastIndexOf('/') + 1);
+                String schemaName = extractSchemaNameFromRef(ref);
                 String subclassName = toModelName(name + capitalize(schemaName));
 
                 alternative.put("isRef", true);
@@ -902,6 +913,10 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                     alternative.put("subclassName", subclassName);
                     alternative.put("index", i + 1);
                 }
+            } else {
+                // Schema has neither $ref nor type - log warning and skip
+                LOGGER.warn("anyOf schema at index {} has neither $ref nor type for schema '{}'. Skipping.", i, name);
+                continue;
             }
 
             // Set hasNext flag for all but the last alternative
@@ -925,6 +940,33 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                "integer".equals(type) ||
                "number".equals(type) ||
                "boolean".equals(type);
+    }
+
+    /**
+     * Safely extracts the schema name from a $ref string.
+     * Handles refs without '/' gracefully and validates input.
+     *
+     * @param ref the $ref string (e.g., "#/components/schemas/Pet")
+     * @return the schema name (e.g., "Pet"), or "UnknownSchema" if extraction fails
+     */
+    private String extractSchemaNameFromRef(String ref) {
+        if (ref == null || ref.isEmpty()) {
+            LOGGER.warn("Received null or empty $ref");
+            return "UnknownSchema";
+        }
+
+        int lastSlashIndex = ref.lastIndexOf('/');
+        if (lastSlashIndex == -1) {
+            LOGGER.warn("Malformed $ref without '/': {}", ref);
+            return ref; // Return the whole string as fallback
+        }
+
+        if (lastSlashIndex == ref.length() - 1) {
+            LOGGER.warn("Malformed $ref ends with '/': {}", ref);
+            return "UnknownSchema";
+        }
+
+        return ref.substring(lastSlashIndex + 1);
     }
 
     /**
