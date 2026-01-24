@@ -472,8 +472,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     /**
      * Preprocesses the OpenAPI specification to flatten allOf compositions and detect circular references.
-     * This runs before model generation, allowing us to resolve and merge allOf schemas
-     * directly in the spec and mark circular properties as nullable.
+     * This runs before model generation to optimize the schema structure for code generation.
      *
      * @param openAPI the OpenAPI specification
      */
@@ -483,31 +482,62 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
         LOGGER.info("Preprocessing OpenAPI spec for allOf composition");
 
-        if (openAPI == null || openAPI.getComponents() == null || openAPI.getComponents().getSchemas() == null) {
+        Map<String, Schema> schemas = extractSchemas(openAPI);
+        if (schemas == null) {
             LOGGER.info("No schemas to preprocess");
             return;
         }
 
-        // Process each schema in components/schemas
-        Map<String, Schema> schemas = openAPI.getComponents().getSchemas();
         LOGGER.info("Found {} schemas to process", schemas.size());
 
         // First pass: flatten allOf compositions
+        flattenAllOfCompositions(schemas);
+
+        // Second pass: detect and mark circular references
+        detectAllCircularReferences(schemas);
+    }
+
+    /**
+     * Safely extracts schemas from the OpenAPI specification.
+     *
+     * @param openAPI the OpenAPI specification
+     * @return the schemas map, or null if not available
+     */
+    @SuppressWarnings("rawtypes")
+    private Map<String, Schema> extractSchemas(io.swagger.v3.oas.models.OpenAPI openAPI) {
+        if (openAPI == null || openAPI.getComponents() == null) {
+            return null;
+        }
+        return openAPI.getComponents().getSchemas();
+    }
+
+    /**
+     * Flattens all allOf compositions in the schema map.
+     *
+     * @param schemas the schemas to process (modified in place)
+     */
+    @SuppressWarnings("rawtypes")
+    private void flattenAllOfCompositions(Map<String, Schema> schemas) {
         for (Map.Entry<String, Schema> entry : schemas.entrySet()) {
             String schemaName = entry.getKey();
             Schema schema = entry.getValue();
 
-            // If this schema has allOf, flatten it
             if (schema.getAllOf() != null && !schema.getAllOf().isEmpty()) {
                 LOGGER.info("Processing allOf for schema: {}", schemaName);
                 Schema flattenedSchema = composeAllOfSchemaPreprocess(schemaName, schema, schemas);
-                // Replace the schema with the flattened version
                 schemas.put(schemaName, flattenedSchema);
                 LOGGER.info("Replaced schema {} with flattened version", schemaName);
             }
         }
+    }
 
-        // Second pass: detect and mark circular references
+    /**
+     * Detects circular references in all schemas and marks affected properties as nullable.
+     *
+     * @param schemas all schemas to check for circular references
+     */
+    @SuppressWarnings("rawtypes")
+    private void detectAllCircularReferences(Map<String, Schema> schemas) {
         LOGGER.info("Detecting circular references");
         for (Map.Entry<String, Schema> entry : schemas.entrySet()) {
             String schemaName = entry.getKey();
@@ -577,10 +607,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     /**
      * Composes an allOf schema during preprocessing by merging all properties.
-     * This version works with the raw schema map during preprocessing.
-     *
-     * Handles nested composition: when allOf contains a reference to a oneOf/anyOf schema,
-     * creates a property typed as that schema instead of trying to merge properties.
+     * Handles nested composition (allOf containing oneOf/anyOf references).
      *
      * @param name the schema name
      * @param schema the schema with allOf
@@ -595,84 +622,166 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
         LOGGER.info("Composing allOf schema for: {}", name);
 
-        // Create a new schema to hold the composed result
-        Schema composedSchema = new Schema();
         Map<String, Schema> mergedProperties = new LinkedHashMap<>();
         Set<String> mergedRequired = new LinkedHashSet<>();
 
         // Process each schema in the allOf array
         List<Schema> allOfSchemas = (List<Schema>) schema.getAllOf();
         LOGGER.info("allOf has {} schemas to merge", allOfSchemas.size());
+
         for (Schema allOfSchema : allOfSchemas) {
-            Schema resolvedSchema = allOfSchema;
-            String referencedSchemaName = null;
+            processAllOfElement(name, allOfSchema, allSchemas, mergedProperties, mergedRequired);
+        }
 
-            // Resolve $ref if present
-            if (allOfSchema.get$ref() != null) {
-                // Extract schema name from $ref (e.g., "#/components/schemas/BaseEntity" -> "BaseEntity")
-                String ref = allOfSchema.get$ref();
-                referencedSchemaName = extractSchemaNameFromRef(ref);
-                resolvedSchema = allSchemas.get(referencedSchemaName);
+        // Create and configure the composed schema
+        Schema composedSchema = createComposedSchema(schema, mergedProperties, mergedRequired);
 
-                if (resolvedSchema == null) {
-                    LOGGER.warn("Unable to resolve $ref: {} in allOf for schema: {}", ref, name);
-                    continue;
-                }
-            }
+        LOGGER.info("Composed allOf schema for '{}': {} properties, {} required",
+                    name, mergedProperties.size(), mergedRequired.size());
 
-            // Check if this is a oneOf/anyOf composition schema (nested composition)
-            boolean isOneOfOrAnyOf = (resolvedSchema.getOneOf() != null && !resolvedSchema.getOneOf().isEmpty()) ||
-                                      (resolvedSchema.getAnyOf() != null && !resolvedSchema.getAnyOf().isEmpty());
+        return composedSchema;
+    }
 
-            if (isOneOfOrAnyOf && referencedSchemaName != null) {
-                // Nested composition: Create a property typed as the oneOf/anyOf sealed class
-                LOGGER.info("Detected nested composition: allOf contains oneOf/anyOf reference to '{}'", referencedSchemaName);
+    /**
+     * Processes a single element from an allOf array, merging properties or handling nested composition.
+     *
+     * @param parentName the parent schema name
+     * @param allOfSchema the allOf element schema
+     * @param allSchemas all available schemas for $ref resolution
+     * @param mergedProperties accumulator for merged properties
+     * @param mergedRequired accumulator for merged required properties
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void processAllOfElement(String parentName, Schema allOfSchema, Map<String, Schema> allSchemas,
+                                      Map<String, Schema> mergedProperties, Set<String> mergedRequired) {
+        Schema resolvedSchema = allOfSchema;
+        String referencedSchemaName = null;
 
-                // Create a property with type = the referenced schema name
-                Schema propertySchema = new Schema();
-                propertySchema.set$ref("#/components/schemas/" + referencedSchemaName);
+        // Resolve $ref if present
+        if (allOfSchema.get$ref() != null) {
+            String ref = allOfSchema.get$ref();
+            referencedSchemaName = extractSchemaNameFromRef(ref);
+            resolvedSchema = allSchemas.get(referencedSchemaName);
 
-                // Use camelCase schema name as property name
-                String propertyName = toCamelCase(referencedSchemaName);
-                mergedProperties.put(propertyName, propertySchema);
-                mergedRequired.add(propertyName);
-
-                LOGGER.info("Created property '{}' typed as '{}'", propertyName, referencedSchemaName);
-                continue;
-            }
-
-            // Regular object schema: Merge properties
-            if (resolvedSchema.getProperties() != null) {
-                Map<String, Schema> properties = (Map<String, Schema>) resolvedSchema.getProperties();
-                for (Map.Entry<String, Schema> propEntry : properties.entrySet()) {
-                    String propName = propEntry.getKey();
-                    Schema propSchema = propEntry.getValue();
-
-                    // Check for property conflict
-                    if (mergedProperties.containsKey(propName)) {
-                        Schema existingSchema = mergedProperties.get(propName);
-                        String existingType = existingSchema.getType();
-                        String newType = propSchema.getType();
-
-                        if (!Objects.equals(existingType, newType)) {
-                            LOGGER.warn("Property conflict in allOf for schema '{}': property '{}' " +
-                                       "has different types ({} vs {}). Using last definition.",
-                                       name, propName, existingType, newType);
-                        }
-                    }
-
-                    // Last definition wins
-                    mergedProperties.put(propName, propSchema);
-                }
-            }
-
-            // Merge required arrays (union: property is required if ANY schema requires it)
-            if (resolvedSchema.getRequired() != null) {
-                mergedRequired.addAll(resolvedSchema.getRequired());
+            if (resolvedSchema == null) {
+                LOGGER.warn("Unable to resolve $ref: {} in allOf for schema: {}", ref, parentName);
+                return;
             }
         }
 
-        // Apply merged properties and required to the composed schema
+        // Handle nested composition (allOf containing oneOf/anyOf)
+        if (isCompositionSchema(resolvedSchema) && referencedSchemaName != null) {
+            handleNestedComposition(referencedSchemaName, mergedProperties, mergedRequired);
+            return;
+        }
+
+        // Regular object schema: Merge properties
+        mergeSchemaProperties(parentName, resolvedSchema, mergedProperties);
+
+        // Merge required arrays
+        if (resolvedSchema.getRequired() != null) {
+            mergedRequired.addAll(resolvedSchema.getRequired());
+        }
+    }
+
+    /**
+     * Checks if a schema is a composition schema (oneOf or anyOf).
+     *
+     * @param schema the schema to check
+     * @return true if the schema has oneOf or anyOf
+     */
+    @SuppressWarnings("rawtypes")
+    private boolean isCompositionSchema(Schema schema) {
+        return (schema.getOneOf() != null && !schema.getOneOf().isEmpty()) ||
+               (schema.getAnyOf() != null && !schema.getAnyOf().isEmpty());
+    }
+
+    /**
+     * Handles nested composition by creating a property typed as the composition schema.
+     *
+     * @param referencedSchemaName the name of the composition schema
+     * @param mergedProperties accumulator for merged properties
+     * @param mergedRequired accumulator for merged required properties
+     */
+    @SuppressWarnings("rawtypes")
+    private void handleNestedComposition(String referencedSchemaName, Map<String, Schema> mergedProperties,
+                                          Set<String> mergedRequired) {
+        LOGGER.info("Detected nested composition: allOf contains oneOf/anyOf reference to '{}'", referencedSchemaName);
+
+        // Create a property with type = the referenced schema name
+        Schema propertySchema = new Schema();
+        propertySchema.set$ref("#/components/schemas/" + referencedSchemaName);
+
+        // Use camelCase schema name as property name
+        String propertyName = toCamelCase(referencedSchemaName);
+        mergedProperties.put(propertyName, propertySchema);
+        mergedRequired.add(propertyName);
+
+        LOGGER.info("Created property '{}' typed as '{}'", propertyName, referencedSchemaName);
+    }
+
+    /**
+     * Merges properties from a resolved schema into the merged properties map.
+     *
+     * @param parentName the parent schema name (for logging)
+     * @param resolvedSchema the schema to merge from
+     * @param mergedProperties accumulator for merged properties
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void mergeSchemaProperties(String parentName, Schema resolvedSchema, Map<String, Schema> mergedProperties) {
+        if (resolvedSchema.getProperties() == null) {
+            return;
+        }
+
+        Map<String, Schema> properties = (Map<String, Schema>) resolvedSchema.getProperties();
+        for (Map.Entry<String, Schema> propEntry : properties.entrySet()) {
+            String propName = propEntry.getKey();
+            Schema propSchema = propEntry.getValue();
+
+            // Check for property conflict
+            if (mergedProperties.containsKey(propName)) {
+                logPropertyConflict(parentName, propName, mergedProperties.get(propName), propSchema);
+            }
+
+            // Last definition wins
+            mergedProperties.put(propName, propSchema);
+        }
+    }
+
+    /**
+     * Logs a warning when a property conflict is detected during allOf merging.
+     *
+     * @param schemaName the schema name
+     * @param propertyName the conflicting property name
+     * @param existingSchema the existing property schema
+     * @param newSchema the new property schema
+     */
+    @SuppressWarnings("rawtypes")
+    private void logPropertyConflict(String schemaName, String propertyName, Schema existingSchema, Schema newSchema) {
+        String existingType = existingSchema.getType();
+        String newType = newSchema.getType();
+
+        if (!Objects.equals(existingType, newType)) {
+            LOGGER.warn("Property conflict in allOf for schema '{}': property '{}' " +
+                       "has different types ({} vs {}). Using last definition.",
+                       schemaName, propertyName, existingType, newType);
+        }
+    }
+
+    /**
+     * Creates the final composed schema from merged data.
+     *
+     * @param originalSchema the original schema with allOf
+     * @param mergedProperties the merged properties
+     * @param mergedRequired the merged required properties
+     * @return the composed schema
+     */
+    @SuppressWarnings("rawtypes")
+    private Schema createComposedSchema(Schema originalSchema, Map<String, Schema> mergedProperties,
+                                         Set<String> mergedRequired) {
+        Schema composedSchema = new Schema();
+
+        // Apply merged properties and required
         if (!mergedProperties.isEmpty()) {
             composedSchema.setProperties(mergedProperties);
         }
@@ -682,22 +791,15 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         }
 
         // Copy other relevant attributes from the original schema
-        if (schema.getType() != null) {
-            composedSchema.setType(schema.getType());
-        } else {
-            composedSchema.setType("object");
+        composedSchema.setType(originalSchema.getType() != null ? originalSchema.getType() : "object");
+
+        if (originalSchema.getDescription() != null) {
+            composedSchema.setDescription(originalSchema.getDescription());
         }
 
-        if (schema.getDescription() != null) {
-            composedSchema.setDescription(schema.getDescription());
+        if (originalSchema.getTitle() != null) {
+            composedSchema.setTitle(originalSchema.getTitle());
         }
-
-        if (schema.getTitle() != null) {
-            composedSchema.setTitle(schema.getTitle());
-        }
-
-        LOGGER.info("Composed allOf schema for '{}': {} properties, {} required",
-                    name, mergedProperties.size(), mergedRequired.size());
 
         return composedSchema;
     }
@@ -759,96 +861,11 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         model.vendorExtensions.put("x-is-one-of", true);
 
         // Process discriminator if present
-        if (schema.getDiscriminator() != null) {
-            String discriminatorPropertyName = schema.getDiscriminator().getPropertyName();
-
-            // Validate discriminator property name
-            if (discriminatorPropertyName == null || discriminatorPropertyName.isEmpty()) {
-                LOGGER.warn("Discriminator property name is null or empty for schema: {}", name);
-                model.vendorExtensions.put("x-has-discriminator", false);
-            } else {
-                model.vendorExtensions.put("x-has-discriminator", true);
-                model.vendorExtensions.put("x-discriminator-name", discriminatorPropertyName);
-
-                // Process discriminator mapping
-                if (schema.getDiscriminator().getMapping() != null) {
-                List<Map<String, Object>> discriminatorMapping = new ArrayList<>();
-                Map<String, String> mapping = schema.getDiscriminator().getMapping();
-
-                for (Map.Entry<String, String> entry : mapping.entrySet()) {
-                    String mappingKey = entry.getKey();
-                    String schemaRef = entry.getValue();
-
-                    // Extract schema name from $ref (e.g., "#/components/schemas/Dog" -> "Dog")
-                    String schemaName = extractSchemaNameFromRef(schemaRef);
-                    String subclassName = toModelName(name + capitalize(schemaName));
-
-                    Map<String, Object> mappingEntry = new HashMap<>();
-                    mappingEntry.put("mappingKey", mappingKey);
-                    mappingEntry.put("schemaName", schemaName);
-                    mappingEntry.put("subclassName", subclassName);
-                    discriminatorMapping.add(mappingEntry);
-                }
-
-                    model.vendorExtensions.put("x-discriminator-mapping", discriminatorMapping);
-                }
-            }
-        } else {
-            model.vendorExtensions.put("x-has-discriminator", false);
-        }
+        processDiscriminator(name, schema, model);
 
         // Process oneOf alternatives
-        List<Map<String, Object>> alternatives = new ArrayList<>();
         List<Schema> oneOfSchemas = (List<Schema>) schema.getOneOf();
-
-        for (int i = 0; i < oneOfSchemas.size(); i++) {
-            Schema oneOfSchema = oneOfSchemas.get(i);
-            Map<String, Object> alternative = new HashMap<>();
-
-            // Add parent class name for template reference
-            alternative.put("parentClassName", name);
-
-            if (oneOfSchema.get$ref() != null) {
-                // Reference to another schema
-                String ref = oneOfSchema.get$ref();
-                String schemaName = extractSchemaNameFromRef(ref);
-                String subclassName = toModelName(name + capitalize(schemaName));
-
-                alternative.put("isRef", true);
-                alternative.put("schemaName", schemaName);
-                alternative.put("subclassName", subclassName);
-                alternative.put("importPath", toModelImport(schemaName));
-            } else if (oneOfSchema.getType() != null) {
-                // Inline schema (primitive or object)
-                String type = oneOfSchema.getType();
-                boolean isPrimitive = isPrimitiveType(type);
-
-                if (isPrimitive) {
-                    // Wrapper class for primitive
-                    String dartType = getTypeDeclaration(oneOfSchema);
-                    String wrapperName = toModelName(name + capitalize(dartType));
-
-                    alternative.put("isPrimitive", true);
-                    alternative.put("dartType", dartType);
-                    alternative.put("subclassName", wrapperName);
-                } else {
-                    // Inline complex type - use Option naming
-                    String subclassName = toModelName(name + "Option" + (i + 1));
-                    alternative.put("isInline", true);
-                    alternative.put("subclassName", subclassName);
-                    alternative.put("index", i + 1);
-                }
-            } else {
-                // Schema has neither $ref nor type - log warning and skip
-                LOGGER.warn("oneOf schema at index {} has neither $ref nor type for schema '{}'. Skipping.", i, name);
-                continue;
-            }
-
-            // Set hasNext flag for all but the last alternative
-            alternative.put("hasNext", i < oneOfSchemas.size() - 1);
-
-            alternatives.add(alternative);
-        }
+        List<Map<String, Object>> alternatives = processCompositionAlternatives(name, oneOfSchemas, "oneOf");
 
         model.vendorExtensions.put("x-one-of-alternatives", alternatives);
         LOGGER.info("Processed oneOf for '{}': {} alternatives", name, alternatives.size());
@@ -873,67 +890,151 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         model.vendorExtensions.put("x-has-discriminator", false);
 
         // Process anyOf alternatives (same as oneOf)
-        List<Map<String, Object>> alternatives = new ArrayList<>();
         List<Schema> anyOfSchemas = (List<Schema>) schema.getAnyOf();
-
-        for (int i = 0; i < anyOfSchemas.size(); i++) {
-            Schema anyOfSchema = anyOfSchemas.get(i);
-            Map<String, Object> alternative = new HashMap<>();
-
-            // Add parent class name for template reference
-            alternative.put("parentClassName", name);
-
-            if (anyOfSchema.get$ref() != null) {
-                // Reference to another schema
-                String ref = anyOfSchema.get$ref();
-                String schemaName = extractSchemaNameFromRef(ref);
-                String subclassName = toModelName(name + capitalize(schemaName));
-
-                alternative.put("isRef", true);
-                alternative.put("schemaName", schemaName);
-                alternative.put("subclassName", subclassName);
-                alternative.put("importPath", toModelImport(schemaName));
-            } else if (anyOfSchema.getType() != null) {
-                // Inline schema (primitive or object)
-                String type = anyOfSchema.getType();
-                boolean isPrimitive = isPrimitiveType(type);
-
-                if (isPrimitive) {
-                    // Wrapper class for primitive
-                    String dartType = getTypeDeclaration(anyOfSchema);
-                    String wrapperName = toModelName(name + capitalize(dartType));
-
-                    alternative.put("isPrimitive", true);
-                    alternative.put("dartType", dartType);
-                    alternative.put("subclassName", wrapperName);
-                } else {
-                    // Inline complex type - use Option naming
-                    String subclassName = toModelName(name + "Option" + (i + 1));
-                    alternative.put("isInline", true);
-                    alternative.put("subclassName", subclassName);
-                    alternative.put("index", i + 1);
-                }
-            } else {
-                // Schema has neither $ref nor type - log warning and skip
-                LOGGER.warn("anyOf schema at index {} has neither $ref nor type for schema '{}'. Skipping.", i, name);
-                continue;
-            }
-
-            // Set hasNext flag for all but the last alternative
-            alternative.put("hasNext", i < anyOfSchemas.size() - 1);
-
-            alternatives.add(alternative);
-        }
+        List<Map<String, Object>> alternatives = processCompositionAlternatives(name, anyOfSchemas, "anyOf");
 
         model.vendorExtensions.put("x-any-of-alternatives", alternatives);
         LOGGER.info("Processed anyOf for '{}': {} alternatives", name, alternatives.size());
     }
 
     /**
-     * Checks if a type is a primitive type (not array or object).
+     * Processes discriminator information for oneOf schemas.
+     * Extracts discriminator property name and mapping metadata.
      *
-     * @param type the OpenAPI type
-     * @return true if primitive, false otherwise
+     * @param name the schema name
+     * @param schema the schema (may have discriminator)
+     * @param model the codegen model to update
+     */
+    @SuppressWarnings("rawtypes")
+    private void processDiscriminator(String name, Schema schema, CodegenModel model) {
+        if (schema.getDiscriminator() == null) {
+            model.vendorExtensions.put("x-has-discriminator", false);
+            return;
+        }
+
+        String discriminatorPropertyName = schema.getDiscriminator().getPropertyName();
+
+        // Validate discriminator property name
+        if (discriminatorPropertyName == null || discriminatorPropertyName.isEmpty()) {
+            LOGGER.warn("Discriminator property name is null or empty for schema: {}", name);
+            model.vendorExtensions.put("x-has-discriminator", false);
+            return;
+        }
+
+        model.vendorExtensions.put("x-has-discriminator", true);
+        model.vendorExtensions.put("x-discriminator-name", discriminatorPropertyName);
+
+        // Process discriminator mapping
+        if (schema.getDiscriminator().getMapping() != null) {
+            List<Map<String, Object>> discriminatorMapping = new ArrayList<>();
+            Map<String, String> mapping = schema.getDiscriminator().getMapping();
+
+            for (Map.Entry<String, String> entry : mapping.entrySet()) {
+                String mappingKey = entry.getKey();
+                String schemaRef = entry.getValue();
+
+                // Extract schema name from $ref (e.g., "#/components/schemas/Dog" -> "Dog")
+                String schemaName = extractSchemaNameFromRef(schemaRef);
+                String subclassName = toModelName(name + capitalize(schemaName));
+
+                Map<String, Object> mappingEntry = new HashMap<>();
+                mappingEntry.put("mappingKey", mappingKey);
+                mappingEntry.put("schemaName", schemaName);
+                mappingEntry.put("subclassName", subclassName);
+                discriminatorMapping.add(mappingEntry);
+            }
+
+            model.vendorExtensions.put("x-discriminator-mapping", discriminatorMapping);
+        }
+    }
+
+    /**
+     * Processes composition alternatives (oneOf/anyOf) into a list of metadata maps.
+     * Handles references, primitive types, and inline schemas.
+     *
+     * @param parentName the parent schema name
+     * @param schemas the list of alternative schemas
+     * @param compositionType the composition type ("oneOf" or "anyOf") for logging
+     * @return list of alternative metadata maps
+     */
+    @SuppressWarnings("rawtypes")
+    private List<Map<String, Object>> processCompositionAlternatives(String parentName, List<Schema> schemas, String compositionType) {
+        List<Map<String, Object>> alternatives = new ArrayList<>();
+
+        for (int i = 0; i < schemas.size(); i++) {
+            Schema alternativeSchema = schemas.get(i);
+            Map<String, Object> alternative = createAlternativeMetadata(parentName, alternativeSchema, i, compositionType);
+
+            if (alternative != null) {
+                // Set hasNext flag for all but the last alternative
+                alternative.put("hasNext", i < schemas.size() - 1);
+                alternatives.add(alternative);
+            }
+        }
+
+        return alternatives;
+    }
+
+    /**
+     * Creates metadata for a single composition alternative.
+     *
+     * @param parentName the parent schema name
+     * @param schema the alternative schema
+     * @param index the index of this alternative
+     * @param compositionType the composition type ("oneOf" or "anyOf") for logging
+     * @return metadata map, or null if the schema is invalid
+     */
+    @SuppressWarnings("rawtypes")
+    private Map<String, Object> createAlternativeMetadata(String parentName, Schema schema, int index, String compositionType) {
+        Map<String, Object> alternative = new HashMap<>();
+        alternative.put("parentClassName", parentName);
+
+        if (schema.get$ref() != null) {
+            // Reference to another schema
+            String ref = schema.get$ref();
+            String schemaName = extractSchemaNameFromRef(ref);
+            String subclassName = toModelName(parentName + capitalize(schemaName));
+
+            alternative.put("isRef", true);
+            alternative.put("schemaName", schemaName);
+            alternative.put("subclassName", subclassName);
+            alternative.put("importPath", toModelImport(schemaName));
+        } else if (schema.getType() != null) {
+            // Inline schema (primitive or object)
+            String type = schema.getType();
+            boolean isPrimitive = isPrimitiveType(type);
+
+            if (isPrimitive) {
+                // Wrapper class for primitive
+                String dartType = getTypeDeclaration(schema);
+                String wrapperName = toModelName(parentName + capitalize(dartType));
+
+                alternative.put("isPrimitive", true);
+                alternative.put("dartType", dartType);
+                alternative.put("subclassName", wrapperName);
+            } else {
+                // Inline complex type - use Option naming
+                String subclassName = toModelName(parentName + "Option" + (index + 1));
+                alternative.put("isInline", true);
+                alternative.put("subclassName", subclassName);
+                alternative.put("index", index + 1);
+            }
+        } else {
+            // Schema has neither $ref nor type - log warning and skip
+            LOGGER.warn("{} schema at index {} has neither $ref nor type for schema '{}'. Skipping.",
+                       compositionType, index, parentName);
+            return null;
+        }
+
+        return alternative;
+    }
+
+    /**
+     * Checks if an OpenAPI type is a primitive type (string, integer, number, boolean).
+     * Arrays and objects are not considered primitive.
+     *
+     * @param type the OpenAPI type to check
+     * @return true if the type is primitive (string/integer/number/boolean), false otherwise
      */
     private boolean isPrimitiveType(String type) {
         return "string".equals(type) ||
@@ -1259,21 +1360,11 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
-     * Helper method to update a parameter's type information across all parameter lists.
-     *
-     * OpenAPI Generator creates separate CodegenParameter instances for different
-     * parameter lists (allParams, bodyParams, formParams), even for the same logical parameter.
-     * This means updating a parameter in allParams doesn't automatically update the
-     * corresponding parameter in bodyParams or formParams.
-     *
-     * This method ensures consistency by finding parameters with matching names in all
-     * lists and synchronizing their type information (dataType, datatypeWithEnum, baseType).
-     *
-     * This is necessary when we transform parameter types based on context
-     * (e.g., List&lt;int&gt; → MultipartFile for multipart/form-data requests).
+     * Synchronizes parameter type information across all parameter lists (allParams, bodyParams, formParams).
+     * Required because OpenAPI Generator creates separate instances for each list.
      *
      * @param operation the operation containing the parameter lists
-     * @param param the parameter with updated type information (used as the source)
+     * @param param the parameter with updated type information to propagate
      */
     private void updateParameterInLists(CodegenOperation operation, CodegenParameter param) {
         // Update in bodyParams if present

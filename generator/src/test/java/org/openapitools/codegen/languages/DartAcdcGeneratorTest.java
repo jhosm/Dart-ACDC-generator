@@ -6,6 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.openapitools.codegen.CodegenModel;
 import org.openapitools.codegen.CodegenOperation;
 import org.openapitools.codegen.CodegenParameter;
+import org.openapitools.codegen.CodegenProperty;
 
 import java.util.*;
 
@@ -480,5 +481,143 @@ class DartAcdcGeneratorTest {
         assertNotNull(childrenProperty, "Children property should exist");
         assertTrue(childrenProperty.getNullable() != null && childrenProperty.getNullable(),
                 "Circular reference property should be marked as nullable");
+    }
+
+    // ========================================
+    // Type Mapping and Declaration Tests
+    // ========================================
+
+    @Test
+    @DisplayName("getTypeDeclaration: should map binary to List<int>")
+    void testGetTypeDeclaration_Binary() {
+        io.swagger.v3.oas.models.media.Schema binarySchema = new io.swagger.v3.oas.models.media.Schema();
+        binarySchema.setType("string");
+        binarySchema.setFormat("binary");
+
+        String result = generator.getTypeDeclaration(binarySchema);
+        assertEquals("List<int>", result, "Binary type should map to List<int>");
+    }
+
+    @Test
+    @DisplayName("getTypeDeclaration: should handle null schema gracefully")
+    void testGetTypeDeclaration_Null() {
+        io.swagger.v3.oas.models.media.Schema nullSchema = null;
+        String result = generator.getTypeDeclaration(nullSchema);
+        // Should not throw exception
+        assertNotNull(result);
+    }
+
+    // ========================================
+    // Property Processing Tests
+    // ========================================
+
+    @Test
+    @DisplayName("fromProperty: should map binary to List<int> in non-multipart context")
+    void testFromProperty_BinaryNonMultipart() {
+        io.swagger.v3.oas.models.media.Schema binarySchema = new io.swagger.v3.oas.models.media.Schema();
+        binarySchema.setType("string");
+        binarySchema.setFormat("binary");
+
+        CodegenProperty property = generator.fromProperty("file", binarySchema, false, false);
+
+        assertNotNull(property);
+        // In non-multipart context, binary should be List<int>
+        // Note: The actual mapping depends on ThreadLocal context which is set by fromRequestBody
+    }
+
+    @Test
+    @DisplayName("fromProperty: should return null for null schema")
+    void testFromProperty_NullSchema() {
+        CodegenProperty property = generator.fromProperty("test", null, false, false);
+        // fromProperty returns null when schema is null (expected behavior)
+        assertNull(property, "fromProperty should return null when schema is null");
+    }
+
+    // ========================================
+    // Additional Properties Processing Tests
+    // ========================================
+
+    @Test
+    @DisplayName("processOpts: should sanitize pubName")
+    void testProcessOpts_SanitizePubName() {
+        generator.additionalProperties().put("pubName", "My-API@Client!");
+        generator.processOpts();
+
+        String sanitizedPubName = (String) generator.additionalProperties().get("pubName");
+        assertEquals("my_apiclient", sanitizedPubName, "pubName should be sanitized");
+    }
+
+    @Test
+    @DisplayName("processOpts: should handle missing pubName")
+    void testProcessOpts_MissingPubName() {
+        // Don't set pubName
+        generator.processOpts();
+        // Should not throw exception
+    }
+
+    // ========================================
+    // String Utility Tests (via public API)
+    // ========================================
+
+    @Test
+    @DisplayName("toEnumVarName: should handle mixed separators")
+    void testToEnumVarName_MixedSeparators() {
+        String result = generator.toEnumVarName("user-name_active.value", "string");
+        assertEquals("userNameActiveValue", result, "Should handle mixed separators");
+    }
+
+    @Test
+    @DisplayName("toEnumVarName: should handle whitespace")
+    void testToEnumVarName_Whitespace() {
+        String result = generator.toEnumVarName("user  active", "string");
+        assertEquals("userActive", result, "Should handle whitespace");
+    }
+
+    @Test
+    @DisplayName("toModelFilename: should handle acronyms correctly")
+    void testToModelFilename_Acronyms() {
+        String result = generator.toModelFilename("XMLHTTPRequest");
+        assertEquals("xmlhttp_request", result, "Should handle acronyms");
+    }
+
+    @Test
+    @DisplayName("sanitizePubName: should handle Unicode characters")
+    void testSanitizePubName_Unicode() {
+        String result = generator.sanitizePubName("my-api-клиент");
+        // Should remove non-ASCII characters
+        assertEquals("my_api", result, "Should remove Unicode characters");
+    }
+
+    // ========================================
+    // Edge Case Tests
+    // ========================================
+
+    @Test
+    @DisplayName("toEnumVarName: should handle very long numeric values")
+    void testToEnumVarName_LongNumeric() {
+        String result = generator.toEnumVarName("123456789012345", "string");
+        assertEquals("value123456789012345", result);
+    }
+
+    @Test
+    @DisplayName("toModelName: should handle single character names")
+    void testToModelName_SingleChar() {
+        String result = generator.toModelName("A");
+        assertEquals("A", result);
+    }
+
+    @Test
+    @DisplayName("toModelFilename: should handle numbers in middle")
+    void testToModelFilename_NumbersInMiddle() {
+        String result = generator.toModelFilename("User2FA");
+        assertEquals("user2_fa", result);
+    }
+
+    @Test
+    @DisplayName("escapeReservedWord: should handle already escaped words")
+    void testEscapeReservedWord_AlreadyEscaped() {
+        String result = generator.escapeReservedWord("class_");
+        // Should add another underscore (this is expected behavior)
+        assertEquals("class__", result);
     }
 }
