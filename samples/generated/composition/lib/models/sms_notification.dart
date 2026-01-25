@@ -8,7 +8,7 @@ part 'sms_notification.g.dart';
 ///
 /// Generated from OpenAPI schema.
 @JsonSerializable()
-class SmsNotification extends Notification {
+class SmsNotification implements Notification {
   @JsonKey(name: 'phoneNumber')
   final String? phoneNumber;
   @JsonKey(name: 'message')

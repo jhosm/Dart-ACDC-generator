@@ -23,6 +23,6 @@ abstract class Animal {
 }
 
 // Subclass Dog is defined in package:composition_client/models/dog.dart
-// It should extend Animal
+// It should implement Animal
 // Subclass Cat is defined in package:composition_client/models/cat.dart
-// It should extend Animal
+// It should implement Animal

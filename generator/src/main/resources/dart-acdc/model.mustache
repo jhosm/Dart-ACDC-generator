@@ -33,6 +33,10 @@ enum {{classname}} {
 {{^isEnum}}
 {{#vendorExtensions}}
 {{#x-is-one-of}}
+{{#imports}}
+import '{{.}}';
+{{/imports}}
+
 /// oneOf composition: {{classname}}
 ///
 /// Generated from OpenAPI oneOf schema.
@@ -72,11 +76,11 @@ abstract class {{classname}} {
 {{#x-one-of-alternatives}}
 {{#isRef}}
 // Subclass {{subclassName}} is defined in {{importPath}}
-// It should extend {{parentClassName}}
+// It should implement {{parentClassName}}
 {{/isRef}}
 {{#isPrimitive}}
 /// Wrapper class for primitive type {{dartType}}
-class {{subclassName}} extends {{parentClassName}} {
+class {{subclassName}} implements {{parentClassName}} {
   final {{dartType}} value;
 
   {{subclassName}}(this.value);
@@ -93,11 +97,15 @@ class {{subclassName}} extends {{parentClassName}} {
 }
 {{/isPrimitive}}
 {{#isInline}}
-// TODO: Implement inline schema {{subclassName}} extending {{parentClassName}}
+// TODO: Implement inline schema {{subclassName}} implementing {{parentClassName}}
 {{/isInline}}
 {{/x-one-of-alternatives}}
 {{/x-is-one-of}}
 {{#x-is-any-of}}
+{{#imports}}
+import '{{.}}';
+{{/imports}}
+
 /// anyOf composition: {{classname}}
 ///
 /// Generated from OpenAPI anyOf schema.
@@ -123,11 +131,11 @@ abstract class {{classname}} {
 {{#x-any-of-alternatives}}
 {{#isRef}}
 // Subclass {{subclassName}} is defined in {{importPath}}
-// It should extend {{parentClassName}}
+// It should implement {{parentClassName}}
 {{/isRef}}
 {{#isPrimitive}}
 /// Wrapper class for primitive type {{dartType}}
-class {{subclassName}} extends {{parentClassName}} {
+class {{subclassName}} implements {{parentClassName}} {
   final {{dartType}} value;
 
   {{subclassName}}(this.value);
@@ -144,7 +152,7 @@ class {{subclassName}} extends {{parentClassName}} {
 }
 {{/isPrimitive}}
 {{#isInline}}
-// TODO: Implement inline schema {{subclassName}} extending {{parentClassName}}
+// TODO: Implement inline schema {{subclassName}} implementing {{parentClassName}}
 {{/isInline}}
 {{/x-any-of-alternatives}}
 {{/x-is-any-of}}
@@ -159,7 +167,7 @@ class {{subclassName}} extends {{parentClassName}} {
 ///
 /// Generated from OpenAPI schema.
 @JsonSerializable()
-class {{classname}}{{#vendorExtensions.x-extends-sealed-class}} extends {{vendorExtensions.x-sealed-parent}}{{/vendorExtensions.x-extends-sealed-class}} {
+class {{classname}}{{#vendorExtensions.x-extends-sealed-class}} implements {{vendorExtensions.x-sealed-parent}}{{/vendorExtensions.x-extends-sealed-class}} {
 {{#vars}}
 {{#description}}
   /// {{{description}}}

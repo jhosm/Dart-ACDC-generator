@@ -24,6 +24,6 @@ abstract class Payment {
 }
 
 // Subclass CreditCardPayment is defined in package:composition_client/models/credit_card_payment.dart
-// It should extend Payment
+// It should implement Payment
 // Subclass BankTransferPayment is defined in package:composition_client/models/bank_transfer_payment.dart
-// It should extend Payment
+// It should implement Payment

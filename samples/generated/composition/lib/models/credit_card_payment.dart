@@ -8,7 +8,7 @@ part 'credit_card_payment.g.dart';
 ///
 /// Generated from OpenAPI schema.
 @JsonSerializable()
-class CreditCardPayment extends Payment {
+class CreditCardPayment implements Payment {
   @JsonKey(name: 'cardNumber')
   final String cardNumber;
   @JsonKey(name: 'cvv')

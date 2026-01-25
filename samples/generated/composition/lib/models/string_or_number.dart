@@ -22,7 +22,7 @@ abstract class StringOrNumber {
 }
 
 /// Wrapper class for primitive type String
-class StringOrNumberString extends StringOrNumber {
+class StringOrNumberString implements StringOrNumber {
   final String value;
 
   StringOrNumberString(this.value);
@@ -38,7 +38,7 @@ class StringOrNumberString extends StringOrNumber {
   Map<String, dynamic> toJson() => {'value': value};
 }
 /// Wrapper class for primitive type double
-class StringOrNumberDouble extends StringOrNumber {
+class StringOrNumberDouble implements StringOrNumber {
   final double value;
 
   StringOrNumberDouble(this.value);

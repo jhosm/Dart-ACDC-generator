@@ -8,7 +8,7 @@ part 'bank_transfer_payment.g.dart';
 ///
 /// Generated from OpenAPI schema.
 @JsonSerializable()
-class BankTransferPayment extends Payment {
+class BankTransferPayment implements Payment {
   @JsonKey(name: 'accountNumber')
   final String accountNumber;
   @JsonKey(name: 'routingNumber')

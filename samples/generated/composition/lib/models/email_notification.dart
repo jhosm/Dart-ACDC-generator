@@ -8,7 +8,7 @@ part 'email_notification.g.dart';
 ///
 /// Generated from OpenAPI schema.
 @JsonSerializable()
-class EmailNotification extends Notification {
+class EmailNotification implements Notification {
   @JsonKey(name: 'email')
   final String? email;
   @JsonKey(name: 'subject')

@@ -8,7 +8,7 @@ part 'dog.g.dart';
 ///
 /// Generated from OpenAPI schema.
 @JsonSerializable()
-class Dog extends Animal {
+class Dog implements Animal {
   @JsonKey(name: 'animalType')
   final String animalType;
   @JsonKey(name: 'breed')

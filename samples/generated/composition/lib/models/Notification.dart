@@ -26,6 +26,6 @@ abstract class Notification {
 }
 
 // Subclass EmailNotification is defined in package:composition_client/models/email_notification.dart
-// It should extend Notification
+// It should implement Notification
 // Subclass SmsNotification is defined in package:composition_client/models/sms_notification.dart
-// It should extend Notification
+// It should implement Notification
