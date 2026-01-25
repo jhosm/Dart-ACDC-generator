@@ -966,10 +966,11 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                 // Use the actual schema name as the subclass name (e.g., "Dog", not "AnimalDog")
                 String subclassName = toModelName(schemaName);
 
-                Map<String, Object> mappingEntry = new HashMap<>();
-                mappingEntry.put("mappingKey", mappingKey);
-                mappingEntry.put("schemaName", schemaName);
-                mappingEntry.put("subclassName", subclassName);
+                Map<String, Object> mappingEntry = Map.of(
+                    "mappingKey", mappingKey,
+                    "schemaName", schemaName,
+                    "subclassName", subclassName
+                );
                 discriminatorMapping.add(mappingEntry);
             }
 
@@ -992,11 +993,10 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
         for (int i = 0; i < schemas.size(); i++) {
             Schema alternativeSchema = schemas.get(i);
-            Map<String, Object> alternative = createAlternativeMetadata(parentName, alternativeSchema, i, compositionType);
+            boolean hasNext = i < schemas.size() - 1;
+            Map<String, Object> alternative = createAlternativeMetadata(parentName, alternativeSchema, i, hasNext, compositionType);
 
             if (alternative != null) {
-                // Set hasNext flag for all but the last alternative
-                alternative.put("hasNext", i < schemas.size() - 1);
                 alternatives.add(alternative);
             }
         }
@@ -1010,14 +1010,12 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      * @param parentName the parent schema name
      * @param schema the alternative schema
      * @param index the index of this alternative
+     * @param hasNext whether there are more alternatives after this one
      * @param compositionType the composition type ("oneOf" or "anyOf") for logging
      * @return metadata map, or null if the schema is invalid
      */
     @SuppressWarnings("rawtypes")
-    private Map<String, Object> createAlternativeMetadata(String parentName, Schema schema, int index, String compositionType) {
-        Map<String, Object> alternative = new HashMap<>();
-        alternative.put("parentClassName", parentName);
-
+    private Map<String, Object> createAlternativeMetadata(String parentName, Schema schema, int index, boolean hasNext, String compositionType) {
         if (schema.get$ref() != null) {
             // Reference to another schema
             String ref = schema.get$ref();
@@ -1025,10 +1023,14 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             // Use the actual schema name as the subclass name (e.g., "Dog", not "AnimalDog")
             String subclassName = toModelName(schemaName);
 
-            alternative.put("isRef", true);
-            alternative.put("schemaName", schemaName);
-            alternative.put("subclassName", subclassName);
-            alternative.put("importPath", toModelImport(schemaName));
+            return Map.of(
+                "parentClassName", parentName,
+                "isRef", true,
+                "schemaName", schemaName,
+                "subclassName", subclassName,
+                "importPath", toModelImport(schemaName),
+                "hasNext", hasNext
+            );
         } else if (schema.getType() != null) {
             // Inline schema (primitive or object)
             String type = schema.getType();
@@ -1039,15 +1041,23 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                 String dartType = getTypeDeclaration(schema);
                 String wrapperName = toModelName(parentName + capitalize(dartType));
 
-                alternative.put("isPrimitive", true);
-                alternative.put("dartType", dartType);
-                alternative.put("subclassName", wrapperName);
+                return Map.of(
+                    "parentClassName", parentName,
+                    "isPrimitive", true,
+                    "dartType", dartType,
+                    "subclassName", wrapperName,
+                    "hasNext", hasNext
+                );
             } else {
                 // Inline complex type - use Option naming
                 String subclassName = toModelName(parentName + "Option" + (index + 1));
-                alternative.put("isInline", true);
-                alternative.put("subclassName", subclassName);
-                alternative.put("index", index + 1);
+                return Map.of(
+                    "parentClassName", parentName,
+                    "isInline", true,
+                    "subclassName", subclassName,
+                    "index", index + 1,
+                    "hasNext", hasNext
+                );
             }
         } else {
             // Schema has neither $ref nor type - log warning and skip
@@ -1055,8 +1065,6 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                        compositionType, index, parentName);
             return null;
         }
-
-        return alternative;
     }
 
     /**
@@ -1364,10 +1372,11 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                 finalName = baseName;
             }
 
-            Map<String, Object> enumVar = new HashMap<>();
-            enumVar.put("name", finalName);
-            enumVar.put("value", valueStr);
-            enumVar.put("isString", "string".equalsIgnoreCase(datatype));
+            Map<String, Object> enumVar = Map.of(
+                "name", finalName,
+                "value", valueStr,
+                "isString", "string".equalsIgnoreCase(datatype)
+            );
             enumVars.add(enumVar);
         }
 
