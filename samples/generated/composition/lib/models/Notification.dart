@@ -1,3 +1,6 @@
+import 'package:composition_client/models/email_notification.dart';
+import 'package:composition_client/models/sms_notification.dart';
+
 /// anyOf composition: Notification
 ///
 /// Generated from OpenAPI anyOf schema.

@@ -1,5 +1,4 @@
 .gitignore
-.openapi-generator-ignore
 README.md
 analysis_options.yaml
 lib/api_client.dart
@@ -10,8 +9,12 @@ lib/config/config.dart
 lib/config/log_config.dart
 lib/config/offline_config.dart
 lib/config/security_config.dart
-lib/models/Color.dart
-lib/models/EnumTestModel.dart
-lib/models/Size.dart
-lib/remote_data_sources/DefaultApi.dart
+lib/models/color.dart
+lib/models/enum_test_model.dart
+lib/models/models.dart
+lib/models/size.dart
+lib/remote_data_sources/DefaultApi_remote_data_source.dart
+lib/remote_data_sources/DefaultApi_remote_data_source_impl.dart
+lib/remote_data_sources/remote_data_sources.dart
+lib/{{pubName}}.dart
 pubspec.yaml

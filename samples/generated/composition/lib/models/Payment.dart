@@ -1,3 +1,6 @@
+import 'package:composition_client/models/bank_transfer_payment.dart';
+import 'package:composition_client/models/credit_card_payment.dart';
+
 /// oneOf composition: Payment
 ///
 /// Generated from OpenAPI oneOf schema.

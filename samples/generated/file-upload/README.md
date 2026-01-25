@@ -29,7 +29,93 @@ dependencies:
 
 ## Usage
 
-TODO: Add usage examples
+### 1. Run code generation for JSON serialization
+
+After installing the package, generate the necessary JSON serialization code:
+
+```bash
+dart run build_runner build
+```
+
+### 2. Basic setup
+
+```dart
+import 'package:file_upload_client/file_upload_client.dart';
+import 'package:file_upload_client/config/config.dart';
+
+void main() {
+  // Configure the API client
+  final config = AcdcConfig(
+    baseUrl: 'https://api.example.com',
+    auth: AuthConfig(
+      tokenRefreshUrl: 'https://api.example.com/auth/refresh',
+    ),
+    cache: CacheConfig(
+      ttl: Duration(hours: 1),
+    ),
+    log: LogConfig(
+      level: LogLevel.info,
+    ),
+  );
+
+  // Create the Dio client with ACDC features
+  final dio = ApiClient.createDio(config);
+
+  // Create API instances
+  final DefaultApiRemoteDataSource defaultApiApi = DefaultApiRemoteDataSourceImpl(dio);
+
+  // Use the APIs
+  // Example: await userApi.getUser('user123');
+}
+```
+
+### 3. Error handling
+
+All API methods may throw `AcdcException` or its subclasses:
+
+```dart
+try {
+  final result = await api.someMethod();
+  print('Success: $result');
+} on AcdcAuthException catch (e) {
+  print('Authentication error: $e');
+} on AcdcNetworkException catch (e) {
+  print('Network error: $e');
+} on AcdcServerException catch (e) {
+  print('Server error: $e');
+} on AcdcException catch (e) {
+  print('Other ACDC error: $e');
+}
+```
+
+### 4. Advanced configuration
+
+```dart
+final config = AcdcConfig(
+  baseUrl: 'https://api.example.com',
+  auth: AuthConfig(
+    tokenRefreshUrl: 'https://api.example.com/auth/refresh',
+    clientId: 'your-client-id',
+    clientSecret: 'your-client-secret',
+  ),
+  cache: CacheConfig(
+    ttl: Duration(minutes: 30),
+    encryptCache: true,
+  ),
+  log: LogConfig(
+    level: LogLevel.debug,
+    redactSensitiveData: true,
+  ),
+  offline: OfflineConfig(
+    failFast: true,
+  ),
+  security: SecurityConfig(
+    certificateFingerprints: [
+      'sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
+    ],
+  ),
+);
+```
 
 ## Documentation
 

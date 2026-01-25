@@ -3,17 +3,19 @@ description: Composition test client (allOf/oneOf/anyOf)
 version: 1.0.0
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: ^3.8.0
 
 dependencies:
   # HTTP client with interceptors
   dio: ^5.4.0
 
   # Dart-ACDC library for authentication, caching, debugging, and client features
-  dart_acdc: ^1.0.0
+  dart_acdc:
+    git:
+      url: https://github.com/jhosm/Dart-ACDC.git
 
   # JSON serialization annotations
-  json_annotation: ^4.8.1
+  json_annotation: ^4.9.0
 
 dev_dependencies:
   # Code generation for json_serializable

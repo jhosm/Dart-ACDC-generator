@@ -9,7 +9,11 @@ lib/config/config.dart
 lib/config/log_config.dart
 lib/config/offline_config.dart
 lib/config/security_config.dart
-lib/models/ClassModel.dart
-lib/models/TestObject.dart
-lib/remote_data_sources/DefaultApi.dart
+lib/models/class_model.dart
+lib/models/models.dart
+lib/models/test_object.dart
+lib/remote_data_sources/DefaultApi_remote_data_source.dart
+lib/remote_data_sources/DefaultApi_remote_data_source_impl.dart
+lib/remote_data_sources/remote_data_sources.dart
+lib/{{pubName}}.dart
 pubspec.yaml

@@ -1,8 +1,7 @@
 // AUTO-GENERATED FILE - DO NOT EDIT
 import 'package:dio/dio.dart';
 import 'package:dart_acdc/dart_acdc.dart';
-import '{import&#x3D;package:composition_client/models/entity.dart, classname&#x3D;Entity}';
-import '{import&#x3D;package:composition_client/models/array.dart, classname&#x3D;array}';
+import 'package:composition_client/models/entity.dart';
 
 /// Implementation of [DefaultApiRemoteDataSource] using Dio
 class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
@@ -13,7 +12,7 @@ class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
   @override
   Future<List> getEntities() async {
     try {
-      final response = await _dio.(
+      final response = await _dio.get(
         '/entities',
       );
 

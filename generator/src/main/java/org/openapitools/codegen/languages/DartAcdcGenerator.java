@@ -1200,9 +1200,135 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                     }
                 }
             }
+
+            // Add imports for oneOf/anyOf sealed class alternatives
+            if (model.vendorExtensions.containsKey("x-is-one-of")) {
+                addAlternativeImports(model, "x-one-of-alternatives");
+            }
+            if (model.vendorExtensions.containsKey("x-is-any-of")) {
+                addAlternativeImports(model, "x-any-of-alternatives");
+            }
+
+            // Clean up imports: keep only valid package imports
+            // Note: Final cleanup happens in postProcessAllModels() after base class adds more imports
+            if (model.imports != null && !model.imports.isEmpty()) {
+                Set<String> validImports = new HashSet<>();
+                for (Object importObj : model.imports) {
+                    String importStr = importObj.toString();
+                    // Only keep imports that start with "package:" and don't reference primitive types
+                    if (importStr.startsWith("package:") && !isPrimitiveTypeImport(importStr)) {
+                        validImports.add(importStr);
+                    }
+                }
+                model.imports = new TreeSet<>(validImports);
+            }
         }
 
         return result;
+    }
+
+    /**
+     * Post-processes all models after individual model processing.
+     *
+     * This is the final cleanup stage before template rendering. The base class
+     * (DefaultCodegen.postProcessAllModels) adds simple-name imports based on
+     * model references, which we need to convert to proper package imports.
+     *
+     * @param objs the map of all models
+     * @return the processed models map
+     */
+    @Override
+    public Map<String, ModelsMap> postProcessAllModels(Map<String, ModelsMap> objs) {
+        Map<String, ModelsMap> result = super.postProcessAllModels(objs);
+
+        // Final cleanup: Remove simple-name imports added by base class
+        // The base class adds imports like "Cat", "Dog" based on model references.
+        // We need to ensure only valid package imports (package:xxx/models/yyy.dart) remain.
+        for (Map.Entry<String, ModelsMap> entry : result.entrySet()) {
+            ModelsMap modelsMap = entry.getValue();
+            for (ModelMap modelMap : modelsMap.getModels()) {
+                CodegenModel model = modelMap.getModel();
+
+                if (model.imports != null && !model.imports.isEmpty()) {
+                    Set<String> validImports = new TreeSet<>();
+                    for (Object importObj : model.imports) {
+                        String importStr = importObj.toString();
+                        // Only keep imports that start with "package:" and don't reference primitive types
+                        if (importStr.startsWith("package:") && !isPrimitiveTypeImport(importStr)) {
+                            validImports.add(importStr);
+                        }
+                    }
+                    model.imports = new TreeSet<>(validImports);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Primitive type file names that should never be imported.
+     * These are used to filter out invalid imports to non-existent primitive type files.
+     */
+    private static final Set<String> PRIMITIVE_TYPES = Set.of(
+        "string", "integer", "number", "boolean", "int", "double", "num", "array", "object"
+    );
+
+    /**
+     * Checks if an import path references a primitive type file that doesn't exist.
+     *
+     * @param importPath the import path to check
+     * @return true if this is an invalid primitive type import
+     */
+    private boolean isPrimitiveTypeImport(String importPath) {
+        if (importPath == null || !importPath.contains("/models/")) {
+            return false;
+        }
+
+        // Extract the filename (e.g., "string.dart" from "package:foo/models/string.dart")
+        int lastSlash = importPath.lastIndexOf('/');
+        if (lastSlash == -1) {
+            return false;
+        }
+
+        String filename = importPath.substring(lastSlash + 1);
+        // Remove .dart extension
+        if (filename.endsWith(".dart")) {
+            filename = filename.substring(0, filename.length() - 5);
+        }
+
+        return PRIMITIVE_TYPES.contains(filename);
+    }
+
+    /**
+     * Adds imports for oneOf/anyOf sealed class alternatives.
+     * Extracts import paths from alternative metadata and adds them to model.imports.
+     *
+     * @param model the codegen model
+     * @param alternativesKey the vendor extension key containing alternatives ("x-one-of-alternatives" or "x-any-of-alternatives")
+     */
+    @SuppressWarnings("unchecked")
+    private void addAlternativeImports(CodegenModel model, String alternativesKey) {
+        Object alternativesObj = model.vendorExtensions.get(alternativesKey);
+        if (!(alternativesObj instanceof List)) {
+            return;
+        }
+
+        List<Map<String, Object>> alternatives = (List<Map<String, Object>>) alternativesObj;
+        for (Map<String, Object> alternative : alternatives) {
+            // Only add imports for reference types (not primitives or inline schemas)
+            Object isRef = alternative.get("isRef");
+            if (Boolean.TRUE.equals(isRef)) {
+                Object importPathObj = alternative.get("importPath");
+                if (importPathObj instanceof String) {
+                    String importPath = (String) importPathObj;
+                    if (!importPath.isEmpty()) {
+                        model.imports.add(importPath);
+                        LOGGER.info("Added import for sealed class alternative: {}", importPath);
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -1418,14 +1544,22 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         if (imports != null && !imports.isEmpty()) {
             List<String> fixedImports = new ArrayList<>();
             for (Object importObj : imports) {
+                String importPath = null;
                 if (importObj instanceof String) {
-                    fixedImports.add((String) importObj);
+                    importPath = (String) importObj;
                 } else if (importObj instanceof Map) {
                     Map<?, ?> importMap = (Map<?, ?>) importObj;
-                    Object importPath = importMap.get("import");
-                    if (importPath != null) {
-                        fixedImports.add(importPath.toString());
+                    Object importPathObj = importMap.get("import");
+                    if (importPathObj != null) {
+                        importPath = importPathObj.toString();
                     }
+                }
+
+                // Only add valid package imports that don't reference primitive types
+                if (importPath != null &&
+                    importPath.startsWith("package:") &&
+                    !isPrimitiveTypeImport(importPath)) {
+                    fixedImports.add(importPath);
                 }
             }
             result.put("imports", fixedImports);

@@ -1,3 +1,6 @@
+import 'package:composition_client/models/cat.dart';
+import 'package:composition_client/models/dog.dart';
+
 /// oneOf composition: Animal
 ///
 /// Generated from OpenAPI oneOf schema.
