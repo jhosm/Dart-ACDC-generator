@@ -1087,10 +1087,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      * @return true if the type is primitive (string/integer/number/boolean), false otherwise
      */
     private boolean isPrimitiveType(String type) {
-        return "string".equals(type) ||
-               "integer".equals(type) ||
-               "number".equals(type) ||
-               "boolean".equals(type);
+        return type != null && OPENAPI_PRIMITIVE_TYPES.contains(type);
     }
 
     /**
@@ -1267,8 +1264,17 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
+     * OpenAPI primitive types (used for oneOf/anyOf composition logic).
+     * These are the standard OpenAPI primitive types that can appear in schemas.
+     */
+    private static final Set<String> OPENAPI_PRIMITIVE_TYPES = Set.of(
+        "string", "integer", "number", "boolean"
+    );
+
+    /**
      * Primitive type file names that should never be imported.
      * These are used to filter out invalid imports to non-existent primitive type files.
+     * Includes both OpenAPI types and Dart-specific type names.
      */
     private static final Set<String> PRIMITIVE_TYPES = Set.of(
         "string", "integer", "number", "boolean", "int", "double", "num", "array", "object"
