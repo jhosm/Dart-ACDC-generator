@@ -1728,7 +1728,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
         // Skip special Dart types that aren't models
         if (typeName.equals("MultipartFile") || typeName.equals("List") ||
-            typeName.equals("Map") || typeName.equals("void")) {
+            typeName.equals("Map") || typeName.equals("void") || typeName.equals("file")) {
             return null;
         }
 

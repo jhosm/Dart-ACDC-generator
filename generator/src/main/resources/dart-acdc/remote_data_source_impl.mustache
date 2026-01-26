@@ -15,7 +15,7 @@ class {{classname}}RemoteDataSourceImpl implements {{classname}}RemoteDataSource
 
 {{#operation}}
   @override
-  Future<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/returnType}}> {{operationId}}({{#allParams}}{{^-first}}, {{/-first}}{{#isPathParam}}{{{dataType}}} {{paramName}}{{/isPathParam}}{{#isBodyParam}}{{{dataType}}} {{paramName}}{{/isBodyParam}}{{#isQueryParam}}{{#required}}{required {{{dataType}}} {{paramName}}}{{/required}}{{^required}}{{{dataType}}}? {{paramName}}{{/required}}{{/isQueryParam}}{{#isHeaderParam}}{{#required}}{required {{{dataType}}} {{paramName}}}{{/required}}{{^required}}{{{dataType}}}? {{paramName}}{{/required}}{{/isHeaderParam}}{{/allParams}}) async {
+  Future<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/returnType}}> {{operationId}}({{#allParams}}{{^-first}}, {{/-first}}{{#isPathParam}}{{{dataType}}} {{paramName}}{{/isPathParam}}{{#isBodyParam}}{{{dataType}}} {{paramName}}{{/isBodyParam}}{{#isQueryParam}}{{#required}}{required {{{dataType}}} {{paramName}}}{{/required}}{{^required}}{{{dataType}}}? {{paramName}}{{/required}}{{/isQueryParam}}{{#isHeaderParam}}{{#required}}{required {{{dataType}}} {{paramName}}}{{/required}}{{^required}}{{{dataType}}}? {{paramName}}{{/required}}{{/isHeaderParam}}{{#isFormParam}}{{#required}}{{{dataType}}} {{paramName}}{{/required}}{{^required}}{{{dataType}}}? {{paramName}}{{/required}}{{/isFormParam}}{{/allParams}}) async {
 {{#hasQueryParams}}
     // Build query parameters, filtering out nulls
     final queryParameters = <String, dynamic>{};
@@ -36,6 +36,15 @@ class {{classname}}RemoteDataSourceImpl implements {{classname}}RemoteDataSource
 {{/headerParams}}
 
 {{/hasHeaderParams}}
+{{#hasFormParams}}
+    // Build form data for multipart/form-data request
+    final formData = FormData.fromMap({
+{{#formParams}}
+      '{{baseName}}': {{paramName}},
+{{/formParams}}
+    });
+
+{{/hasFormParams}}
     final response = await _dio.{{httpMethod}}(
       '{{path}}'{{#pathParams}}.replaceAll('{' + '{{baseName}}' + '}', {{paramName}}.toString()){{/pathParams}},
 {{#hasQueryParams}}
@@ -46,6 +55,9 @@ class {{classname}}RemoteDataSourceImpl implements {{classname}}RemoteDataSource
       data: {{paramName}}.toJson(),
 {{/bodyParam}}
 {{/hasBodyParam}}
+{{#hasFormParams}}
+      data: formData,
+{{/hasFormParams}}
 {{#hasHeaderParams}}
       options: Options(headers: headers),
 {{/hasHeaderParams}}

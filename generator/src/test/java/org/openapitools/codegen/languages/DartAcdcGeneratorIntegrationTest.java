@@ -105,6 +105,43 @@ class DartAcdcGeneratorIntegrationTest {
     }
 
     /**
+     * Test 7: Verify generated code compiles with build_runner and dart analyze
+     */
+    @Test
+    @Order(7)
+    @DisplayName("Verify generated code compiles successfully")
+    void testCodeCompilation() throws Exception {
+        // First generate the code and fetch dependencies
+        testGenerateCodeFromPetstore();
+        testDependenciesFetch();
+
+        // Run build_runner to generate .g.dart files
+        System.out.println("\nRunning 'dart run build_runner build --delete-conflicting-outputs'...");
+        ProcessResult buildRunnerResult = runCommand(outputDir,
+            "dart", "run", "build_runner", "build", "--delete-conflicting-outputs");
+
+        System.out.println("Build runner output:\n" + buildRunnerResult.output);
+
+        assertEquals(0, buildRunnerResult.exitCode,
+            "build_runner should succeed. Output:\n" + buildRunnerResult.output);
+        System.out.println("✓ Code generation with build_runner completed successfully");
+
+        // Run dart analyze to verify code compiles
+        System.out.println("\nRunning 'dart analyze'...");
+        ProcessResult analyzeResult = runCommand(outputDir, "dart", "analyze");
+
+        System.out.println("Analyze output:\n" + analyzeResult.output);
+
+        // Check for compilation errors (exit code 3 indicates errors)
+        // Exit code 0 = no issues, 1 = warnings only, 2 = infos, 3 = errors
+        assertTrue(analyzeResult.exitCode >= 0 && analyzeResult.exitCode < 3,
+            "dart analyze should complete without errors (warnings/infos are acceptable). " +
+            "Exit code: " + analyzeResult.exitCode + "\nOutput:\n" + analyzeResult.output);
+
+        System.out.println("✓ Code analysis passed - generated code compiles successfully");
+    }
+
+    /**
      * Test 3: Verify models are generated correctly
      */
     @Test
