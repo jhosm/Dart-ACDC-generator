@@ -1,7 +1,6 @@
 // AUTO-GENERATED FILE - DO NOT EDIT
 import 'package:dio/dio.dart';
 import 'package:dart_acdc/dart_acdc.dart';
-import 'package:petstore_client/models/error.dart';
 import 'package:petstore_client/models/new_pet.dart';
 import 'package:petstore_client/models/pet.dart';
 import 'package:petstore_client/remote_data_sources/PetsApi_remote_data_source.dart';

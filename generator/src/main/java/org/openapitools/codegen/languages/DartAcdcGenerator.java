@@ -1543,6 +1543,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      * For operations with multipart/form-data request bodies, this method changes
      * binary parameters from List<int> to MultipartFile and adds the necessary imports.
      *
+     * This method also filters imports to only include models actually used in operation
+     * signatures (parameters, return types) to avoid unused imports.
+     *
      * @param objs the operations map
      * @param allModels all models for cross-referencing
      * @return the processed operations map
@@ -1551,8 +1554,36 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     public OperationsMap postProcessOperationsWithModels(OperationsMap objs, List<ModelMap> allModels) {
         OperationsMap result = super.postProcessOperationsWithModels(objs, allModels);
 
+        // Get the operations list to track which models are actually used
+        OperationMap operations = result.getOperations();
+        List<CodegenOperation> ops = operations.getOperation();
+
+        // Track which models are actually used across all operations
+        Set<String> usedModelImports = new HashSet<>();
+
+        // First pass: identify which models are actually used
+        for (CodegenOperation operation : ops) {
+            // Add imports for return types
+            if (operation.returnType != null && !operation.returnType.equals("void")) {
+                String returnModelImport = getModelImportFromType(operation.returnBaseType != null ? operation.returnBaseType : operation.returnType);
+                if (returnModelImport != null) {
+                    usedModelImports.add(returnModelImport);
+                }
+            }
+
+            // Add imports for parameters
+            if (operation.allParams != null) {
+                for (CodegenParameter param : operation.allParams) {
+                    String paramModelImport = getModelImportFromType(param.baseType != null ? param.baseType : param.dataType);
+                    if (paramModelImport != null) {
+                        usedModelImports.add(paramModelImport);
+                    }
+                }
+            }
+        }
+
         // Fix imports: OpenAPI Generator populates the imports list with Map objects
-        // Extract the actual import paths from these maps for template rendering
+        // Extract the actual import paths from these maps and filter to only used models
         List<?> imports = (List<?>) result.get("imports");
         if (imports != null && !imports.isEmpty()) {
             List<String> fixedImports = new ArrayList<>();
@@ -1568,20 +1599,20 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                     }
                 }
 
-                // Only add valid package imports that don't reference primitive types
+                // Only add valid package imports that:
+                // 1. Don't reference primitive types
+                // 2. Are actually used in operation signatures
                 if (importPath != null &&
                     importPath.startsWith("package:") &&
-                    !isPrimitiveTypeImport(importPath)) {
+                    !isPrimitiveTypeImport(importPath) &&
+                    usedModelImports.contains(importPath)) {
                     fixedImports.add(importPath);
                 }
             }
             result.put("imports", fixedImports);
         }
 
-        // Get the operations list
-        OperationMap operations = result.getOperations();
-        List<CodegenOperation> ops = operations.getOperation();
-
+        // Second pass: process operations for multipart and other special handling
         for (CodegenOperation operation : ops) {
             // Convert HTTP method to lowercase for Dio method calls (GET -> get, POST -> post, etc.)
             if (operation.httpMethod != null) {
@@ -1676,6 +1707,38 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                 }
             }
         }
+    }
+
+    /**
+     * Converts a type name to its corresponding model import path.
+     * Filters out primitive types and language-specific primitives.
+     *
+     * @param typeName the type name (e.g., "Pet", "List", "int")
+     * @return the model import path, or null if not a model type
+     */
+    private String getModelImportFromType(String typeName) {
+        if (typeName == null || typeName.isEmpty()) {
+            return null;
+        }
+
+        // Skip language-specific primitives
+        if (languageSpecificPrimitives.contains(typeName)) {
+            return null;
+        }
+
+        // Skip special Dart types that aren't models
+        if (typeName.equals("MultipartFile") || typeName.equals("List") ||
+            typeName.equals("Map") || typeName.equals("void")) {
+            return null;
+        }
+
+        // Skip types with generic parameters (e.g., "List<int>", "Map<String, dynamic>")
+        if (typeName.contains("<") || typeName.contains(">")) {
+            return null;
+        }
+
+        // Convert model name to import path
+        return toModelImport(typeName);
     }
 
 }
