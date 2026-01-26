@@ -1,0 +1,286 @@
+openapi: 3.0.3
+info:
+  title: Petstore API with File Upload
+  version: 1.0.0
+  description: A sample Pet Store Server with file upload support
+servers:
+  - url: https://petstore.swagger.io/api/v3
+paths:
+  /pets:
+    get:
+      summary: List all pets
+      operationId: listPets
+      tags:
+        - pets
+      parameters:
+        - name: limit
+          in: query
+          description: How many items to return at one time (max 100)
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: status
+          in: query
+          description: Filter by pet status
+          required: false
+          schema:
+            type: string
+            enum:
+              - available
+              - pending
+              - sold
+      responses:
+        '200':
+          description: An array of pets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pet'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Create a pet
+      operationId: createPet
+      tags:
+        - pets
+      requestBody:
+        description: Pet to add to the store
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewPet'
+      responses:
+        '201':
+          description: Pet created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /pets/{petId}:
+    get:
+      summary: Info for a specific pet
+      operationId: showPetById
+      tags:
+        - pets
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          description: The id of the pet to retrieve
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Delete a pet
+      operationId: deletePet
+      tags:
+        - pets
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          description: The id of the pet to delete
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Pet deleted
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /pets/{petId}/photo:
+    post:
+      summary: Upload a pet photo
+      operationId: uploadPetPhoto
+      tags:
+        - pets
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          description: The id of the pet
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        description: Pet photo to upload
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - photo
+              properties:
+                photo:
+                  type: string
+                  format: binary
+                  description: The photo file to upload
+                caption:
+                  type: string
+                  description: Optional photo caption
+      responses:
+        '200':
+          description: Photo uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhotoUploadResponse'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /pets/batch-upload:
+    post:
+      summary: Upload multiple pet photos
+      operationId: batchUploadPhotos
+      tags:
+        - pets
+      requestBody:
+        description: Multiple pet photos to upload
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - photos
+              properties:
+                photos:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Array of photo files to upload
+                descriptions:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional descriptions for each photo
+      responses:
+        '200':
+          description: Photos uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PhotoUploadResponse'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    Pet:
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        tag:
+          type: string
+        status:
+          type: string
+          description: Pet status in the store
+          enum:
+            - available
+            - pending
+            - sold
+        category:
+          type: string
+          description: Pet category
+          enum:
+            - dog
+            - cat
+            - bird
+            - fish
+            - reptile
+    NewPet:
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        tag:
+          type: string
+        status:
+          type: string
+          enum:
+            - available
+            - pending
+        category:
+          type: string
+          enum:
+            - dog
+            - cat
+            - bird
+            - fish
+            - reptile
+    PhotoUploadResponse:
+      required:
+        - photoId
+        - url
+      properties:
+        photoId:
+          type: string
+          description: Unique identifier for the uploaded photo
+        url:
+          type: string
+          description: URL where the photo can be accessed
+        thumbnailUrl:
+          type: string
+          description: URL for the thumbnail version
+        uploadedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the photo was uploaded
+    Error:
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
