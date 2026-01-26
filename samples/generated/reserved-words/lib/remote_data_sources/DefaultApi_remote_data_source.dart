@@ -1,4 +1,7 @@
 // AUTO-GENERATED FILE - DO NOT EDIT
+import 'package:dart_acdc/dart_acdc.dart';
+import 'package:reserved_words_test/models/test_object.dart';
+
 /// Remote data source for DefaultApi
 ///
 /// All methods may throw the following exceptions:

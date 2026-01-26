@@ -158,9 +158,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             "double",
             "num",
             "Object",
-            "DateTime",
-            "List",
-            "Map"
+            "DateTime"
         ));
 
         // Type mappings: OpenAPI types -> Dart types
@@ -1633,6 +1631,16 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                         }
                     }
                 }
+            }
+
+            // Fix array return types: Ensure List<T> has generic parameter
+            if (operation.returnType != null && operation.isArray && operation.returnBaseType != null) {
+                // Only fix if returnType is missing the generic parameter
+                if ("List".equals(operation.returnType)) {
+                    operation.returnType = "List<" + operation.returnBaseType + ">";
+                }
+                // Ensure isListContainer is set for template
+                operation.vendorExtensions.put("isListContainer", true);
             }
         }
 

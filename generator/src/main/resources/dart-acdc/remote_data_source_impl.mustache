@@ -4,8 +4,9 @@ import 'package:dart_acdc/dart_acdc.dart';
 {{#imports}}
 import '{{.}}';
 {{/imports}}
-
 {{#operations}}
+import 'package:{{pubName}}/remote_data_sources/{{classname}}_remote_data_source.dart';
+
 /// Implementation of [{{classname}}RemoteDataSource] using Dio
 class {{classname}}RemoteDataSourceImpl implements {{classname}}RemoteDataSource {
   final Dio _dio;
@@ -15,69 +16,67 @@ class {{classname}}RemoteDataSourceImpl implements {{classname}}RemoteDataSource
 {{#operation}}
   @override
   Future<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/returnType}}> {{operationId}}({{#allParams}}{{^-first}}, {{/-first}}{{#isPathParam}}{{{dataType}}} {{paramName}}{{/isPathParam}}{{#isBodyParam}}{{{dataType}}} {{paramName}}{{/isBodyParam}}{{#isQueryParam}}{{#required}}{required {{{dataType}}} {{paramName}}}{{/required}}{{^required}}{{{dataType}}}? {{paramName}}{{/required}}{{/isQueryParam}}{{#isHeaderParam}}{{#required}}{required {{{dataType}}} {{paramName}}}{{/required}}{{^required}}{{{dataType}}}? {{paramName}}{{/required}}{{/isHeaderParam}}{{/allParams}}) async {
-    try {
 {{#hasQueryParams}}
-      // Build query parameters, filtering out nulls
-      final queryParameters = <String, dynamic>{};
+    // Build query parameters, filtering out nulls
+    final queryParameters = <String, dynamic>{};
 {{#queryParams}}
-      if ({{paramName}} != null) {
-        queryParameters['{{baseName}}'] = {{paramName}};
-      }
+    if ({{paramName}} != null) {
+      queryParameters['{{baseName}}'] = {{paramName}};
+    }
 {{/queryParams}}
 
 {{/hasQueryParams}}
 {{#hasHeaderParams}}
-      // Build header parameters
-      final headers = <String, dynamic>{};
+    // Build header parameters
+    final headers = <String, dynamic>{};
 {{#headerParams}}
-      if ({{paramName}} != null) {
-        headers['{{baseName}}'] = {{paramName}};
-      }
+    if ({{paramName}} != null) {
+      headers['{{baseName}}'] = {{paramName}};
+    }
 {{/headerParams}}
 
 {{/hasHeaderParams}}
-      final response = await _dio.{{httpMethod}}(
-        '{{path}}'{{#pathParams}}.replaceAll('{' + '{{baseName}}' + '}', {{paramName}}.toString()){{/pathParams}},
+    final response = await _dio.{{httpMethod}}(
+      '{{path}}'{{#pathParams}}.replaceAll('{' + '{{baseName}}' + '}', {{paramName}}.toString()){{/pathParams}},
 {{#hasQueryParams}}
-        queryParameters: queryParameters,
+      queryParameters: queryParameters,
 {{/hasQueryParams}}
 {{#hasBodyParam}}
 {{#bodyParam}}
-        data: {{paramName}}.toJson(),
+      data: {{paramName}}.toJson(),
 {{/bodyParam}}
 {{/hasBodyParam}}
 {{#hasHeaderParams}}
-        options: Options(headers: headers),
+      options: Options(headers: headers),
 {{/hasHeaderParams}}
-      );
+    );
 
 {{#returnType}}
-{{#isListContainer}}
-      // Handle List response
-      if (response.data is List) {
-        return (response.data as List)
-            .map((item) => {{{returnBaseType}}}.fromJson(item as Map<String, dynamic>))
-            .toList();
-      }
-      throw AcdcClientException('Expected List response but got: ${response.data.runtimeType}');
-{{/isListContainer}}
-{{^isListContainer}}
+{{#isArray}}
+    // Handle List response
+    if (response.data is List) {
+      return (response.data as List)
+          .map((item) => {{{returnBaseType}}}.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+    throw AcdcClientException(
+      message: 'Expected List response but got: ${response.data.runtimeType}',
+      statusCode: response.statusCode ?? 0,
+      requestOptions: response.requestOptions,
+      originalException: null,
+    );
+{{/isArray}}
+{{^isArray}}
 {{#returnTypeIsPrimitive}}
-      // Handle primitive response
-      return response.data as {{{returnType}}};
+    // Handle primitive response
+    return response.data as {{{returnType}}};
 {{/returnTypeIsPrimitive}}
 {{^returnTypeIsPrimitive}}
-      // Handle single object response
-      return {{{returnType}}}.fromJson(response.data as Map<String, dynamic>);
+    // Handle single object response
+    return {{{returnType}}}.fromJson(response.data as Map<String, dynamic>);
 {{/returnTypeIsPrimitive}}
-{{/isListContainer}}
+{{/isArray}}
 {{/returnType}}
-{{^returnType}}
-      // Void return type - no deserialization needed
-{{/returnType}}
-    } on DioException catch (e) {
-      throw AcdcException.fromDioException(e);
-    }
   }
 
 {{/operation}}

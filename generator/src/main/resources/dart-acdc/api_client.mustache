@@ -1,6 +1,6 @@
 // AUTO-GENERATED FILE - DO NOT EDIT
 import 'package:dio/dio.dart';
-import 'package:dart_acdc/dart_acdc.dart';
+import 'package:dart_acdc/dart_acdc.dart' as acdc;
 import 'config/config.dart';
 
 /// Main API client factory
@@ -24,54 +24,60 @@ class ApiClient {
   ///   cache: CacheConfig(ttl: Duration(hours: 1)),
   ///   log: LogConfig(level: LogLevel.info),
   /// );
-  /// final dio = ApiClient.createDio(config);
+  /// final dio = await ApiClient.createDio(config);
   /// ```
-  static Dio createDio(AcdcConfig config) {
-    final builder = AcdcClientBuilder()
+  static Future<Dio> createDio(AcdcConfig config) async {
+    var builder = acdc.AcdcClientBuilder()
       .withBaseUrl(config.baseUrl);
 
     // Conditionally add features based on config
     if (config.auth != null) {
-      builder.withAuthentication(
-        tokenRefreshUrl: config.auth!.tokenRefreshUrl,
-        clientId: config.auth!.clientId,
-        clientSecret: config.auth!.clientSecret,
-        refreshThreshold: config.auth!.refreshThreshold,
-        useSecureStorage: config.auth!.useSecureStorage,
+      builder = builder.withTokenRefreshEndpoint(
+        url: config.auth!.tokenRefreshUrl,
+        clientId: config.auth!.clientId ?? '',
       );
     }
 
     if (config.cache != null) {
-      builder.withCache(
+      // Map our CacheConfig to dart_acdc's CacheConfig
+      final acdcCacheConfig = acdc.CacheConfig(
         ttl: config.cache!.ttl,
-        enableDiskCache: config.cache!.enableDiskCache,
-        encryptCache: config.cache!.encryptCache,
-        maxMemoryCacheSizeMB: config.cache!.maxMemoryCacheSizeMB,
-        maxDiskCacheSizeMB: config.cache!.maxDiskCacheSizeMB,
-        userIsolation: config.cache!.userIsolation,
+        maxSize: config.cache!.maxDiskCacheSizeMB * 1024 * 1024,
+        inMemoryMaxSize: config.cache!.maxMemoryCacheSizeMB * 1024 * 1024,
+        cacheAuthenticatedRequests: true,
+        inMemory: true,
       );
+      builder = builder.withCache(acdcCacheConfig);
     }
 
     if (config.log != null) {
-      builder.withLogging(
-        level: config.log!.level,
-        redactSensitiveData: config.log!.redactSensitiveData,
-      );
+      builder = builder.withLogLevel(config.log!.level);
+      if (config.log!.redactSensitiveData) {
+        builder = builder.withSensitiveFields(['password', 'token', 'secret', 'authorization']);
+      }
     }
 
     if (config.offline != null) {
-      builder.withOfflineDetection(
+      builder = builder.withOfflineDetection(
         failFast: config.offline!.failFast,
       );
     }
 
-    if (config.security != null) {
-      builder.withCertificatePinning(
-        certificateFingerprints: config.security!.certificateFingerprints,
-        allowSelfSigned: config.security!.allowSelfSigned,
+    if (config.security != null && config.security!.certificateFingerprints.isNotEmpty) {
+      // Map our SecurityConfig to dart_acdc's CertificatePinningConfig
+      // Group all fingerprints under the base URL's domain
+      final domain = Uri.parse(config.baseUrl).host;
+      final pinningConfig = acdc.CertificatePinningConfig(
+        allowedPins: {
+          domain: config.security!.certificateFingerprints
+            .map((fp) => fp.startsWith('SHA256:') ? fp : 'SHA256:$fp')
+            .toList(),
+        },
+        reportOnly: config.security!.allowSelfSigned,
       );
+      builder = builder.withCertificatePinning(pinningConfig);
     }
 
-    return builder.build();
+    return await builder.build();
   }
 }

@@ -1,4 +1,9 @@
 // AUTO-GENERATED FILE - DO NOT EDIT
+import 'package:dart_acdc/dart_acdc.dart';
+import 'package:petstore_client/models/error.dart';
+import 'package:petstore_client/models/new_pet.dart';
+import 'package:petstore_client/models/pet.dart';
+
 /// Remote data source for PetsApi
 ///
 /// All methods may throw the following exceptions:
@@ -15,7 +20,7 @@ abstract class PetsApiRemoteDataSource {
   Future<void> deletePet(int petId);
 
   /// List all pets
-  Future<List> listPets(int? limit);
+  Future<List<Pet>> listPets(int? limit);
 
   /// Info for a specific pet
   Future<Pet> showPetById(int petId);

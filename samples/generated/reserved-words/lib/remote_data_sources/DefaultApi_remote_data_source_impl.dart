@@ -2,6 +2,7 @@
 import 'package:dio/dio.dart';
 import 'package:dart_acdc/dart_acdc.dart';
 import 'package:reserved_words_test/models/test_object.dart';
+import 'package:reserved_words_test/remote_data_sources/DefaultApi_remote_data_source.dart';
 
 /// Implementation of [DefaultApiRemoteDataSource] using Dio
 class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
@@ -11,16 +12,12 @@ class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
 
   @override
   Future<TestObject> getTest() async {
-    try {
-      final response = await _dio.get(
-        '/test',
-      );
+    final response = await _dio.get(
+      '/test',
+    );
 
-      // Handle single object response
-      return TestObject.fromJson(response.data as Map<String, dynamic>);
-    } on DioException catch (e) {
-      throw AcdcException.fromDioException(e);
-    }
+    // Handle single object response
+    return TestObject.fromJson(response.data as Map<String, dynamic>);
   }
 
 }

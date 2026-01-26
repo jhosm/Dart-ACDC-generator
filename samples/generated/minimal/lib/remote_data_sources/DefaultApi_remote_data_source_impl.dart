@@ -2,6 +2,7 @@
 import 'package:dio/dio.dart';
 import 'package:dart_acdc/dart_acdc.dart';
 import 'package:minimal_client/models/ping200_response.dart';
+import 'package:minimal_client/remote_data_sources/DefaultApi_remote_data_source.dart';
 
 /// Implementation of [DefaultApiRemoteDataSource] using Dio
 class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
@@ -11,16 +12,12 @@ class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
 
   @override
   Future<ping_200_response> ping() async {
-    try {
-      final response = await _dio.get(
-        '/ping',
-      );
+    final response = await _dio.get(
+      '/ping',
+    );
 
-      // Handle single object response
-      return ping_200_response.fromJson(response.data as Map<String, dynamic>);
-    } on DioException catch (e) {
-      throw AcdcException.fromDioException(e);
-    }
+    // Handle single object response
+    return ping_200_response.fromJson(response.data as Map<String, dynamic>);
   }
 
 }

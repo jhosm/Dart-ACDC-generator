@@ -1,4 +1,7 @@
 // AUTO-GENERATED FILE - DO NOT EDIT
+import 'package:dart_acdc/dart_acdc.dart';
+import 'package:composition_client/models/entity.dart';
+
 /// Remote data source for DefaultApi
 ///
 /// All methods may throw the following exceptions:
@@ -9,6 +12,6 @@
 /// - [AcdcSecurityException] - Certificate pinning or security violations
 abstract class DefaultApiRemoteDataSource {
   /// Get entities
-  Future<List> getEntities();
+  Future<List<Entity>> getEntities();
 
 }
