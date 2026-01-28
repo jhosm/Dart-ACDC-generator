@@ -13,7 +13,7 @@ class PetsApiRemoteDataSourceImpl implements PetsApiRemoteDataSource {
 
   @override
   Future<Pet> createPet(NewPet newPet) async {
-    final response = await _dio.post(
+    final response = await _dio.post<Response>(
       '/pets',
       data: newPet.toJson(),
     );
@@ -24,10 +24,9 @@ class PetsApiRemoteDataSourceImpl implements PetsApiRemoteDataSource {
 
   @override
   Future<void> deletePet(int petId) async {
-    final response = await _dio.delete(
+    await _dio.delete<void>(
       '/pets/{petId}'.replaceAll('{' + 'petId' + '}', petId.toString()),
     );
-
   }
 
   @override
@@ -38,7 +37,7 @@ class PetsApiRemoteDataSourceImpl implements PetsApiRemoteDataSource {
       queryParameters['limit'] = limit;
     }
 
-    final response = await _dio.get(
+    final response = await _dio.get<Response>(
       '/pets',
       queryParameters: queryParameters,
     );
@@ -59,7 +58,7 @@ class PetsApiRemoteDataSourceImpl implements PetsApiRemoteDataSource {
 
   @override
   Future<Pet> showPetById(int petId) async {
-    final response = await _dio.get(
+    final response = await _dio.get<Response>(
       '/pets/{petId}'.replaceAll('{' + 'petId' + '}', petId.toString()),
     );
 

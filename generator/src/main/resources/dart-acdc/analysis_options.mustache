@@ -6,6 +6,10 @@ analyzer:
     strict-casts: true
     strict-inference: true
     strict-raw-types: true
+  errors:
+    # http_mock_adapter callbacks don't publicly export the MockServer type,
+    # so inference of the callback parameter type is expected in tests
+    inference_failure_on_untyped_parameter: ignore
 
 linter:
   rules:

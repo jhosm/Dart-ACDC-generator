@@ -223,6 +223,28 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
+     * Returns the folder where API test files are generated.
+     * Places test files in the standard Dart test/ directory.
+     *
+     * @return path to the test directory
+     */
+    @Override
+    public String apiTestFileFolder() {
+        return outputFolder + "/test";
+    }
+
+    /**
+     * Returns the folder where model test files are generated.
+     * Places test files in the standard Dart test/ directory.
+     *
+     * @return path to the test directory
+     */
+    @Override
+    public String modelTestFileFolder() {
+        return outputFolder + "/test";
+    }
+
+    /**
      * Escapes a reserved word by suffixing it with an underscore.
      * This is called for property/variable names.
      *
@@ -1586,6 +1608,30 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
+     * Generates a raw (unquoted) test value for URL path embedding.
+     * Unlike getTestValueForType(), this returns values without Dart string delimiters.
+     * Used in path parameter replacement: .replaceAll('{param}', 'rawValue')
+     *
+     * @param dataType the Dart data type
+     * @return a raw string suitable for URL embedding
+     */
+    private String getTestValueRawForType(String dataType) {
+        if (dataType == null || dataType.isEmpty()) {
+            return "null";
+        }
+
+        return switch (dataType) {
+            case "int" -> "42";
+            case "double" -> "3.14";
+            case "num" -> "123.45";
+            case "bool" -> "true";
+            case "String" -> "test_value";
+            case "DateTime" -> "2024-01-01T00:00:00.000Z";
+            default -> "test_value";
+        };
+    }
+
+    /**
      * Extracts the inner type from a generic type declaration.
      * E.g., "List<Pet>" -> "Pet", "Map<String, Pet>" -> "Pet"
      *
@@ -1620,6 +1666,23 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         return languageSpecificPrimitives.contains(type) ||
                type.equals("Object") ||
                type.equals("dynamic");
+    }
+
+    /**
+     * Adds testValue and testValueRaw vendor extensions to a list of parameters.
+     *
+     * @param params the parameter list (may be null)
+     */
+    private void addTestValuesToParams(List<CodegenParameter> params) {
+        if (params == null) {
+            return;
+        }
+        for (CodegenParameter param : params) {
+            String testValue = getTestValueForType(param.dataType);
+            param.vendorExtensions.put("testValue", testValue);
+            String testValueRaw = getTestValueRawForType(param.dataType);
+            param.vendorExtensions.put("testValueRaw", testValueRaw);
+        }
     }
 
     /**
@@ -1759,15 +1822,23 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                 operation.returnBaseType,
                 operation.isArray
             );
+            // Ensure sampleResponseJson is never empty - use fallback if needed
+            if (sampleResponseJson == null || sampleResponseJson.trim().isEmpty()) {
+                sampleResponseJson = "<String, dynamic>{}";
+                LOGGER.warn("sampleResponseJson was empty for operation {}, using fallback",
+                           operation.operationId);
+            }
             operation.vendorExtensions.put("sampleResponseJson", sampleResponseJson);
 
-            // Add test values to all parameters
-            if (operation.allParams != null) {
-                for (CodegenParameter param : operation.allParams) {
-                    String testValue = getTestValueForType(param.dataType);
-                    param.vendorExtensions.put("testValue", testValue);
-                }
-            }
+            // Add test values to all parameter lists
+            // OpenAPI Generator creates separate instances for allParams, pathParams, queryParams, etc.
+            // We must set vendor extensions on ALL lists for template access
+            addTestValuesToParams(operation.allParams);
+            addTestValuesToParams(operation.pathParams);
+            addTestValuesToParams(operation.queryParams);
+            addTestValuesToParams(operation.bodyParams);
+            addTestValuesToParams(operation.headerParams);
+            addTestValuesToParams(operation.formParams);
 
             // Check if this operation has multipart/form-data content
             boolean isMultipartOperation = operation.hasConsumes && operation.consumes != null &&
