@@ -118,8 +118,10 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         // Basic configuration
         outputFolder = "generated-code/dart-acdc";
         modelTemplateFiles.put("model.mustache", ".dart");
+        modelTestTemplateFiles.put("test/model_test.mustache", "_test.dart");
         apiTemplateFiles.put("remote_data_source.mustache", "_remote_data_source.dart");
         apiTemplateFiles.put("remote_data_source_impl.mustache", "_remote_data_source_impl.dart");
+        apiTestTemplateFiles.put("test/api_test.mustache", "_test.dart");
         embeddedTemplateDir = templateDir = "dart-acdc";
 
         // Enable enum generation as separate models
@@ -149,6 +151,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         supportingFiles.add(new SupportingFile("log_config.mustache", "lib/config", "log_config.dart"));
         supportingFiles.add(new SupportingFile("offline_config.mustache", "lib/config", "offline_config.dart"));
         supportingFiles.add(new SupportingFile("security_config.mustache", "lib/config", "security_config.dart"));
+
+        // Test supporting files
+        supportingFiles.add(new SupportingFile("test/test_helpers.mustache", "test", "test_helpers.dart"));
 
         // Language-specific primitives
         languageSpecificPrimitives = new HashSet<>(Arrays.asList(
