@@ -1,0 +1,304 @@
+{{#models}}
+{{#model}}
+// AUTO-GENERATED FILE - DO NOT EDIT
+import 'package:test/test.dart';
+import 'package:{{pubName}}/models/{{classFilename}}.dart';
+{{#imports}}
+import 'package:{{pubName}}/models/{{.}}';
+{{/imports}}
+
+void main() {
+  group('{{classname}} tests', () {
+{{#isEnum}}
+    test('enum has all expected values', () {
+      expect({{classname}}.values.length, equals({{#allowableValues}}{{enumVars.size}}{{/allowableValues}}));
+{{#allowableValues}}
+{{#enumVars}}
+      expect({{classname}}.values, contains({{classname}}.{{name}}));
+{{/enumVars}}
+{{/allowableValues}}
+    });
+{{/isEnum}}
+{{^isEnum}}
+{{^vendorExtensions.x-is-one-of}}
+{{^vendorExtensions.x-is-any-of}}
+    test('fromJson with all fields populated', () {
+      final json = <String, dynamic>{
+{{#vars}}
+{{#isString}}
+        '{{baseName}}': 'test_{{name}}',
+{{/isString}}
+{{#isInteger}}
+        '{{baseName}}': 42,
+{{/isInteger}}
+{{#isLong}}
+        '{{baseName}}': 42,
+{{/isLong}}
+{{#isDouble}}
+        '{{baseName}}': 3.14,
+{{/isDouble}}
+{{#isFloat}}
+        '{{baseName}}': 3.14,
+{{/isFloat}}
+{{#isBoolean}}
+        '{{baseName}}': true,
+{{/isBoolean}}
+{{#isDateTime}}
+        '{{baseName}}': '2024-01-01T00:00:00.000Z',
+{{/isDateTime}}
+{{#isDate}}
+        '{{baseName}}': '2024-01-01',
+{{/isDate}}
+{{#isArray}}
+        '{{baseName}}': [],
+{{/isArray}}
+{{#isMap}}
+        '{{baseName}}': <String, dynamic>{},
+{{/isMap}}
+{{^isString}}
+{{^isInteger}}
+{{^isLong}}
+{{^isDouble}}
+{{^isFloat}}
+{{^isBoolean}}
+{{^isDateTime}}
+{{^isDate}}
+{{^isArray}}
+{{^isMap}}
+{{#complexType}}
+        '{{baseName}}': <String, dynamic>{},
+{{/complexType}}
+{{/isMap}}
+{{/isArray}}
+{{/isDate}}
+{{/isDateTime}}
+{{/isBoolean}}
+{{/isFloat}}
+{{/isDouble}}
+{{/isLong}}
+{{/isInteger}}
+{{/isString}}
+{{/vars}}
+      };
+
+      final model = {{classname}}.fromJson(json);
+
+      expect(model, isA<{{classname}}>());
+{{#vars}}
+{{#required}}
+      expect(model.{{name}}, isNotNull);
+{{/required}}
+{{/vars}}
+    });
+
+    test('fromJson with only required fields', () {
+      final json = <String, dynamic>{
+{{#vars}}
+{{#required}}
+{{#isString}}
+        '{{baseName}}': 'test_{{name}}',
+{{/isString}}
+{{#isInteger}}
+        '{{baseName}}': 42,
+{{/isInteger}}
+{{#isLong}}
+        '{{baseName}}': 42,
+{{/isLong}}
+{{#isDouble}}
+        '{{baseName}}': 3.14,
+{{/isDouble}}
+{{#isFloat}}
+        '{{baseName}}': 3.14,
+{{/isFloat}}
+{{#isBoolean}}
+        '{{baseName}}': true,
+{{/isBoolean}}
+{{#isDateTime}}
+        '{{baseName}}': '2024-01-01T00:00:00.000Z',
+{{/isDateTime}}
+{{#isDate}}
+        '{{baseName}}': '2024-01-01',
+{{/isDate}}
+{{#isArray}}
+        '{{baseName}}': [],
+{{/isArray}}
+{{#isMap}}
+        '{{baseName}}': <String, dynamic>{},
+{{/isMap}}
+{{^isString}}
+{{^isInteger}}
+{{^isLong}}
+{{^isDouble}}
+{{^isFloat}}
+{{^isBoolean}}
+{{^isDateTime}}
+{{^isDate}}
+{{^isArray}}
+{{^isMap}}
+{{#complexType}}
+        '{{baseName}}': <String, dynamic>{},
+{{/complexType}}
+{{/isMap}}
+{{/isArray}}
+{{/isDate}}
+{{/isDateTime}}
+{{/isBoolean}}
+{{/isFloat}}
+{{/isDouble}}
+{{/isLong}}
+{{/isInteger}}
+{{/isString}}
+{{/required}}
+{{/vars}}
+      };
+
+      final model = {{classname}}.fromJson(json);
+
+      expect(model, isA<{{classname}}>());
+{{#vars}}
+{{#required}}
+      expect(model.{{name}}, isNotNull);
+{{/required}}
+{{^required}}
+      expect(model.{{name}}, isNull);
+{{/required}}
+{{/vars}}
+    });
+
+    test('toJson produces valid JSON', () {
+      final model = {{classname}}(
+{{#vars}}
+{{#required}}
+{{#isString}}
+        {{name}}: 'test_{{name}}',
+{{/isString}}
+{{#isInteger}}
+        {{name}}: 42,
+{{/isInteger}}
+{{#isLong}}
+        {{name}}: 42,
+{{/isLong}}
+{{#isDouble}}
+        {{name}}: 3.14,
+{{/isDouble}}
+{{#isFloat}}
+        {{name}}: 3.14,
+{{/isFloat}}
+{{#isBoolean}}
+        {{name}}: true,
+{{/isBoolean}}
+{{#isArray}}
+        {{name}}: [],
+{{/isArray}}
+{{#isMap}}
+        {{name}}: <String, dynamic>{},
+{{/isMap}}
+{{^isString}}
+{{^isInteger}}
+{{^isLong}}
+{{^isDouble}}
+{{^isFloat}}
+{{^isBoolean}}
+{{^isArray}}
+{{^isMap}}
+{{#complexType}}
+        {{name}}: null, // TODO: Provide valid test data
+{{/complexType}}
+{{/isMap}}
+{{/isArray}}
+{{/isBoolean}}
+{{/isFloat}}
+{{/isDouble}}
+{{/isLong}}
+{{/isInteger}}
+{{/isString}}
+{{/required}}
+{{/vars}}
+      );
+
+      final json = model.toJson();
+
+      expect(json, isA<Map<String, dynamic>>());
+{{#vars}}
+{{#required}}
+      expect(json.containsKey('{{baseName}}'), isTrue);
+{{/required}}
+{{/vars}}
+    });
+
+    test('roundtrip serialization preserves data', () {
+      final originalJson = <String, dynamic>{
+{{#vars}}
+{{#isString}}
+        '{{baseName}}': 'test_{{name}}',
+{{/isString}}
+{{#isInteger}}
+        '{{baseName}}': 42,
+{{/isInteger}}
+{{#isLong}}
+        '{{baseName}}': 42,
+{{/isLong}}
+{{#isDouble}}
+        '{{baseName}}': 3.14,
+{{/isDouble}}
+{{#isFloat}}
+        '{{baseName}}': 3.14,
+{{/isFloat}}
+{{#isBoolean}}
+        '{{baseName}}': true,
+{{/isBoolean}}
+{{#isDateTime}}
+        '{{baseName}}': '2024-01-01T00:00:00.000Z',
+{{/isDateTime}}
+{{#isDate}}
+        '{{baseName}}': '2024-01-01',
+{{/isDate}}
+{{#isArray}}
+        '{{baseName}}': [],
+{{/isArray}}
+{{#isMap}}
+        '{{baseName}}': <String, dynamic>{},
+{{/isMap}}
+{{^isString}}
+{{^isInteger}}
+{{^isLong}}
+{{^isDouble}}
+{{^isFloat}}
+{{^isBoolean}}
+{{^isDateTime}}
+{{^isDate}}
+{{^isArray}}
+{{^isMap}}
+{{#complexType}}
+        '{{baseName}}': <String, dynamic>{},
+{{/complexType}}
+{{/isMap}}
+{{/isArray}}
+{{/isDate}}
+{{/isDateTime}}
+{{/isBoolean}}
+{{/isFloat}}
+{{/isDouble}}
+{{/isLong}}
+{{/isInteger}}
+{{/isString}}
+{{/vars}}
+      };
+
+      final model = {{classname}}.fromJson(originalJson);
+      final serializedJson = model.toJson();
+
+      // Verify all required fields match
+{{#vars}}
+{{#required}}
+      expect(serializedJson['{{baseName}}'], equals(originalJson['{{baseName}}']));
+{{/required}}
+{{/vars}}
+    });
+{{/vendorExtensions.x-is-any-of}}
+{{/vendorExtensions.x-is-one-of}}
+{{/isEnum}}
+  });
+}
+{{/model}}
+{{/models}}
