@@ -353,7 +353,7 @@ class DartAcdcGeneratorTest {
         assertEquals(2, alternatives.size(), "Should have 2 alternatives");
 
         // First alternative should be a primitive wrapper for String
-        java.util.Map<String, Object> firstAlt = alternatives.get(0);
+        java.util.Map<String, Object> firstAlt = alternatives.getFirst();
         assertTrue((Boolean) firstAlt.getOrDefault("isPrimitive", false),
                 "First alternative should be primitive");
         assertEquals("String", firstAlt.get("dartType"), "Should be String type");

@@ -1552,36 +1552,74 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             return "null";
         }
 
-        // Handle primitive types
-        switch (dataType) {
-            case "int":
-                return "42";
-            case "double":
-                return "3.14";
-            case "num":
-                return "123.45";
-            case "bool":
-                return "true";
-            case "String":
-                return "'test_value'";
-            case "DateTime":
-                return "DateTime.parse('2024-01-01T00:00:00.000Z')";
-            default:
+        // Handle primitive types using enhanced switch expression
+        return switch (dataType) {
+            case "int" -> "42";
+            case "double" -> "3.14";
+            case "num" -> "123.45";
+            case "bool" -> "true";
+            case "String" -> "'test_value'";
+            case "DateTime" -> "DateTime.parse('2024-01-01T00:00:00.000Z')";
+            default -> {
                 // Handle List types
                 if (dataType.startsWith("List<")) {
-                    return "[]";
+                    String innerType = extractGenericType(dataType);
+                    if (isPrimitiveOrSimpleType(innerType)) {
+                        yield "[]";
+                    }
+                    // For lists of complex types, use empty list
+                    yield "const []";
                 }
                 // Handle Map types
                 if (dataType.startsWith("Map<")) {
-                    return "<String, dynamic>{}";
+                    yield "const <String, dynamic>{}";
                 }
                 // Handle MultipartFile
                 if (dataType.equals("MultipartFile")) {
-                    return "MultipartFile.fromString('test', filename: 'test.txt')";
+                    yield "MultipartFile.fromString('test', filename: 'test.txt')";
                 }
-                // For model types, return a TODO comment
-                return dataType + "(/* TODO: Provide valid test data */)";
+                // For model types, use fromJson with minimal valid data
+                // This ensures tests compile and can be extended with proper test data
+                yield dataType + ".fromJson(const <String, dynamic>{})";
+            }
+        };
+    }
+
+    /**
+     * Extracts the inner type from a generic type declaration.
+     * E.g., "List<Pet>" -> "Pet", "Map<String, Pet>" -> "Pet"
+     *
+     * @param genericType the generic type string
+     * @return the inner type, or empty string if not found
+     */
+    private String extractGenericType(String genericType) {
+        int start = genericType.indexOf('<');
+        int end = genericType.lastIndexOf('>');
+        if (start != -1 && end != -1 && end > start) {
+            String inner = genericType.substring(start + 1, end).trim();
+            // For Map<String, Pet>, extract the last type
+            int commaIndex = inner.lastIndexOf(',');
+            if (commaIndex != -1) {
+                return inner.substring(commaIndex + 1).trim();
+            }
+            return inner;
         }
+        return "";
+    }
+
+    /**
+     * Checks if a type is a primitive or simple Dart type.
+     *
+     * @param type the type to check
+     * @return true if primitive or simple type, false if model type
+     */
+    private boolean isPrimitiveOrSimpleType(String type) {
+        if (type == null || type.isEmpty()) {
+            return false;
+        }
+        return languageSpecificPrimitives.contains(type) ||
+               type.equals("Object") ||
+               type.equals("dynamic");
     }
 
     /**
@@ -1594,26 +1632,23 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      * @return a Dart code string representing sample response JSON
      */
     private String getSampleResponseJson(String returnType, String returnBaseType, boolean isArray) {
-        if (returnType == null || returnType.equals("void")) {
+        // Handle null, empty, or void return types
+        if (returnType == null || returnType.isEmpty() || returnType.trim().isEmpty() || returnType.equals("void")) {
             return "null";
         }
 
-        // Handle primitive return types
+        // Trim whitespace
+        returnType = returnType.trim();
+
+        // Handle primitive return types using enhanced switch expression
         if (languageSpecificPrimitives.contains(returnType)) {
-            switch (returnType) {
-                case "int":
-                case "double":
-                case "num":
-                    return "42";
-                case "bool":
-                    return "true";
-                case "String":
-                    return "'test_response'";
-                case "DateTime":
-                    return "'2024-01-01T00:00:00.000Z'";
-                default:
-                    return "null";
-            }
+            return switch (returnType) {
+                case "int", "double", "num" -> "42";
+                case "bool" -> "true";
+                case "String" -> "'test_response'";
+                case "DateTime" -> "'2024-01-01T00:00:00.000Z'";
+                default -> "<String, dynamic>{}";
+            };
         }
 
         // Handle array responses
@@ -1621,7 +1656,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             return "[<String, dynamic>{}]";
         }
 
-        // Handle object responses
+        // Handle object responses (model types)
         return "<String, dynamic>{}";
     }
 
@@ -1708,12 +1743,14 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         for (CodegenOperation operation : ops) {
             // Convert HTTP method to lowercase for Dio method calls (GET -> get, POST -> post, etc.)
             if (operation.httpMethod != null) {
-                // Store capitalized version for test templates (GET, POST, DELETE)
-                String httpMethodUpper = operation.httpMethod.toUpperCase();
-                operation.vendorExtensions.put("httpMethodCapitalized", httpMethodUpper);
+                // Store PascalCase version for test templates (Get, Post, Delete)
+                // This is used for method names like onGetJson, onPostJson, etc.
+                String httpMethodLower = operation.httpMethod.toLowerCase();
+                String httpMethodPascal = capitalize(httpMethodLower);
+                operation.vendorExtensions.put("httpMethodCapitalized", httpMethodPascal);
 
                 // Convert to lowercase for Dio method calls
-                operation.httpMethod = operation.httpMethod.toLowerCase();
+                operation.httpMethod = httpMethodLower;
             }
 
             // Add test metadata for test templates

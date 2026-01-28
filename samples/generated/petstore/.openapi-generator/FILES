@@ -1,4 +1,8 @@
 .gitignore
+ErrorTest_test.dart
+NewPetTest_test.dart
+PetTest_test.dart
+PetsApiTest_test.dart
 README.md
 analysis_options.yaml
 lib/api_client.dart
@@ -18,3 +22,4 @@ lib/remote_data_sources/PetsApi_remote_data_source_impl.dart
 lib/remote_data_sources/remote_data_sources.dart
 lib/{{pubName}}.dart
 pubspec.yaml
+test/test_helpers.dart

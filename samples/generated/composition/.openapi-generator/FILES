@@ -1,5 +1,21 @@
 .gitignore
+AnimalTest_test.dart
+BankTransferPaymentTest_test.dart
+BaseEntityTest_test.dart
+CatTest_test.dart
+CreditCardPaymentTest_test.dart
+DefaultApiTest_test.dart
+DogTest_test.dart
+EmailNotificationTest_test.dart
+EntityTest_test.dart
+NodeTest_test.dart
+NotificationTest_test.dart
+PaymentTest_test.dart
 README.md
+SmsNotificationTest_test.dart
+StringOrNumberTest_test.dart
+TimestampedTest_test.dart
+VerifiedAnimalTest_test.dart
 analysis_options.yaml
 lib/api_client.dart
 lib/config/acdc_config.dart
@@ -30,3 +46,4 @@ lib/remote_data_sources/DefaultApi_remote_data_source_impl.dart
 lib/remote_data_sources/remote_data_sources.dart
 lib/{{pubName}}.dart
 pubspec.yaml
+test/test_helpers.dart

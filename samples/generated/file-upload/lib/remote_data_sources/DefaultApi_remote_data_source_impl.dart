@@ -3,7 +3,6 @@ import 'package:dio/dio.dart';
 import 'package:dart_acdc/dart_acdc.dart';
 import 'package:file_upload_client/models/profile.dart';
 import 'package:file_upload_client/models/upload_response.dart';
-import 'package:file_upload_client/models/file.dart';
 import 'package:file_upload_client/remote_data_sources/DefaultApi_remote_data_source.dart';
 
 /// Implementation of [DefaultApiRemoteDataSource] using Dio
@@ -13,9 +12,16 @@ class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
   DefaultApiRemoteDataSourceImpl(this._dio);
 
   @override
-  Future<UploadResponse> uploadFile(, ) async {
+  Future<UploadResponse> uploadFile(MultipartFile file, String? description) async {
+    // Build form data for multipart/form-data request
+    final formData = FormData.fromMap({
+      'file': file,
+      'description': description,
+    });
+
     final response = await _dio.post(
       '/upload',
+      data: formData,
     );
 
     // Handle single object response
@@ -23,9 +29,16 @@ class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
   }
 
   @override
-  Future<List<UploadResponse>> uploadMultipleFiles(, ) async {
+  Future<List<UploadResponse>> uploadMultipleFiles(List files, List? tags) async {
+    // Build form data for multipart/form-data request
+    final formData = FormData.fromMap({
+      'files': files,
+      'tags': tags,
+    });
+
     final response = await _dio.post(
       '/upload/multiple',
+      data: formData,
     );
 
     // Handle List response
@@ -43,9 +56,17 @@ class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
   }
 
   @override
-  Future<Profile> uploadProfile(, , ) async {
+  Future<Profile> uploadProfile(String name, MultipartFile avatar, String? bio) async {
+    // Build form data for multipart/form-data request
+    final formData = FormData.fromMap({
+      'name': name,
+      'bio': bio,
+      'avatar': avatar,
+    });
+
     final response = await _dio.post(
       '/upload/profile',
+      data: formData,
     );
 
     // Handle single object response

@@ -1,4 +1,5 @@
 // AUTO-GENERATED FILE - DO NOT EDIT
+import 'package:dio/dio.dart';
 import 'package:dart_acdc/dart_acdc.dart';
 import 'package:composition_client/models/entity.dart';
 

@@ -45,7 +45,8 @@ class {{classname}}RemoteDataSourceImpl implements {{classname}}RemoteDataSource
     });
 
 {{/hasFormParams}}
-    final response = await _dio.{{httpMethod}}(
+{{#returnType}}
+    final response = await _dio.{{httpMethod}}<Response>(
       '{{path}}'{{#pathParams}}.replaceAll('{' + '{{baseName}}' + '}', {{paramName}}.toString()){{/pathParams}},
 {{#hasQueryParams}}
       queryParameters: queryParameters,
@@ -63,6 +64,26 @@ class {{classname}}RemoteDataSourceImpl implements {{classname}}RemoteDataSource
 {{/hasHeaderParams}}
     );
 
+{{/returnType}}
+{{^returnType}}
+    await _dio.{{httpMethod}}<void>(
+      '{{path}}'{{#pathParams}}.replaceAll('{' + '{{baseName}}' + '}', {{paramName}}.toString()){{/pathParams}},
+{{#hasQueryParams}}
+      queryParameters: queryParameters,
+{{/hasQueryParams}}
+{{#hasBodyParam}}
+{{#bodyParam}}
+      data: {{paramName}}.toJson(),
+{{/bodyParam}}
+{{/hasBodyParam}}
+{{#hasFormParams}}
+      data: formData,
+{{/hasFormParams}}
+{{#hasHeaderParams}}
+      options: Options(headers: headers),
+{{/hasHeaderParams}}
+    );
+{{/returnType}}
 {{#returnType}}
 {{#isArray}}
     // Handle List response
