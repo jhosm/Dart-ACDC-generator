@@ -19,79 +19,31 @@ void main() {
 {{#returnType}}
 {{#isArray}}
 
-        final responseData = [
-          {
-{{#returnBaseType}}
-{{#vars}}
-{{#isString}}
-            '{{baseName}}': 'test_value',
-{{/isString}}
-{{#isInteger}}
-            '{{baseName}}': 42,
-{{/isInteger}}
-{{#isLong}}
-            '{{baseName}}': 42,
-{{/isLong}}
-{{#isDouble}}
-            '{{baseName}}': 3.14,
-{{/isDouble}}
-{{#isFloat}}
-            '{{baseName}}': 3.14,
-{{/isFloat}}
-{{#isBoolean}}
-            '{{baseName}}': true,
-{{/isBoolean}}
-{{/vars}}
-{{/returnBaseType}}
-          }
-        ];
+        final responseData = {{{sampleResponseJson}}};
 
-        mockSetup.adapter.onGetList('{{path}}'{{#pathParams}}.replaceAll('{' + '{{baseName}}' + '}', 'test_{{paramName}}'){{/pathParams}}, responseData);
+        mockSetup.adapter.on{{httpMethodCapitalized}}List('{{path}}'{{#pathParams}}.replaceAll('{' + '{{baseName}}' + '}', 'test_{{paramName}}'){{/pathParams}}, responseData);
 {{/isArray}}
 {{^isArray}}
 {{#returnTypeIsPrimitive}}
 
-        final responseData = {{#isString}}'test_response'{{/isString}}{{#isInteger}}42{{/isInteger}}{{#isLong}}42{{/isLong}}{{#isDouble}}3.14{{/isDouble}}{{#isFloat}}3.14{{/isFloat}}{{#isBoolean}}true{{/isBoolean}};
+        final responseData = {{{sampleResponseJson}}};
 
-        mockSetup.adapter.on{{httpMethod}}(
+        mockSetup.adapter.on{{httpMethodCapitalized}}(
           '{{path}}'{{#pathParams}}.replaceAll('{' + '{{baseName}}' + '}', 'test_{{paramName}}'){{/pathParams}},
           (server) => server.reply(200, responseData),
         );
 {{/returnTypeIsPrimitive}}
 {{^returnTypeIsPrimitive}}
 
-        final responseData = <String, dynamic>{
-{{#returnType}}
-{{#vars}}
-{{#isString}}
-          '{{baseName}}': 'test_value',
-{{/isString}}
-{{#isInteger}}
-          '{{baseName}}': 42,
-{{/isInteger}}
-{{#isLong}}
-          '{{baseName}}': 42,
-{{/isLong}}
-{{#isDouble}}
-          '{{baseName}}': 3.14,
-{{/isDouble}}
-{{#isFloat}}
-          '{{baseName}}': 3.14,
-{{/isFloat}}
-{{#isBoolean}}
-          '{{baseName}}': true,
-{{/isBoolean}}
-{{/vars}}
-{{/returnType}}
-        };
+        final responseData = {{{sampleResponseJson}}};
 
-        mockSetup.adapter.on{{httpMethod}}Json('{{path}}'{{#pathParams}}.replaceAll('{' + '{{baseName}}' + '}', 'test_{{paramName}}'){{/pathParams}}, responseData);
+        mockSetup.adapter.on{{httpMethodCapitalized}}Json('{{path}}'{{#pathParams}}.replaceAll('{' + '{{baseName}}' + '}', 'test_{{paramName}}'){{/pathParams}}, responseData);
 {{/returnTypeIsPrimitive}}
 {{/isArray}}
 {{/returnType}}
 {{^returnType}}
 
-        mockSetup.adapter.on{{httpMethod}}(
+        mockSetup.adapter.on{{httpMethodCapitalized}}(
           '{{path}}'{{#pathParams}}.replaceAll('{' + '{{baseName}}' + '}', 'test_{{paramName}}'){{/pathParams}},
           (server) => server.reply(204, null),
         );
@@ -127,7 +79,7 @@ void main() {
         final api = {{classname}}RemoteDataSourceImpl(mockSetup.dio);
 
         String capturedPath = '';
-        mockSetup.adapter.on{{httpMethod}}(
+        mockSetup.adapter.on{{httpMethodCapitalized}}(
           '{{path}}'{{#pathParams}}.replaceAll('{' + '{{baseName}}' + '}', 'param_value_{{paramName}}'){{/pathParams}},
           (server) {
             capturedPath = server.request.uri.path;
@@ -153,7 +105,7 @@ void main() {
         final api = {{classname}}RemoteDataSourceImpl(mockSetup.dio);
 
         Map<String, dynamic> capturedQueryParams = {};
-        mockSetup.adapter.on{{httpMethod}}(
+        mockSetup.adapter.on{{httpMethodCapitalized}}(
           '{{path}}'{{#pathParams}}.replaceAll('{' + '{{baseName}}' + '}', 'test_{{paramName}}'){{/pathParams}},
           (server) {
             capturedQueryParams = Map.from(server.request.uri.queryParameters);

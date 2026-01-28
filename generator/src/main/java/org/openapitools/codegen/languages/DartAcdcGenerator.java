@@ -1541,6 +1541,91 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
+     * Generates a test value for a given Dart data type.
+     * Used by test templates to generate valid test data for parameters.
+     *
+     * @param dataType the Dart data type (e.g., "int", "String", "Pet")
+     * @return a Dart code string representing a test value
+     */
+    private String getTestValueForType(String dataType) {
+        if (dataType == null || dataType.isEmpty()) {
+            return "null";
+        }
+
+        // Handle primitive types
+        switch (dataType) {
+            case "int":
+                return "42";
+            case "double":
+                return "3.14";
+            case "num":
+                return "123.45";
+            case "bool":
+                return "true";
+            case "String":
+                return "'test_value'";
+            case "DateTime":
+                return "DateTime.parse('2024-01-01T00:00:00.000Z')";
+            default:
+                // Handle List types
+                if (dataType.startsWith("List<")) {
+                    return "[]";
+                }
+                // Handle Map types
+                if (dataType.startsWith("Map<")) {
+                    return "<String, dynamic>{}";
+                }
+                // Handle MultipartFile
+                if (dataType.equals("MultipartFile")) {
+                    return "MultipartFile.fromString('test', filename: 'test.txt')";
+                }
+                // For model types, return a TODO comment
+                return dataType + "(/* TODO: Provide valid test data */)";
+        }
+    }
+
+    /**
+     * Generates sample JSON response data for a given return type.
+     * Used by test templates to mock API responses.
+     *
+     * @param returnType the return type (e.g., "Pet", "List<Pet>")
+     * @param returnBaseType the base type for arrays (e.g., "Pet" for "List<Pet>")
+     * @param isArray whether the return type is an array
+     * @return a Dart code string representing sample response JSON
+     */
+    private String getSampleResponseJson(String returnType, String returnBaseType, boolean isArray) {
+        if (returnType == null || returnType.equals("void")) {
+            return "null";
+        }
+
+        // Handle primitive return types
+        if (languageSpecificPrimitives.contains(returnType)) {
+            switch (returnType) {
+                case "int":
+                case "double":
+                case "num":
+                    return "42";
+                case "bool":
+                    return "true";
+                case "String":
+                    return "'test_response'";
+                case "DateTime":
+                    return "'2024-01-01T00:00:00.000Z'";
+                default:
+                    return "null";
+            }
+        }
+
+        // Handle array responses
+        if (isArray) {
+            return "[<String, dynamic>{}]";
+        }
+
+        // Handle object responses
+        return "<String, dynamic>{}";
+    }
+
+    /**
      * Post-processes operations to apply context-aware type mapping for file parameters.
      * Also ensures that parameters requiring special imports (like MultipartFile) have
      * their imports properly tracked.
@@ -1550,6 +1635,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      *
      * This method also filters imports to only include models actually used in operation
      * signatures (parameters, return types) to avoid unused imports.
+     *
+     * Additionally, adds test metadata to operations and parameters for test template generation.
      *
      * @param objs the operations map
      * @param allModels all models for cross-referencing
@@ -1621,7 +1708,28 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         for (CodegenOperation operation : ops) {
             // Convert HTTP method to lowercase for Dio method calls (GET -> get, POST -> post, etc.)
             if (operation.httpMethod != null) {
+                // Store capitalized version for test templates (GET, POST, DELETE)
+                String httpMethodUpper = operation.httpMethod.toUpperCase();
+                operation.vendorExtensions.put("httpMethodCapitalized", httpMethodUpper);
+
+                // Convert to lowercase for Dio method calls
                 operation.httpMethod = operation.httpMethod.toLowerCase();
+            }
+
+            // Add test metadata for test templates
+            String sampleResponseJson = getSampleResponseJson(
+                operation.returnType,
+                operation.returnBaseType,
+                operation.isArray
+            );
+            operation.vendorExtensions.put("sampleResponseJson", sampleResponseJson);
+
+            // Add test values to all parameters
+            if (operation.allParams != null) {
+                for (CodegenParameter param : operation.allParams) {
+                    String testValue = getTestValueForType(param.dataType);
+                    param.vendorExtensions.put("testValue", testValue);
+                }
             }
 
             // Check if this operation has multipart/form-data content
