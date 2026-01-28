@@ -4,9 +4,9 @@ import 'package:test/test.dart';
 import 'package:dio/dio.dart';
 import 'package:{{pubName}}/remote_data_sources/{{classFilename}}_remote_data_source_impl.dart';
 {{#imports}}
-import 'package:{{pubName}}/models/{{.}}';
+import '{{.}}';
 {{/imports}}
-import 'package:{{pubName}}/test/test_helpers.dart';
+import 'test_helpers.dart';
 
 void main() {
   group('{{classname}}RemoteDataSource tests', () {

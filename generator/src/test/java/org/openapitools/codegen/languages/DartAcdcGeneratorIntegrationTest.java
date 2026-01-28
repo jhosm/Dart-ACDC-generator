@@ -142,6 +142,43 @@ class DartAcdcGeneratorIntegrationTest {
     }
 
     /**
+     * Test 8: Run Dart runtime tests to verify generated code behavior
+     */
+    @Test
+    @Order(8)
+    @DisplayName("Run Dart runtime tests to verify generated code behavior")
+    void testRuntimeBehavior() throws Exception {
+        // Ensure code is generated, dependencies are fetched, and code is compiled
+        testGenerateCodeFromPetstore();
+        testDependenciesFetch();
+        testCodeCompilation();
+
+        // Verify test files were generated
+        assertTrue(Files.exists(outputDir.resolve("test/test_helpers.dart")),
+            "test_helpers.dart should be generated");
+
+        Path testDir = outputDir.resolve("test");
+        assertTrue(Files.exists(testDir), "test directory should exist");
+
+        // Run dart test
+        System.out.println("\nRunning 'dart test'...");
+        ProcessResult testResult = runCommand(outputDir, "dart", "test");
+
+        System.out.println("Test output:\n" + testResult.output);
+
+        // Check that tests passed
+        assertEquals(0, testResult.exitCode,
+            "dart test should pass. Output:\n" + testResult.output);
+
+        System.out.println("✓ Runtime tests passed - generated code works correctly");
+
+        // Verify test output contains expected test execution
+        String output = testResult.output.toLowerCase();
+        assertTrue(output.contains("test") || output.contains("pass") || output.contains("+"),
+            "Test output should indicate tests ran: " + testResult.output);
+    }
+
+    /**
      * Test 3: Verify models are generated correctly
      */
     @Test
