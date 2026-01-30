@@ -86,6 +86,12 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     private final Map<String, String> sealedClassExtensions = new HashMap<>();
 
     /**
+     * Map to store model schemas for test data generation.
+     * Key: model name (e.g., "Pet", "NewPet"), Value: the schema definition
+     */
+    private Map<String, Schema> modelSchemas = new HashMap<>();
+
+    /**
      * Dart reserved keywords that require escaping.
      * These cannot be used as identifiers in Dart code.
      */
@@ -532,6 +538,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
         // Second pass: detect and mark circular references
         detectAllCircularReferences(schemas);
+
+        // Store processed schemas for test data generation
+        this.modelSchemas = schemas;
     }
 
     /**
@@ -1563,6 +1572,82 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
+     * Generates valid test JSON for a model type with required fields populated.
+     * Looks up the model schema and generates appropriate test values for all required fields.
+     *
+     * @param modelName the model name (e.g., "Pet", "NewPet")
+     * @return a JSON string with required fields populated, or empty JSON if no required fields
+     */
+    @SuppressWarnings("rawtypes")
+    private String generateTestJsonForModel(String modelName) {
+        if (modelSchemas == null || !modelSchemas.containsKey(modelName)) {
+            return "<String, dynamic>{}";
+        }
+
+        Schema schema = modelSchemas.get(modelName);
+        if (schema == null || schema.getProperties() == null) {
+            return "<String, dynamic>{}";
+        }
+
+        // Get required fields
+        List<String> required = schema.getRequired();
+        if (required == null || required.isEmpty()) {
+            return "<String, dynamic>{}";
+        }
+
+        // Build JSON with required fields
+        StringBuilder json = new StringBuilder("<String, dynamic>{");
+        boolean first = true;
+
+        for (String fieldName : required) {
+            Schema fieldSchema = (Schema) schema.getProperties().get(fieldName);
+            if (fieldSchema == null) {
+                continue;
+            }
+
+            if (!first) {
+                json.append(", ");
+            }
+            first = false;
+
+            // Add field name
+            json.append("'").append(fieldName).append("': ");
+
+            // Add field value based on type
+            String fieldType = fieldSchema.getType();
+            if (fieldType != null) {
+                switch (fieldType) {
+                    case "string":
+                        json.append("'test_").append(fieldName).append("'");
+                        break;
+                    case "integer":
+                    case "number":
+                        json.append("42");
+                        break;
+                    case "boolean":
+                        json.append("true");
+                        break;
+                    case "array":
+                        json.append("[]");
+                        break;
+                    case "object":
+                        json.append("{}");
+                        break;
+                    default:
+                        json.append("null");
+                        break;
+                }
+            } else {
+                // Handle $ref or complex types
+                json.append("null");
+            }
+        }
+
+        json.append("}");
+        return json.toString();
+    }
+
+    /**
      * Generates a test value for a given Dart data type.
      * Used by test templates to generate valid test data for parameters.
      *
@@ -1600,9 +1685,10 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                 if (dataType.equals("MultipartFile")) {
                     yield "MultipartFile.fromString('test', filename: 'test.txt')";
                 }
-                // For model types, use fromJson with minimal valid data
-                // This ensures tests compile and can be extended with proper test data
-                yield dataType + ".fromJson(const <String, dynamic>{})";
+                // For model types, generate fromJson with valid test data for required fields
+                // This ensures tests compile and run successfully
+                String testJson = generateTestJsonForModel(dataType);
+                yield dataType + ".fromJson(const " + testJson + ")";
             }
         };
     }
