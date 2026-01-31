@@ -21,7 +21,8 @@ import java.util.regex.Pattern;
 /**
  * Dart-ACDC OpenAPI Generator
  *
- * Generates Dart API clients with full Dart-ACDC integration (Authentication, Caching, Debugging, Client).
+ * Generates Dart API clients with full Dart-ACDC integration (Authentication,
+ * Caching, Debugging, Client).
  *
  * @see <a href="https://github.com/jhosm/Dart-ACDC">Dart-ACDC Library</a>
  */
@@ -74,14 +75,16 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     private static final Pattern PATTERN_UPPERCASE_SEQUENCE = Pattern.compile("([A-Z])([A-Z][a-z])");
 
     /**
-     * ThreadLocal to track whether we're currently processing a multipart/form-data request body.
+     * ThreadLocal to track whether we're currently processing a multipart/form-data
+     * request body.
      * This allows context-aware type mapping for file/binary types.
      */
     private static final ThreadLocal<Boolean> IS_MULTIPART_CONTEXT = ThreadLocal.withInitial(() -> false);
 
     /**
      * Map to track which schemas should extend sealed classes.
-     * Key: schema name (e.g., "Dog"), Value: parent sealed class name (e.g., "Animal")
+     * Key: schema name (e.g., "Dog"), Value: parent sealed class name (e.g.,
+     * "Animal")
      */
     private final Map<String, String> sealedClassExtensions = new HashMap<>();
 
@@ -96,21 +99,20 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      * These cannot be used as identifiers in Dart code.
      */
     protected static final Set<String> DART_RESERVED_WORDS = new HashSet<>(Arrays.asList(
-        // Keywords
-        "abstract", "as", "assert", "async", "await",
-        "break", "case", "catch", "class", "const",
-        "continue", "covariant", "default", "deferred", "do",
-        "dynamic", "else", "enum", "export", "extends",
-        "extension", "external", "factory", "false", "final",
-        "finally", "for", "Function", "get", "hide",
-        "if", "implements", "import", "in", "interface",
-        "is", "late", "library", "mixin", "new",
-        "null", "on", "operator", "part", "required",
-        "rethrow", "return", "set", "show", "static",
-        "super", "switch", "sync", "this", "throw",
-        "true", "try", "typedef", "var", "void",
-        "while", "with", "yield"
-    ));
+            // Keywords
+            "abstract", "as", "assert", "async", "await",
+            "break", "case", "catch", "class", "const",
+            "continue", "covariant", "default", "deferred", "do",
+            "dynamic", "else", "enum", "export", "extends",
+            "extension", "external", "factory", "false", "final",
+            "finally", "for", "Function", "get", "hide",
+            "if", "implements", "import", "in", "interface",
+            "is", "late", "library", "mixin", "new",
+            "null", "on", "operator", "part", "required",
+            "rethrow", "return", "set", "show", "static",
+            "super", "switch", "sync", "this", "throw",
+            "true", "try", "typedef", "var", "void",
+            "while", "with", "yield"));
 
     /**
      * Constructor - configures the generator with Dart-ACDC specific settings.
@@ -146,7 +148,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
         // Barrel export files
         supportingFiles.add(new SupportingFile("models.mustache", "lib/models", "models.dart"));
-        supportingFiles.add(new SupportingFile("remote_data_sources.mustache", "lib/remote_data_sources", "remote_data_sources.dart"));
+        supportingFiles.add(new SupportingFile("remote_data_sources.mustache", "lib/remote_data_sources",
+                "remote_data_sources.dart"));
         supportingFiles.add(new SupportingFile("library.mustache", "lib", "{{pubName}}.dart"));
 
         // Config supporting files
@@ -163,14 +166,17 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
         // Language-specific primitives
         languageSpecificPrimitives = new HashSet<>(Arrays.asList(
-            "String",
-            "bool",
-            "int",
-            "double",
-            "num",
-            "Object",
-            "DateTime"
-        ));
+                "String",
+                "bool",
+                "int",
+                "double",
+                "num",
+                "Object",
+                "DateTime",
+                "List",
+                "Map",
+                "Set",
+                "dynamic"));
 
         // Type mappings: OpenAPI types -> Dart types
         typeMapping.clear();
@@ -275,7 +281,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         // First apply standard sanitization from parent class
         String sanitized = super.toModelName(name);
 
-        // If the sanitized name is a Dart reserved keyword (case-insensitive check), suffix with "Model"
+        // If the sanitized name is a Dart reserved keyword (case-insensitive check),
+        // suffix with "Model"
         if (isReservedWord(sanitized.toLowerCase())) {
             return sanitized + RESERVED_WORD_MODEL_SUFFIX;
         }
@@ -394,7 +401,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      * - Prefix numeric values with 'value'
      * - Handle empty strings as 'empty'
      *
-     * @param value the original enum value
+     * @param value    the original enum value
      * @param datatype the data type (e.g., String, int)
      * @return the sanitized enum identifier
      */
@@ -514,8 +521,10 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
-     * Preprocesses the OpenAPI specification to flatten allOf compositions and detect circular references.
-     * This runs before model generation to optimize the schema structure for code generation.
+     * Preprocesses the OpenAPI specification to flatten allOf compositions and
+     * detect circular references.
+     * This runs before model generation to optimize the schema structure for code
+     * generation.
      *
      * @param openAPI the OpenAPI specification
      */
@@ -578,7 +587,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
-     * Detects circular references in all schemas and marks affected properties as nullable.
+     * Detects circular references in all schemas and marks affected properties as
+     * nullable.
      *
      * @param schemas all schemas to check for circular references
      */
@@ -596,13 +606,15 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      * Detects circular references in a schema by traversing the property graph.
      * Marks properties involved in circular references as nullable.
      *
-     * @param schemaName the current schema name
-     * @param schema the current schema
-     * @param allSchemas all available schemas for reference resolution
-     * @param visitedPath set of schema names in the current path (for cycle detection)
+     * @param schemaName  the current schema name
+     * @param schema      the current schema
+     * @param allSchemas  all available schemas for reference resolution
+     * @param visitedPath set of schema names in the current path (for cycle
+     *                    detection)
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private void detectCircularReferences(String schemaName, Schema schema, Map<String, Schema> allSchemas, Set<String> visitedPath) {
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    private void detectCircularReferences(String schemaName, Schema schema, Map<String, Schema> allSchemas,
+            Set<String> visitedPath) {
         if (schema == null || schema.getProperties() == null) {
             return;
         }
@@ -623,7 +635,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                 // Direct reference
                 String ref = propSchema.get$ref();
                 referencedSchemaName = extractSchemaNameFromRef(ref);
-            } else if ("array".equals(propSchema.getType()) && propSchema.getItems() != null && propSchema.getItems().get$ref() != null) {
+            } else if ("array".equals(propSchema.getType()) && propSchema.getItems() != null
+                    && propSchema.getItems().get$ref() != null) {
                 // Array of references
                 String ref = propSchema.getItems().get$ref();
                 referencedSchemaName = extractSchemaNameFromRef(ref);
@@ -633,7 +646,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                 // Check if this creates a cycle
                 if (visitedPath.contains(referencedSchemaName)) {
                     // Circular reference detected!
-                    LOGGER.info("Circular reference detected: {} -> {} (in property '{}')", schemaName, referencedSchemaName, propName);
+                    LOGGER.info("Circular reference detected: {} -> {} (in property '{}')", schemaName,
+                            referencedSchemaName, propName);
 
                     // Mark property as nullable
                     propSchema.setNullable(true);
@@ -655,12 +669,12 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      * Composes an allOf schema during preprocessing by merging all properties.
      * Handles nested composition (allOf containing oneOf/anyOf references).
      *
-     * @param name the schema name
-     * @param schema the schema with allOf
+     * @param name       the schema name
+     * @param schema     the schema with allOf
      * @param allSchemas all available schemas for $ref resolution
      * @return a new flattened schema
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     private Schema composeAllOfSchemaPreprocess(String name, Schema schema, Map<String, Schema> allSchemas) {
         if (schema.getAllOf() == null || schema.getAllOf().isEmpty()) {
             return schema;
@@ -683,23 +697,24 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         Schema composedSchema = createComposedSchema(schema, mergedProperties, mergedRequired);
 
         LOGGER.info("Composed allOf schema for '{}': {} properties, {} required",
-                    name, mergedProperties.size(), mergedRequired.size());
+                name, mergedProperties.size(), mergedRequired.size());
 
         return composedSchema;
     }
 
     /**
-     * Processes a single element from an allOf array, merging properties or handling nested composition.
+     * Processes a single element from an allOf array, merging properties or
+     * handling nested composition.
      *
-     * @param parentName the parent schema name
-     * @param allOfSchema the allOf element schema
-     * @param allSchemas all available schemas for $ref resolution
+     * @param parentName       the parent schema name
+     * @param allOfSchema      the allOf element schema
+     * @param allSchemas       all available schemas for $ref resolution
      * @param mergedProperties accumulator for merged properties
-     * @param mergedRequired accumulator for merged required properties
+     * @param mergedRequired   accumulator for merged required properties
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     private void processAllOfElement(String parentName, Schema allOfSchema, Map<String, Schema> allSchemas,
-                                      Map<String, Schema> mergedProperties, Set<String> mergedRequired) {
+            Map<String, Schema> mergedProperties, Set<String> mergedRequired) {
         Schema resolvedSchema = allOfSchema;
         String referencedSchemaName = null;
 
@@ -739,19 +754,20 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     @SuppressWarnings("rawtypes")
     private boolean isCompositionSchema(Schema schema) {
         return (schema.getOneOf() != null && !schema.getOneOf().isEmpty()) ||
-               (schema.getAnyOf() != null && !schema.getAnyOf().isEmpty());
+                (schema.getAnyOf() != null && !schema.getAnyOf().isEmpty());
     }
 
     /**
-     * Handles nested composition by creating a property typed as the composition schema.
+     * Handles nested composition by creating a property typed as the composition
+     * schema.
      *
      * @param referencedSchemaName the name of the composition schema
-     * @param mergedProperties accumulator for merged properties
-     * @param mergedRequired accumulator for merged required properties
+     * @param mergedProperties     accumulator for merged properties
+     * @param mergedRequired       accumulator for merged required properties
      */
     @SuppressWarnings("rawtypes")
     private void handleNestedComposition(String referencedSchemaName, Map<String, Schema> mergedProperties,
-                                          Set<String> mergedRequired) {
+            Set<String> mergedRequired) {
         LOGGER.info("Detected nested composition: allOf contains oneOf/anyOf reference to '{}'", referencedSchemaName);
 
         // Create a property with type = the referenced schema name
@@ -769,11 +785,11 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     /**
      * Merges properties from a resolved schema into the merged properties map.
      *
-     * @param parentName the parent schema name (for logging)
-     * @param resolvedSchema the schema to merge from
+     * @param parentName       the parent schema name (for logging)
+     * @param resolvedSchema   the schema to merge from
      * @param mergedProperties accumulator for merged properties
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     private void mergeSchemaProperties(String parentName, Schema resolvedSchema, Map<String, Schema> mergedProperties) {
         if (resolvedSchema.getProperties() == null) {
             return;
@@ -797,10 +813,10 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     /**
      * Logs a warning when a property conflict is detected during allOf merging.
      *
-     * @param schemaName the schema name
-     * @param propertyName the conflicting property name
+     * @param schemaName     the schema name
+     * @param propertyName   the conflicting property name
      * @param existingSchema the existing property schema
-     * @param newSchema the new property schema
+     * @param newSchema      the new property schema
      */
     @SuppressWarnings("rawtypes")
     private void logPropertyConflict(String schemaName, String propertyName, Schema existingSchema, Schema newSchema) {
@@ -809,22 +825,22 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
         if (!Objects.equals(existingType, newType)) {
             LOGGER.warn("Property conflict in allOf for schema '{}': property '{}' " +
-                       "has different types ({} vs {}). Using last definition.",
-                       schemaName, propertyName, existingType, newType);
+                    "has different types ({} vs {}). Using last definition.",
+                    schemaName, propertyName, existingType, newType);
         }
     }
 
     /**
      * Creates the final composed schema from merged data.
      *
-     * @param originalSchema the original schema with allOf
+     * @param originalSchema   the original schema with allOf
      * @param mergedProperties the merged properties
-     * @param mergedRequired the merged required properties
+     * @param mergedRequired   the merged required properties
      * @return the composed schema
      */
     @SuppressWarnings("rawtypes")
     private Schema createComposedSchema(Schema originalSchema, Map<String, Schema> mergedProperties,
-                                         Set<String> mergedRequired) {
+            Set<String> mergedRequired) {
         Schema composedSchema = new Schema();
 
         // Apply merged properties and required
@@ -851,19 +867,21 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
-     * Overrides fromModel to properly handle standalone enum schemas and composition schemas (oneOf/anyOf).
-     * allOf composition is now handled in preprocessOpenAPI() which runs before model generation.
+     * Overrides fromModel to properly handle standalone enum schemas and
+     * composition schemas (oneOf/anyOf).
+     * allOf composition is now handled in preprocessOpenAPI() which runs before
+     * model generation.
      *
      * For enum schemas:
      * - Ensures that schemas with enum values are properly processed as enums
-     *   with populated allowableValues and enumVars for template rendering.
+     * with populated allowableValues and enumVars for template rendering.
      *
      * For oneOf/anyOf schemas:
      * - Detects composition and marks the model appropriately
      * - Processes alternatives and discriminator information
      * - Adds metadata for sealed class generation in templates
      *
-     * @param name the model name
+     * @param name   the model name
      * @param schema the schema
      * @return the codegen model
      */
@@ -905,11 +923,11 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     /**
      * Processes a oneOf composition schema and adds metadata to the CodegenModel.
      *
-     * @param name the schema name
+     * @param name   the schema name
      * @param schema the schema with oneOf
-     * @param model the codegen model to update
+     * @param model  the codegen model to update
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     private void processOneOfComposition(String name, Schema schema, CodegenModel model) {
         LOGGER.info("Processing oneOf composition for schema: {}", name);
 
@@ -934,11 +952,11 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      * Processes an anyOf composition schema and adds metadata to the CodegenModel.
      * anyOf is treated identically to oneOf without discriminator.
      *
-     * @param name the schema name
+     * @param name   the schema name
      * @param schema the schema with anyOf
-     * @param model the codegen model to update
+     * @param model  the codegen model to update
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     private void processAnyOfComposition(String name, Schema schema, CodegenModel model) {
         LOGGER.info("Processing anyOf composition for schema: {}", name);
 
@@ -963,9 +981,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      * Processes discriminator information for oneOf schemas.
      * Extracts discriminator property name and mapping metadata.
      *
-     * @param name the schema name
+     * @param name   the schema name
      * @param schema the schema (may have discriminator)
-     * @param model the codegen model to update
+     * @param model  the codegen model to update
      */
     @SuppressWarnings("rawtypes")
     private void processDiscriminator(String name, Schema schema, CodegenModel model) {
@@ -997,14 +1015,14 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
                 // Extract schema name from $ref (e.g., "#/components/schemas/Dog" -> "Dog")
                 String schemaName = extractSchemaNameFromRef(schemaRef);
-                // Use the actual schema name as the subclass name (e.g., "Dog", not "AnimalDog")
+                // Use the actual schema name as the subclass name (e.g., "Dog", not
+                // "AnimalDog")
                 String subclassName = toModelName(schemaName);
 
                 Map<String, Object> mappingEntry = Map.of(
-                    "mappingKey", mappingKey,
-                    "schemaName", schemaName,
-                    "subclassName", subclassName
-                );
+                        "mappingKey", mappingKey,
+                        "schemaName", schemaName,
+                        "subclassName", subclassName);
                 discriminatorMapping.add(mappingEntry);
             }
 
@@ -1013,22 +1031,25 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
-     * Processes composition alternatives (oneOf/anyOf) into a list of metadata maps.
+     * Processes composition alternatives (oneOf/anyOf) into a list of metadata
+     * maps.
      * Handles references, primitive types, and inline schemas.
      *
-     * @param parentName the parent schema name
-     * @param schemas the list of alternative schemas
+     * @param parentName      the parent schema name
+     * @param schemas         the list of alternative schemas
      * @param compositionType the composition type ("oneOf" or "anyOf") for logging
      * @return list of alternative metadata maps
      */
     @SuppressWarnings("rawtypes")
-    private List<Map<String, Object>> processCompositionAlternatives(String parentName, List<Schema> schemas, String compositionType) {
+    private List<Map<String, Object>> processCompositionAlternatives(String parentName, List<Schema> schemas,
+            String compositionType) {
         List<Map<String, Object>> alternatives = new ArrayList<>();
 
         for (int i = 0; i < schemas.size(); i++) {
             Schema alternativeSchema = schemas.get(i);
             boolean hasNext = i < schemas.size() - 1;
-            Map<String, Object> alternative = createAlternativeMetadata(parentName, alternativeSchema, i, hasNext, compositionType);
+            Map<String, Object> alternative = createAlternativeMetadata(parentName, alternativeSchema, i, hasNext,
+                    compositionType);
 
             if (alternative != null) {
                 alternatives.add(alternative);
@@ -1041,30 +1062,31 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     /**
      * Creates metadata for a single composition alternative.
      *
-     * @param parentName the parent schema name
-     * @param schema the alternative schema
-     * @param index the index of this alternative
-     * @param hasNext whether there are more alternatives after this one
+     * @param parentName      the parent schema name
+     * @param schema          the alternative schema
+     * @param index           the index of this alternative
+     * @param hasNext         whether there are more alternatives after this one
      * @param compositionType the composition type ("oneOf" or "anyOf") for logging
      * @return metadata map, or null if the schema is invalid
      */
     @SuppressWarnings("rawtypes")
-    private Map<String, Object> createAlternativeMetadata(String parentName, Schema schema, int index, boolean hasNext, String compositionType) {
+    private Map<String, Object> createAlternativeMetadata(String parentName, Schema schema, int index, boolean hasNext,
+            String compositionType) {
         if (schema.get$ref() != null) {
             // Reference to another schema
             String ref = schema.get$ref();
             String schemaName = extractSchemaNameFromRef(ref);
-            // Use the actual schema name as the subclass name (e.g., "Dog", not "AnimalDog")
+            // Use the actual schema name as the subclass name (e.g., "Dog", not
+            // "AnimalDog")
             String subclassName = toModelName(schemaName);
 
             return Map.of(
-                "parentClassName", parentName,
-                "isRef", true,
-                "schemaName", schemaName,
-                "subclassName", subclassName,
-                "importPath", toModelImport(schemaName),
-                "hasNext", hasNext
-            );
+                    "parentClassName", parentName,
+                    "isRef", true,
+                    "schemaName", schemaName,
+                    "subclassName", subclassName,
+                    "importPath", toModelImport(schemaName),
+                    "hasNext", hasNext);
         } else if (schema.getType() != null) {
             // Inline schema (primitive or object)
             String type = schema.getType();
@@ -1076,36 +1098,35 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                 String wrapperName = toModelName(parentName + capitalize(dartType));
 
                 return Map.of(
-                    "parentClassName", parentName,
-                    "isPrimitive", true,
-                    "dartType", dartType,
-                    "subclassName", wrapperName,
-                    "hasNext", hasNext
-                );
+                        "parentClassName", parentName,
+                        "isPrimitive", true,
+                        "dartType", dartType,
+                        "subclassName", wrapperName,
+                        "hasNext", hasNext);
             } else {
                 // Inline complex type - use Option naming
                 String subclassName = toModelName(parentName + "Option" + (index + 1));
                 return Map.of(
-                    "parentClassName", parentName,
-                    "isInline", true,
-                    "subclassName", subclassName,
-                    "index", index + 1,
-                    "hasNext", hasNext
-                );
+                        "parentClassName", parentName,
+                        "isInline", true,
+                        "subclassName", subclassName,
+                        "index", index + 1,
+                        "hasNext", hasNext);
             }
         } else {
             // Schema has neither $ref nor type - log warning and skip
             LOGGER.warn("{} schema at index {} has neither $ref nor type for schema '{}'. Skipping.",
-                       compositionType, index, parentName);
+                    compositionType, index, parentName);
             return null;
         }
     }
 
     /**
-     * Registers schemas referenced in oneOf/anyOf to extend the parent sealed class.
+     * Registers schemas referenced in oneOf/anyOf to extend the parent sealed
+     * class.
      *
      * @param parentName the parent sealed class name
-     * @param schemas the list of referenced schemas
+     * @param schemas    the list of referenced schemas
      */
     @SuppressWarnings("rawtypes")
     private void registerSealedClassExtensions(String parentName, List<Schema> schemas) {
@@ -1122,11 +1143,13 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
-     * Checks if an OpenAPI type is a primitive type (string, integer, number, boolean).
+     * Checks if an OpenAPI type is a primitive type (string, integer, number,
+     * boolean).
      * Arrays and objects are not considered primitive.
      *
      * @param type the OpenAPI type to check
-     * @return true if the type is primitive (string/integer/number/boolean), false otherwise
+     * @return true if the type is primitive (string/integer/number/boolean), false
+     *         otherwise
      */
     private boolean isPrimitiveType(String type) {
         return type != null && OPENAPI_PRIMITIVE_TYPES.contains(type);
@@ -1160,8 +1183,10 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
-     * Post-processes models to ensure enum data is properly structured for templates.
-     * Also ensures that properties requiring special imports (like MultipartFile) have
+     * Post-processes models to ensure enum data is properly structured for
+     * templates.
+     * Also ensures that properties requiring special imports (like MultipartFile)
+     * have
      * their imports properly tracked.
      * This runs after all model processing and right before template rendering.
      *
@@ -1219,7 +1244,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                 }
             }
 
-            // Scan model properties for any that require special imports (e.g., MultipartFile)
+            // Scan model properties for any that require special imports (e.g.,
+            // MultipartFile)
             if (model.vars != null) {
                 for (CodegenProperty prop : model.vars) {
                     if (prop.vendorExtensions.containsKey(VENDOR_EXTENSION_DART_IMPORT)) {
@@ -1249,12 +1275,14 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             }
 
             // Clean up imports: keep only valid package imports
-            // Note: Final cleanup happens in postProcessAllModels() after base class adds more imports
+            // Note: Final cleanup happens in postProcessAllModels() after base class adds
+            // more imports
             if (model.imports != null && !model.imports.isEmpty()) {
                 Set<String> validImports = new HashSet<>();
                 for (Object importObj : model.imports) {
                     String importStr = importObj.toString();
-                    // Only keep imports that start with "package:" and don't reference primitive types
+                    // Only keep imports that start with "package:" and don't reference primitive
+                    // types
                     if (importStr.startsWith("package:") && !isPrimitiveTypeImport(importStr)) {
                         validImports.add(importStr);
                     }
@@ -1282,7 +1310,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
         // Final cleanup: Remove simple-name imports added by base class
         // The base class adds imports like "Cat", "Dog" based on model references.
-        // We need to ensure only valid package imports (package:xxx/models/yyy.dart) remain.
+        // We need to ensure only valid package imports (package:xxx/models/yyy.dart)
+        // remain.
         for (Map.Entry<String, ModelsMap> entry : result.entrySet()) {
             ModelsMap modelsMap = entry.getValue();
             for (ModelMap modelMap : modelsMap.getModels()) {
@@ -1292,7 +1321,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                     Set<String> validImports = new TreeSet<>();
                     for (Object importObj : model.imports) {
                         String importStr = importObj.toString();
-                        // Only keep imports that start with "package:" and don't reference primitive types
+                        // Only keep imports that start with "package:" and don't reference primitive
+                        // types
                         if (importStr.startsWith("package:") && !isPrimitiveTypeImport(importStr)) {
                             validImports.add(importStr);
                         }
@@ -1310,17 +1340,17 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      * These are the standard OpenAPI primitive types that can appear in schemas.
      */
     private static final Set<String> OPENAPI_PRIMITIVE_TYPES = Set.of(
-        "string", "integer", "number", "boolean"
-    );
+            "string", "integer", "number", "boolean");
 
     /**
      * Primitive type file names that should never be imported.
-     * These are used to filter out invalid imports to non-existent primitive type files.
+     * These are used to filter out invalid imports to non-existent primitive type
+     * files.
      * Includes both OpenAPI types and Dart-specific type names.
      */
     private static final Set<String> PRIMITIVE_TYPES = Set.of(
-        "string", "integer", "number", "boolean", "int", "double", "num", "array", "object"
-    );
+            "string", "integer", "number", "boolean", "int", "double", "num", "array", "object",
+            "list", "map", "set", "dynamic", "datetime", "date_time");
 
     /**
      * Checks if an import path references a primitive type file that doesn't exist.
@@ -1333,7 +1363,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             return false;
         }
 
-        // Extract the filename (e.g., "string.dart" from "package:foo/models/string.dart")
+        // Extract the filename (e.g., "string.dart" from
+        // "package:foo/models/string.dart")
         int lastSlash = importPath.lastIndexOf('/');
         if (lastSlash == -1) {
             return false;
@@ -1350,10 +1381,12 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     /**
      * Adds imports for oneOf/anyOf sealed class alternatives.
-     * Extracts import paths from alternative metadata and adds them to model.imports.
+     * Extracts import paths from alternative metadata and adds them to
+     * model.imports.
      *
-     * @param model the codegen model
-     * @param alternativesKey the vendor extension key containing alternatives ("x-one-of-alternatives" or "x-any-of-alternatives")
+     * @param model           the codegen model
+     * @param alternativesKey the vendor extension key containing alternatives
+     *                        ("x-one-of-alternatives" or "x-any-of-alternatives")
      */
     @SuppressWarnings("unchecked")
     private void addAlternativeImports(CodegenModel model, String alternativesKey) {
@@ -1381,9 +1414,10 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     /**
      * Creates enumVars list with collision-resistant naming.
-     * Handles collisions by appending numeric suffixes (e.g., value, value2, value3).
+     * Handles collisions by appending numeric suffixes (e.g., value, value2,
+     * value3).
      *
-     * @param values the enum values from the schema
+     * @param values   the enum values from the schema
      * @param datatype the datatype for toEnumVarName processing
      * @return list of enumVar maps with 'name' and 'value' keys
      */
@@ -1407,10 +1441,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             }
 
             Map<String, Object> enumVar = Map.of(
-                "name", finalName,
-                "value", valueStr,
-                "isString", "string".equalsIgnoreCase(datatype)
-            );
+                    "name", finalName,
+                    "value", valueStr,
+                    "isString", "string".equalsIgnoreCase(datatype));
             enumVars.add(enumVar);
         }
 
@@ -1434,9 +1467,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      * Overrides the base implementation to detect multipart/form-data context
      * and set ThreadLocal context for property processing.
      *
-     * @param name the parameter name
-     * @param requestBody the request body specification
-     * @param imports the imports set
+     * @param name              the parameter name
+     * @param requestBody       the request body specification
+     * @param imports           the imports set
      * @param bodyParameterName the body parameter name
      * @return the CodegenParameter with multipart context information
      */
@@ -1478,7 +1511,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
-     * Overrides type declaration to provide context-aware mapping for file/binary types.
+     * Overrides type declaration to provide context-aware mapping for file/binary
+     * types.
      *
      * In multipart/form-data context: binary/file → MultipartFile
      * In non-multipart context: binary/file → List<int>
@@ -1510,21 +1544,25 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
-     * Overrides fromProperty to apply context-aware type mapping for binary/file properties.
+     * Overrides fromProperty to apply context-aware type mapping for binary/file
+     * properties.
      *
-     * Checks the ThreadLocal context to determine if we're in a multipart/form-data request,
+     * Checks the ThreadLocal context to determine if we're in a multipart/form-data
+     * request,
      * and maps binary/file types accordingly:
      * - Multipart context: type=string,format=binary → MultipartFile
      * - Non-multipart context: type=string,format=binary → List<int>
      *
-     * @param name the property name
-     * @param schema the property schema
-     * @param required whether the property is required
-     * @param schemaIsFromAdditionalProperties whether this schema comes from additionalProperties
+     * @param name                             the property name
+     * @param schema                           the property schema
+     * @param required                         whether the property is required
+     * @param schemaIsFromAdditionalProperties whether this schema comes from
+     *                                         additionalProperties
      * @return the CodegenProperty with correct type based on context
      */
     @Override
-    public CodegenProperty fromProperty(String name, Schema schema, boolean required, boolean schemaIsFromAdditionalProperties) {
+    public CodegenProperty fromProperty(String name, Schema schema, boolean required,
+            boolean schemaIsFromAdditionalProperties) {
         CodegenProperty property = super.fromProperty(name, schema, required, schemaIsFromAdditionalProperties);
 
         if (property == null || schema == null) {
@@ -1573,10 +1611,12 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     /**
      * Generates valid test JSON for a model type with required fields populated.
-     * Looks up the model schema and generates appropriate test values for all required fields.
+     * Looks up the model schema and generates appropriate test values for all
+     * required fields.
      *
      * @param modelName the model name (e.g., "Pet", "NewPet")
-     * @return a JSON string with required fields populated, or empty JSON if no required fields
+     * @return a JSON string with required fields populated, or empty JSON if no
+     *         required fields
      */
     @SuppressWarnings("rawtypes")
     private String generateTestJsonForModel(String modelName) {
@@ -1701,7 +1741,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     /**
      * Generates a raw (unquoted) test value for URL path embedding.
-     * Unlike getTestValueForType(), this returns values without Dart string delimiters.
+     * Unlike getTestValueForType(), this returns values without Dart string
+     * delimiters.
      * Used in path parameter replacement: .replaceAll('{param}', 'rawValue')
      *
      * @param dataType the Dart data type
@@ -1756,8 +1797,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             return false;
         }
         return languageSpecificPrimitives.contains(type) ||
-               type.equals("Object") ||
-               type.equals("dynamic");
+                type.equals("Object") ||
+                type.equals("dynamic");
     }
 
     /**
@@ -1781,9 +1822,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      * Generates sample JSON response data for a given return type.
      * Used by test templates to mock API responses.
      *
-     * @param returnType the return type (e.g., "Pet", "List<Pet>")
+     * @param returnType     the return type (e.g., "Pet", "List<Pet>")
      * @param returnBaseType the base type for arrays (e.g., "Pet" for "List<Pet>")
-     * @param isArray whether the return type is an array
+     * @param isArray        whether the return type is an array
      * @return a Dart code string representing sample response JSON
      */
     private String getSampleResponseJson(String returnType, String returnBaseType, boolean isArray) {
@@ -1816,19 +1857,24 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
-     * Post-processes operations to apply context-aware type mapping for file parameters.
-     * Also ensures that parameters requiring special imports (like MultipartFile) have
+     * Post-processes operations to apply context-aware type mapping for file
+     * parameters.
+     * Also ensures that parameters requiring special imports (like MultipartFile)
+     * have
      * their imports properly tracked.
      *
      * For operations with multipart/form-data request bodies, this method changes
-     * binary parameters from List<int> to MultipartFile and adds the necessary imports.
+     * binary parameters from List<int> to MultipartFile and adds the necessary
+     * imports.
      *
-     * This method also filters imports to only include models actually used in operation
+     * This method also filters imports to only include models actually used in
+     * operation
      * signatures (parameters, return types) to avoid unused imports.
      *
-     * Additionally, adds test metadata to operations and parameters for test template generation.
+     * Additionally, adds test metadata to operations and parameters for test
+     * template generation.
      *
-     * @param objs the operations map
+     * @param objs      the operations map
      * @param allModels all models for cross-referencing
      * @return the processed operations map
      */
@@ -1847,7 +1893,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         for (CodegenOperation operation : ops) {
             // Add imports for return types
             if (operation.returnType != null && !operation.returnType.equals("void")) {
-                String returnModelImport = getModelImportFromType(operation.returnBaseType != null ? operation.returnBaseType : operation.returnType);
+                String returnModelImport = getModelImportFromType(
+                        operation.returnBaseType != null ? operation.returnBaseType : operation.returnType);
                 if (returnModelImport != null) {
                     usedModelImports.add(returnModelImport);
                 }
@@ -1856,7 +1903,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             // Add imports for parameters
             if (operation.allParams != null) {
                 for (CodegenParameter param : operation.allParams) {
-                    String paramModelImport = getModelImportFromType(param.baseType != null ? param.baseType : param.dataType);
+                    String paramModelImport = getModelImportFromType(
+                            param.baseType != null ? param.baseType : param.dataType);
                     if (paramModelImport != null) {
                         usedModelImports.add(paramModelImport);
                     }
@@ -1865,7 +1913,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         }
 
         // Fix imports: OpenAPI Generator populates the imports list with Map objects
-        // Extract the actual import paths from these maps and filter to only used models
+        // Extract the actual import paths from these maps and filter to only used
+        // models
         List<?> imports = (List<?>) result.get("imports");
         if (imports != null && !imports.isEmpty()) {
             List<String> fixedImports = new ArrayList<>();
@@ -1885,9 +1934,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                 // 1. Don't reference primitive types
                 // 2. Are actually used in operation signatures
                 if (importPath != null &&
-                    importPath.startsWith("package:") &&
-                    !isPrimitiveTypeImport(importPath) &&
-                    usedModelImports.contains(importPath)) {
+                        importPath.startsWith("package:") &&
+                        !isPrimitiveTypeImport(importPath) &&
+                        usedModelImports.contains(importPath)) {
                     fixedImports.add(importPath);
                 }
             }
@@ -1896,7 +1945,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
         // Second pass: process operations for multipart and other special handling
         for (CodegenOperation operation : ops) {
-            // Convert HTTP method to lowercase for Dio method calls (GET -> get, POST -> post, etc.)
+            // Convert HTTP method to lowercase for Dio method calls (GET -> get, POST ->
+            // post, etc.)
             if (operation.httpMethod != null) {
                 // Store PascalCase version for test templates (Get, Post, Delete)
                 // This is used for method names like onGetJson, onPostJson, etc.
@@ -1909,30 +1959,31 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             }
 
             // Fix returnType and returnBaseType to use proper Dart PascalCase class names.
-            // OpenAPI Generator may set these to raw schema names (e.g., "ping_200_response")
+            // OpenAPI Generator may set these to raw schema names (e.g.,
+            // "ping_200_response")
             // but Dart classes are generated with PascalCase (e.g., "Ping200Response").
             if (operation.returnType != null && !operation.returnType.isEmpty()) {
                 if (!languageSpecificPrimitives.contains(operation.returnType) &&
-                    !operation.returnType.equals("void") &&
-                    !operation.returnType.contains("<") &&
-                    !operation.returnType.contains(">")) {
+                        !operation.returnType.equals("void") &&
+                        !operation.returnType.contains("<") &&
+                        !operation.returnType.contains(">")) {
                     String fixedReturnType = toModelName(operation.returnType);
                     if (!fixedReturnType.equals(operation.returnType)) {
                         LOGGER.info("Fixed returnType from '{}' to '{}' for operation {}",
-                            operation.returnType, fixedReturnType, operation.operationId);
+                                operation.returnType, fixedReturnType, operation.operationId);
                         operation.returnType = fixedReturnType;
                     }
                 }
             }
             if (operation.returnBaseType != null && !operation.returnBaseType.isEmpty()) {
                 if (!languageSpecificPrimitives.contains(operation.returnBaseType) &&
-                    !operation.returnBaseType.equals("void") &&
-                    !operation.returnBaseType.contains("<") &&
-                    !operation.returnBaseType.contains(">")) {
+                        !operation.returnBaseType.equals("void") &&
+                        !operation.returnBaseType.contains("<") &&
+                        !operation.returnBaseType.contains(">")) {
                     String fixedBaseType = toModelName(operation.returnBaseType);
                     if (!fixedBaseType.equals(operation.returnBaseType)) {
                         LOGGER.info("Fixed returnBaseType from '{}' to '{}' for operation {}",
-                            operation.returnBaseType, fixedBaseType, operation.operationId);
+                                operation.returnBaseType, fixedBaseType, operation.operationId);
                         operation.returnBaseType = fixedBaseType;
                     }
                 }
@@ -1940,15 +1991,14 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
             // Add test metadata for test templates
             String sampleResponseJson = getSampleResponseJson(
-                operation.returnType,
-                operation.returnBaseType,
-                operation.isArray
-            );
+                    operation.returnType,
+                    operation.returnBaseType,
+                    operation.isArray);
             // Ensure sampleResponseJson is never empty - use fallback if needed
             if (sampleResponseJson == null || sampleResponseJson.trim().isEmpty()) {
                 sampleResponseJson = "<String, dynamic>{}";
                 LOGGER.warn("sampleResponseJson was empty for operation {}, using fallback",
-                           operation.operationId);
+                        operation.operationId);
             }
             operation.vendorExtensions.put("sampleResponseJson", sampleResponseJson);
 
@@ -2008,8 +2058,10 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             }
 
             // Add test values to all parameter lists AFTER type conversions
-            // This ensures test values match the final parameter types (e.g., MultipartFile instead of List<int>)
-            // OpenAPI Generator creates separate instances for allParams, pathParams, queryParams, etc.
+            // This ensures test values match the final parameter types (e.g., MultipartFile
+            // instead of List<int>)
+            // OpenAPI Generator creates separate instances for allParams, pathParams,
+            // queryParams, etc.
             // We must set vendor extensions on ALL lists for template access
             addTestValuesToParams(operation.allParams);
             addTestValuesToParams(operation.pathParams);
@@ -2023,11 +2075,12 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
-     * Synchronizes parameter type information across all parameter lists (allParams, bodyParams, formParams).
+     * Synchronizes parameter type information across all parameter lists
+     * (allParams, bodyParams, formParams).
      * Required because OpenAPI Generator creates separate instances for each list.
      *
      * @param operation the operation containing the parameter lists
-     * @param param the parameter with updated type information to propagate
+     * @param param     the parameter with updated type information to propagate
      */
     private void updateParameterInLists(CodegenOperation operation, CodegenParameter param) {
         // Update in bodyParams if present
@@ -2072,11 +2125,12 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
         // Skip special Dart types that aren't models
         if (typeName.equals("MultipartFile") || typeName.equals("List") ||
-            typeName.equals("Map") || typeName.equals("void") || typeName.equals("file")) {
+                typeName.equals("Map") || typeName.equals("void") || typeName.equals("file")) {
             return null;
         }
 
-        // Skip types with generic parameters (e.g., "List<int>", "Map<String, dynamic>")
+        // Skip types with generic parameters (e.g., "List<int>", "Map<String,
+        // dynamic>")
         if (typeName.contains("<") || typeName.contains(">")) {
             return null;
         }
