@@ -18,5 +18,8 @@ lib/remote_data_sources/PetsApi_remote_data_source_impl.dart
 lib/remote_data_sources/remote_data_sources.dart
 lib/{{pubName}}.dart
 pubspec.yaml
+test/ErrorTest_test.dart
+test/NewPetTest_test.dart
+test/PetTest_test.dart
 test/PetsApiTest_test.dart
 test/test_helpers.dart

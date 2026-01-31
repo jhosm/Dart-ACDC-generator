@@ -11,13 +11,13 @@ class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
   DefaultApiRemoteDataSourceImpl(this._dio);
 
   @override
-  Future<ping_200_response> ping() async {
+  Future<Ping200Response> ping() async {
     final response = await _dio.get<Response>(
       '/ping',
     );
 
     // Handle single object response
-    return ping_200_response.fromJson(response.data as Map<String, dynamic>);
+    return Ping200Response.fromJson(response.data as Map<String, dynamic>);
   }
 
 }

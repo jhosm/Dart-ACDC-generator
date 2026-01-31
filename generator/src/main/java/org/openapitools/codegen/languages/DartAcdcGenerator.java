@@ -1908,6 +1908,36 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                 operation.httpMethod = httpMethodLower;
             }
 
+            // Fix returnType and returnBaseType to use proper Dart PascalCase class names.
+            // OpenAPI Generator may set these to raw schema names (e.g., "ping_200_response")
+            // but Dart classes are generated with PascalCase (e.g., "Ping200Response").
+            if (operation.returnType != null && !operation.returnType.isEmpty()) {
+                if (!languageSpecificPrimitives.contains(operation.returnType) &&
+                    !operation.returnType.equals("void") &&
+                    !operation.returnType.contains("<") &&
+                    !operation.returnType.contains(">")) {
+                    String fixedReturnType = toModelName(operation.returnType);
+                    if (!fixedReturnType.equals(operation.returnType)) {
+                        LOGGER.info("Fixed returnType from '{}' to '{}' for operation {}",
+                            operation.returnType, fixedReturnType, operation.operationId);
+                        operation.returnType = fixedReturnType;
+                    }
+                }
+            }
+            if (operation.returnBaseType != null && !operation.returnBaseType.isEmpty()) {
+                if (!languageSpecificPrimitives.contains(operation.returnBaseType) &&
+                    !operation.returnBaseType.equals("void") &&
+                    !operation.returnBaseType.contains("<") &&
+                    !operation.returnBaseType.contains(">")) {
+                    String fixedBaseType = toModelName(operation.returnBaseType);
+                    if (!fixedBaseType.equals(operation.returnBaseType)) {
+                        LOGGER.info("Fixed returnBaseType from '{}' to '{}' for operation {}",
+                            operation.returnBaseType, fixedBaseType, operation.operationId);
+                        operation.returnBaseType = fixedBaseType;
+                    }
+                }
+            }
+
             // Add test metadata for test templates
             String sampleResponseJson = getSampleResponseJson(
                 operation.returnType,

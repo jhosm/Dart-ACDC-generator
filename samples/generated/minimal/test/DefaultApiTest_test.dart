@@ -8,7 +8,7 @@ import 'test_helpers.dart';
 void main() {
   group('DefaultApiRemoteDataSource tests', () {
     group('ping tests', () {
-      test('success case - returns ping_200_response', () async {
+      test('success case - returns Ping200Response', () async {
         // Arrange
         final mockSetup = createMockDio();
         final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
@@ -21,7 +21,7 @@ void main() {
         final result = await api.ping();
 
         // Assert
-        expect(result, isA<ping_200_response>());
+        expect(result, isA<Ping200Response>());
       });
 
       test('server error throws exception', () async {

@@ -13,6 +13,6 @@ import 'package:minimal_client/models/ping200_response.dart';
 /// - [AcdcSecurityException] - Certificate pinning or security violations
 abstract class DefaultApiRemoteDataSource {
   /// Health check endpoint
-  Future<ping_200_response> ping();
+  Future<Ping200Response> ping();
 
 }

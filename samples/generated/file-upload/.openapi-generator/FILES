@@ -18,4 +18,6 @@ lib/remote_data_sources/remote_data_sources.dart
 lib/{{pubName}}.dart
 pubspec.yaml
 test/DefaultApiTest_test.dart
+test/ProfileTest_test.dart
+test/UploadResponseTest_test.dart
 test/test_helpers.dart
