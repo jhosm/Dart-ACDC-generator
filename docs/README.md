@@ -1,14 +1,19 @@
 # Documentation
 
-User-facing documentation for the Dart-ACDC-generator Generator.
+User-facing documentation for the Dart-ACDC Generator.
 
-## Guides
+## User Guides
 
 | Document | Description |
 |----------|-------------|
-| [HOW-TO.md](./HOW-TO.md) | Step-by-step guide for generating and using API clients |
+| [HOW-TO.md](./HOW-TO.md) | Complete step-by-step guide for generating and using API clients |
 
-## See Also
+## Quick Links
 
-- [/research](../research/) - Technical research and architecture decisions
-- [/CLAUDE.md](../CLAUDE.md) - Development context for Claude Code
+- **[Main README](../README.md)** - Project overview and quick start
+- **[Generator README](../generator/README.md)** - Build, usage, and troubleshooting
+
+## Developer Resources
+
+- **[/research](../research/)** - Technical research and architecture decisions
+- **[/CLAUDE.md](../CLAUDE.md)** - Development context and guidelines

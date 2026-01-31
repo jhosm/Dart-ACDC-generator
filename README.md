@@ -48,14 +48,18 @@ import 'package:my_api_client/my_api_client.dart';
 
 // Create configured API client
 final dio = ApiClient.createDio(
-  baseUrl: 'https://api.example.com',
-  tokenRefreshUrl: 'https://api.example.com/auth/refresh',
-  logLevel: LogLevel.info,
+  AcdcConfig(
+    baseUrl: 'https://api.example.com',
+    auth: AuthConfig(
+      tokenRefreshUrl: 'https://api.example.com/auth/refresh',
+    ),
+    log: LogConfig(level: LogLevel.info),
+  ),
 );
 
-// Use the API
-final api = UserApi(dio);
-final user = await api.getUser('user-123');
+// Use the API (via RemoteDataSource pattern)
+final userApi = UserRemoteDataSourceImpl(dio);
+final user = await userApi.getUser('user-123');
 ```
 
 ## Features
@@ -78,11 +82,17 @@ final user = await api.getUser('user-123');
 
 ## Documentation
 
+### User Documentation
+
+- **[How-To Guide](docs/HOW-TO.md)** - Complete step-by-step guide for using the generator
 - **[Generator Documentation](generator/README.md)** - Detailed build, usage, and troubleshooting guide
+
+### Developer Documentation
+
+- **[Development Guide](CLAUDE.md)** - Guide for AI assistants and developers
 - **[Project Vision](research/project-vision.md)** - Strategic vision, goals, and features
 - **[Architecture Decisions](research/adr-001-generated-code-architecture.md)** - ADR for generated code structure
 - **[OpenSpec Proposals](openspec/)** - Formal specifications and change proposals
-- **[Development Guide](CLAUDE.md)** - Guide for AI assistants and developers
 
 ## Project Status
 
@@ -100,11 +110,20 @@ final user = await api.getUser('user-123');
 - [x] Comprehensive test suite (39 tests passing)
 - [x] Documentation
 
+### Current Limitations ⚠️
+
+The generator currently produces **complete code** for:
+- oneOf/anyOf sealed class hierarchies
+- Enum types
+- API client configuration
+
+**Note**: Regular object model generation shows TODO placeholders. Full model template implementation is planned for Phase 3.
+
 ### What's Next
 
 **Phase 3**: Refinement
+- Implement full model templates (regular objects)
 - Add configurable options for ACDC features
-- Implement full model templates (currently oneOf/anyOf/enum only)
 - Improve edge case handling
 - Add integration tests
 
@@ -153,6 +172,7 @@ generator/
 
 See the `samples/` directory for example OpenAPI specs and generated output:
 
+- **`minimal.yaml`** - Minimal API example for quick testing
 - **`petstore.yaml`** - Classic Petstore API example
 - **`composition.yaml`** - Schema composition examples (allOf, oneOf, anyOf)
 - **`enums.yaml`** - Enum generation examples

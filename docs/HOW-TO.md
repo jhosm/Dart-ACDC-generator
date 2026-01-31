@@ -39,18 +39,27 @@ Before you begin, ensure you have:
 
 ### Install OpenAPI Generator
 
-Choose one of these methods:
+This project includes a pre-configured `openapi-generator-cli.jar` in the root directory. You can use it directly or install OpenAPI Generator globally:
 
 ```bash
-# Option 1: Homebrew (macOS)
+# Option 1: Use included JAR (recommended for this project)
+# No installation needed - the JAR is in the project root
+
+# Option 2: Homebrew (macOS)
 brew install openapi-generator
 
-# Option 2: NPM (cross-platform)
+# Option 3: NPM (cross-platform)
 npm install -g @openapitools/openapi-generator-cli
 
-# Option 3: Download JAR directly
-wget https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/7.0.0/openapi-generator-cli-7.0.0.jar -O openapi-generator-cli.jar
+# Option 4: Download JAR directly
+wget https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/7.10.0/openapi-generator-cli-7.10.0.jar -O openapi-generator-cli.jar
 ```
+
+> **Note**: Examples in this guide use the `openapi-generator` command (Options 2-3). If using the JAR directly (Options 1 or 4), replace `openapi-generator generate` with:
+> ```bash
+> java -cp "generator/target/dart-acdc-generator-1.0.0-SNAPSHOT.jar:openapi-generator-cli.jar" \
+>   org.openapitools.codegen.OpenAPIGenerator generate
+> ```
 
 ---
 
@@ -716,7 +725,7 @@ Ensure the generated `pubspec.yaml` includes dart_acdc:
 
 ```yaml
 dependencies:
-  dart_acdc: ^0.2.0
+  dart_acdc: ^1.0.0  # Check pub.dev for latest version
   dio: ^5.0.0
 ```
 
@@ -762,7 +771,8 @@ auth: AuthConfig(
 ### Getting Help
 
 - **Documentation**: Check the `README.md` in your generated package
-- **Issues**: Report bugs at [GitHub Issues](https://github.com/your-org/dart-acdc-generator-generator/issues)
+- **Generator Issues**: Report bugs in the Dart-ACDC-generator project
+- **Dart-ACDC Library**: https://github.com/jhosm/Dart-ACDC
 - **Dart-ACDC Docs**: https://github.com/jhosm/Dart-ACDC/tree/main/doc
 
 ---
