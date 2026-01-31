@@ -63,7 +63,12 @@ abstract class {{classname}} {
 {{#x-one-of-alternatives}}
     // Try {{subclassName}}
     try {
+      {{#isPrimitive}}
       return {{subclassName}}.fromJson(json);
+      {{/isPrimitive}}
+      {{^isPrimitive}}
+      return {{subclassName}}.fromJson(json as Map<String, dynamic>);
+      {{/isPrimitive}}
     } catch (_) {}
 {{/x-one-of-alternatives}}
     throw FormatException('No matching oneOf alternative for {{classname}}');
@@ -119,7 +124,12 @@ abstract class {{classname}} {
 {{#x-any-of-alternatives}}
     // Try {{subclassName}}
     try {
+      {{#isPrimitive}}
       return {{subclassName}}.fromJson(json);
+      {{/isPrimitive}}
+      {{^isPrimitive}}
+      return {{subclassName}}.fromJson(json as Map<String, dynamic>);
+      {{/isPrimitive}}
     } catch (_) {}
 {{/x-any-of-alternatives}}
     throw FormatException('No matching anyOf alternative for {{classname}}');
