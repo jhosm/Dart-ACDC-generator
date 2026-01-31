@@ -1,6 +1,7 @@
 name: composition_client
 description: Composition test client (allOf/oneOf/anyOf)
 version: 1.0.0
+publish_to: none  # Generated API client - not intended for pub.dev publication
 
 environment:
   sdk: ^3.8.0

@@ -1668,8 +1668,12 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             case "String" -> "'test_value'";
             case "DateTime" -> "DateTime.parse('2024-01-01T00:00:00.000Z')";
             default -> {
-                // Handle List types
-                if (dataType.startsWith("List<")) {
+                // Handle bare List type (without generics)
+                if (dataType.equals("List")) {
+                    yield "const []";
+                }
+                // Handle List types with generics
+                else if (dataType.startsWith("List<")) {
                     String innerType = extractGenericType(dataType);
                     if (isPrimitiveOrSimpleType(innerType)) {
                         yield "[]";
@@ -1678,17 +1682,19 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                     yield "const []";
                 }
                 // Handle Map types
-                if (dataType.startsWith("Map<")) {
+                else if (dataType.startsWith("Map<")) {
                     yield "const <String, dynamic>{}";
                 }
                 // Handle MultipartFile
-                if (dataType.equals("MultipartFile")) {
+                else if (dataType.equals("MultipartFile")) {
                     yield "MultipartFile.fromString('test', filename: 'test.txt')";
                 }
                 // For model types, generate fromJson with valid test data for required fields
                 // This ensures tests compile and run successfully
-                String testJson = generateTestJsonForModel(dataType);
-                yield dataType + ".fromJson(const " + testJson + ")";
+                else {
+                    String testJson = generateTestJsonForModel(dataType);
+                    yield dataType + ".fromJson(const " + testJson + ")";
+                }
             }
         };
     }
@@ -1916,16 +1922,6 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             }
             operation.vendorExtensions.put("sampleResponseJson", sampleResponseJson);
 
-            // Add test values to all parameter lists
-            // OpenAPI Generator creates separate instances for allParams, pathParams, queryParams, etc.
-            // We must set vendor extensions on ALL lists for template access
-            addTestValuesToParams(operation.allParams);
-            addTestValuesToParams(operation.pathParams);
-            addTestValuesToParams(operation.queryParams);
-            addTestValuesToParams(operation.bodyParams);
-            addTestValuesToParams(operation.headerParams);
-            addTestValuesToParams(operation.formParams);
-
             // Check if this operation has multipart/form-data content
             boolean isMultipartOperation = operation.hasConsumes && operation.consumes != null &&
                     operation.consumes.stream().anyMatch(consume -> {
@@ -1980,6 +1976,17 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                 // Ensure isListContainer is set for template
                 operation.vendorExtensions.put("isListContainer", true);
             }
+
+            // Add test values to all parameter lists AFTER type conversions
+            // This ensures test values match the final parameter types (e.g., MultipartFile instead of List<int>)
+            // OpenAPI Generator creates separate instances for allParams, pathParams, queryParams, etc.
+            // We must set vendor extensions on ALL lists for template access
+            addTestValuesToParams(operation.allParams);
+            addTestValuesToParams(operation.pathParams);
+            addTestValuesToParams(operation.queryParams);
+            addTestValuesToParams(operation.bodyParams);
+            addTestValuesToParams(operation.headerParams);
+            addTestValuesToParams(operation.formParams);
         }
 
         return result;

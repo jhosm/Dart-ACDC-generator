@@ -1,6 +1,7 @@
 name: minimal_client
 description: Minimal API client for edge case testing
 version: 1.0.0
+publish_to: none  # Generated API client - not intended for pub.dev publication
 
 environment:
   sdk: ^3.8.0

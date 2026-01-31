@@ -620,4 +620,103 @@ class DartAcdcGeneratorTest {
         // Should add another underscore (this is expected behavior)
         assertEquals("class__", result);
     }
+
+    // ========================================
+    // Test Value Generation Tests (Regression)
+    // ========================================
+
+    /**
+     * Helper to invoke the private getTestValueForType method via reflection.
+     */
+    private String invokeGetTestValueForType(String dataType) throws Exception {
+        java.lang.reflect.Method method = DartAcdcGenerator.class.getDeclaredMethod("getTestValueForType", String.class);
+        method.setAccessible(true);
+        return (String) method.invoke(generator, dataType);
+    }
+
+    @Test
+    @DisplayName("Regression: getTestValueForType should return MultipartFile for MultipartFile type")
+    void testGetTestValueForType_MultipartFile() throws Exception {
+        // Bug 43d: MultipartFile parameters should generate MultipartFile test values,
+        // not empty lists
+        String result = invokeGetTestValueForType("MultipartFile");
+        assertTrue(result.contains("MultipartFile.fromString"),
+            "MultipartFile type should generate a MultipartFile.fromString() value, got: " + result);
+        assertFalse(result.equals("[]") || result.equals("const []"),
+            "MultipartFile type should NOT generate an empty list");
+    }
+
+    @Test
+    @DisplayName("Regression: getTestValueForType should return empty list for bare List type")
+    void testGetTestValueForType_BareList() throws Exception {
+        // Bug no4: bare List type (without generics) should return const [],
+        // not List.fromJson(...)
+        String result = invokeGetTestValueForType("List");
+        assertEquals("const []", result,
+            "Bare List type should generate 'const []', not List.fromJson()");
+        assertFalse(result.contains("fromJson"),
+            "Bare List type should NOT call fromJson");
+    }
+
+    @Test
+    @DisplayName("getTestValueForType should return empty list for List with generic type")
+    void testGetTestValueForType_GenericList() throws Exception {
+        String result = invokeGetTestValueForType("List<String>");
+        assertEquals("[]", result,
+            "List<String> should generate '[]' (primitive inner type)");
+    }
+
+    @Test
+    @DisplayName("getTestValueForType should return const empty list for List of model type")
+    void testGetTestValueForType_ListOfModel() throws Exception {
+        String result = invokeGetTestValueForType("List<Pet>");
+        assertEquals("const []", result,
+            "List<Pet> should generate 'const []' (model inner type)");
+    }
+
+    @Test
+    @DisplayName("getTestValueForType should return fromJson for model types")
+    void testGetTestValueForType_ModelType() throws Exception {
+        String result = invokeGetTestValueForType("Pet");
+        assertTrue(result.contains("Pet.fromJson"),
+            "Model type should generate a fromJson call, got: " + result);
+    }
+
+    @Test
+    @DisplayName("getTestValueForType should handle primitive types correctly")
+    void testGetTestValueForType_Primitives() throws Exception {
+        assertEquals("42", invokeGetTestValueForType("int"));
+        assertEquals("3.14", invokeGetTestValueForType("double"));
+        assertEquals("true", invokeGetTestValueForType("bool"));
+        assertEquals("'test_value'", invokeGetTestValueForType("String"));
+    }
+
+    @Test
+    @DisplayName("getTestValueForType should handle Map types")
+    void testGetTestValueForType_Map() throws Exception {
+        String result = invokeGetTestValueForType("Map<String, dynamic>");
+        assertEquals("const <String, dynamic>{}", result);
+    }
+
+    // ========================================
+    // Multipart Test Value Ordering Tests
+    // ========================================
+
+    @Test
+    @DisplayName("Regression: test values should be generated AFTER multipart type conversion")
+    void testTestValuesAfterMultipartConversion() throws Exception {
+        // This tests the fix for bug 43d: test values were being generated
+        // BEFORE binary parameters were converted to MultipartFile, resulting
+        // in [] being used instead of MultipartFile.fromString(...)
+        //
+        // We verify this indirectly: a MultipartFile parameter should produce
+        // a MultipartFile test value, not a List test value
+        String multipartResult = invokeGetTestValueForType("MultipartFile");
+        String listIntResult = invokeGetTestValueForType("List<int>");
+
+        assertNotEquals(listIntResult, multipartResult,
+            "MultipartFile and List<int> should produce different test values");
+        assertTrue(multipartResult.contains("MultipartFile"),
+            "MultipartFile type should generate MultipartFile value");
+    }
 }

@@ -12,7 +12,7 @@ class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
 
   @override
   Future<ping_200_response> ping() async {
-    final response = await _dio.get(
+    final response = await _dio.get<Response>(
       '/ping',
     );
 

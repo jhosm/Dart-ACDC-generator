@@ -12,7 +12,7 @@ class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
 
   @override
   Future<List<Entity>> getEntities() async {
-    final response = await _dio.get(
+    final response = await _dio.get<Response>(
       '/entities',
     );
 

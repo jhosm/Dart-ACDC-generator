@@ -1,6 +1,7 @@
 name: reserved_words_test
 description: Test package for reserved keyword escaping
 version: 1.0.0
+publish_to: none  # Generated API client - not intended for pub.dev publication
 
 environment:
   sdk: ^3.8.0

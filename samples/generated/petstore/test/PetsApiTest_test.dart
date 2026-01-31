@@ -19,7 +19,7 @@ void main() {
         mockSetup.adapter.onPostJson('/pets', responseData);
 
         // Act
-        final result = await api.createPet(NewPet.fromJson(const <String, dynamic>{}));
+        final result = await api.createPet(NewPet.fromJson(const <String, dynamic>{'name': 'test_name'}));
 
         // Assert
         expect(result, isA<Pet>());
@@ -34,7 +34,7 @@ void main() {
 
         // Act & Assert
         expect(
-          () => api.createPet(NewPet.fromJson(const <String, dynamic>{})),
+          () => api.createPet(NewPet.fromJson(const <String, dynamic>{'name': 'test_name'})),
           throwsA(isA<DioException>()),
         );
       });

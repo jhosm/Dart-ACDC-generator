@@ -19,7 +19,7 @@ class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
       'description': description,
     });
 
-    final response = await _dio.post(
+    final response = await _dio.post<Response>(
       '/upload',
       data: formData,
     );
@@ -36,7 +36,7 @@ class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
       'tags': tags,
     });
 
-    final response = await _dio.post(
+    final response = await _dio.post<Response>(
       '/upload/multiple',
       data: formData,
     );
@@ -64,7 +64,7 @@ class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
       'avatar': avatar,
     });
 
-    final response = await _dio.post(
+    final response = await _dio.post<Response>(
       '/upload/profile',
       data: formData,
     );

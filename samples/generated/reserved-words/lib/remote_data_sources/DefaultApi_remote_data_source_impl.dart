@@ -12,7 +12,7 @@ class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
 
   @override
   Future<TestObject> getTest() async {
-    final response = await _dio.get(
+    final response = await _dio.get<Response>(
       '/test',
     );
 

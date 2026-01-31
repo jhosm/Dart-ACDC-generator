@@ -1,6 +1,7 @@
 name: file_upload_client
 description: File upload API client (multipart testing)
 version: 1.0.0
+publish_to: none  # Generated API client - not intended for pub.dev publication
 
 environment:
   sdk: ^3.8.0
