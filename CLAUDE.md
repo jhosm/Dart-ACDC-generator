@@ -104,7 +104,8 @@ The generator will consist of:
    - Overrides code generation behavior for Dart/ACDC specifics
 
 2. **Mustache Templates** - Generates Dart source files
-   - `api.mustache` - API endpoint classes with exception handling
+   - `remote_data_source.mustache` - API interface classes
+   - `remote_data_source_impl.mustache` - API implementation classes with exception handling
    - `model.mustache` - Data model classes with json_serializable
    - `api_client.mustache` - Main configuration and AcdcClientBuilder setup
    - `pubspec.mustache` - Package configuration with dependencies
@@ -239,7 +240,8 @@ modules/openapi-generator/src/main/resources/META-INF/services/org.openapitools.
 **Mustache Templates**:
 ```
 modules/openapi-generator/src/main/resources/dart-acdc-generator/
-├── api.mustache
+├── remote_data_source.mustache
+├── remote_data_source_impl.mustache
 ├── model.mustache
 ├── api_client.mustache
 ├── pubspec.mustache
@@ -302,7 +304,7 @@ git push                                     # Push to remote
 2. **Template-Driven**: This is a template generation project. Most of the complexity is in designing correct Mustache templates that handle all OpenAPI spec variations.
 
 3. **Incremental Development**: Start with a minimal viable generator (basic API and model templates) and add features incrementally:
-   - Phase 1: Basic templates (api.mustache, model.mustache)
+   - Phase 1: Basic templates (remote_data_source.mustache, remote_data_source_impl.mustache, model.mustache)
    - Phase 2: Configuration and pubspec.mustache
    - Phase 3: Full ACDC integration (authentication, caching, error handling)
    - Phase 4: Advanced features (offline support, certificate pinning)

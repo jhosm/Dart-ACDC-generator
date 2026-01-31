@@ -163,7 +163,8 @@ generator/
 ├── src/main/resources/       # Mustache templates
 │   └── dart-acdc/
 │       ├── model.mustache
-│       ├── api.mustache
+│       ├── remote_data_source.mustache
+│       ├── remote_data_source_impl.mustache
 │       └── ...
 └── src/test/java/            # Unit tests
 ```

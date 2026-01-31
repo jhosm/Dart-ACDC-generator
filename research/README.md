@@ -65,7 +65,8 @@ Practical quick-start guide for creating Dart client generators.
   - Codegen Java class
   - README.mustache template
   - pubspec.mustache template
-  - api.mustache template
+  - remote_data_source.mustache - API interface template
+  - remote_data_source_impl.mustache - API implementation template
   - model.mustache template
 - Mustache variables reference (API, Operation, Parameter, Model levels)
 - Common Dart type mappings

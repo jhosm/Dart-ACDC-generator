@@ -32,7 +32,8 @@ public class DartCustomGenerator extends DefaultCodegen implements CodegenConfig
         // Basic configuration
         outputFolder = "generated-code/dart-custom";
         modelTemplateFiles.put("model.mustache", ".dart");
-        apiTemplateFiles.put("api.mustache", ".dart");
+        apiTemplateFiles.put("remote_data_source.mustache", "_remote_data_source.dart");
+        apiTemplateFiles.put("remote_data_source_impl.mustache", "_remote_data_source_impl.dart");
         embeddedTemplateDir = templateDir = "dart-custom";
 
         // Package configuration
@@ -145,7 +146,13 @@ dev_dependencies:
   test: ^1.24.0
 ```
 
-#### api.mustache
+#### remote_data_source.mustache
+
+Generates abstract interface classes for API endpoints (e.g., `UserRemoteDataSource`).
+
+#### remote_data_source_impl.mustache
+
+Generates concrete implementation classes with Dio integration (e.g., `UserRemoteDataSourceImpl`).
 ```mustache
 // AUTO GENERATED FILE, DO NOT EDIT.
 //

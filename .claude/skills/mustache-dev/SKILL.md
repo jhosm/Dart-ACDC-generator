@@ -34,7 +34,7 @@ When validating Mustache templates, check for:
 - Incorrect indentation in generated code
 
 **File Structure Issues:**
-- Missing required template files (api.mustache, model.mustache, etc.)
+- Missing required template files (remote_data_source.mustache, remote_data_source_impl.mustache, model.mustache, etc.)
 - Incorrect file naming conventions
 - Partials not placed in correct directory
 
@@ -44,7 +44,8 @@ Generate Mustache templates following OpenAPI Generator conventions:
 
 **Standard Template Files:**
 
-**api.mustache** - API endpoint classes
+**remote_data_source.mustache** - API interface classes
+**remote_data_source_impl.mustache** - API implementation classes
 ```mustache
 {{>licenseInfo}}
 {{#operations}}
@@ -593,7 +594,7 @@ Expected behavior:
 5. Add documentation comments
 6. Follow Dart and OpenAPI Generator conventions
 
-User: `/mustache-dev test api.mustache with sample data`
+User: `/mustache-dev test remote_data_source.mustache with sample data`
 
 Expected behavior:
 1. Read template file

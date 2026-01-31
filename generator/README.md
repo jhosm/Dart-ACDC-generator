@@ -420,7 +420,8 @@ generator/
 │   │   └── resources/
 │   │       ├── dart-acdc/
 │   │       │   ├── model.mustache
-│   │       │   ├── api.mustache
+│   │       │   ├── remote_data_source.mustache
+│   │       │   ├── remote_data_source_impl.mustache
 │   │       │   ├── pubspec.mustache
 │   │       │   └── ...
 │   │       └── META-INF/services/

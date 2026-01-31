@@ -104,7 +104,8 @@ This Java class defines:
 ```java
 outputFolder = "generated-code/my-generator";
 modelTemplateFiles.put("model.mustache", ".dart");
-apiTemplateFiles.put("api.mustache", ".dart");
+        apiTemplateFiles.put("remote_data_source.mustache", "_remote_data_source.dart");
+        apiTemplateFiles.put("remote_data_source_impl.mustache", "_remote_data_source_impl.dart");
 embeddedTemplateDir = templateDir = "my-generator";
 apiPackage = "lib.api";
 modelPackage = "lib.model";
@@ -122,7 +123,8 @@ Add a reference to your Codegen class to allow classpath extension.
 
 Create core templates:
 - **README.mustache** — Overview documentation
-- **api.mustache** — API endpoint generation
+- **remote_data_source.mustache** — API interface generation
+- **remote_data_source_impl.mustache** — API implementation generation
 - **model.mustache** — Data model generation
 
 ### 4. Config File
@@ -186,7 +188,7 @@ Create a `config.yaml` file:
 templateDir: my_custom_templates
 files:
   AUTHORS.md: {}
-  api.mustache:
+  remote_data_source.mustache:
     templateType: API
     destinationFilename: Impl.dart
 ```

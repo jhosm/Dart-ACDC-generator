@@ -110,7 +110,8 @@ java -jar openapi-generator-cli.jar meta \
    - Customizes code generation behavior
 
 2. **Mustache Templates**
-   - `api.mustache` - API endpoint classes
+   - `remote_data_source.mustache` - API interface classes
+   - `remote_data_source_impl.mustache` - API implementation classes
    - `model.mustache` - Data model classes
    - `pubspec.mustache` - Package configuration
    - Supporting files (README, etc.)
@@ -259,7 +260,8 @@ additionalProperties:
 
 ```
 dart-acdc-generator/
-├── api.mustache                    # API class template
+├── remote_data_source.mustache    # API interface template
+├── remote_data_source_impl.mustache # API implementation template
 ├── model.mustache                  # Model class template
 ├── api_client.mustache             # Main client configuration
 ├── pubspec.mustache                # Package configuration
@@ -456,7 +458,7 @@ try {
    - Override methods for Dart-specific behavior
 
 3. **Create Mustache templates**
-   - `api.mustache` with ACDC integration
+   - `remote_data_source.mustache` and `remote_data_source_impl.mustache` with ACDC integration
    - `model.mustache` with json_serializable
    - `api_client.mustache` for configuration
    - `pubspec.mustache` with dependencies
