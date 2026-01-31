@@ -14,7 +14,7 @@ void main() {
         final mockSetup = createMockDio();
         final api = PetsApiRemoteDataSourceImpl(mockSetup.dio);
 
-        final responseData = <String, dynamic>{};
+        final responseData = <String, dynamic>{'id': 42, 'name': 'test_name'};
 
         mockSetup.adapter.onPostJson('/pets', responseData);
 
@@ -95,7 +95,7 @@ void main() {
         final mockSetup = createMockDio();
         final api = PetsApiRemoteDataSourceImpl(mockSetup.dio);
 
-        final responseData = [<String, dynamic>{}];
+        final responseData = [<String, dynamic>{'id': 42, 'name': 'test_name'}];
 
         mockSetup.adapter.onGetList('/pets', responseData);
 
@@ -114,7 +114,7 @@ void main() {
 
         mockSetup.adapter.onGet(
           '/pets',
-          (server) => server.reply(200, <dynamic>[]),
+          (server) => server.reply(200, [<String, dynamic>{'id': 42, 'name': 'test_name'}]),
         );
 
         // Act & Assert - request succeeds with query parameters
@@ -142,7 +142,7 @@ void main() {
         final mockSetup = createMockDio();
         final api = PetsApiRemoteDataSourceImpl(mockSetup.dio);
 
-        final responseData = <String, dynamic>{};
+        final responseData = <String, dynamic>{'id': 42, 'name': 'test_name'};
 
         mockSetup.adapter.onGetJson('/pets/{petId}'.replaceAll('{' 'petId' '}', '42'), responseData);
 
@@ -162,7 +162,7 @@ void main() {
         // verifies that path parameters were correctly substituted
         mockSetup.adapter.onGet(
           '/pets/{petId}'.replaceAll('{' 'petId' '}', '42'),
-          (server) => server.reply(200, <String, dynamic>{}),
+          (server) => server.reply(200, <String, dynamic>{'id': 42, 'name': 'test_name'}),
         );
 
         // Act & Assert - if the path parameter substitution is wrong,

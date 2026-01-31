@@ -1256,7 +1256,12 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                     }
 
                     // Add imports for oneOf/anyOf composition properties
-                    if (prop.vendorExtensions.containsKey("x-is-composition-property")) {
+                    if (prop.vendorExtensions.containsKey("x-is-composition-property") ||
+                        prop.vendorExtensions.containsKey("x-is-one-of-property") ||
+                        prop.vendorExtensions.containsKey("x-is-any-of-property")) {
+                        // Mark model as having composition properties (for test generation)
+                        model.vendorExtensions.put("x-has-composition-property", true);
+                        
                         // The property's complexType contains the model name that needs to be imported
                         String importPath = toModelImport(prop.complexType);
                         if (importPath != null && !importPath.isEmpty()) {
@@ -1836,9 +1841,14 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         // Trim whitespace
         returnType = returnType.trim();
 
+        // Determine the model name to use for generating sample data
+        String modelName = (returnBaseType != null && !returnBaseType.isEmpty()) ? returnBaseType : returnType;
+
         // Handle array responses FIRST (before primitive check, since "List" is a primitive)
         if (isArray) {
-            return "[<String, dynamic>{}]";
+            // Try to generate proper sample data for the array element type
+            String elementJson = generateTestJsonForModel(modelName);
+            return "[" + elementJson + "]";
         }
 
         // Handle primitive return types using enhanced switch expression
@@ -1852,8 +1862,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             };
         }
 
-        // Handle object responses (model types)
-        return "<String, dynamic>{}";
+        // Handle object responses (model types) - use generateTestJsonForModel for proper sample data
+        return generateTestJsonForModel(modelName);
     }
 
     /**

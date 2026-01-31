@@ -13,7 +13,7 @@ void main() {
         final mockSetup = createMockDio();
         final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
 
-        final responseData = [<String, dynamic>{}];
+        final responseData = [<String, dynamic>{'id': 'test_id', 'type': 'test_type'}];
 
         mockSetup.adapter.onGetList('/entities', responseData);
 

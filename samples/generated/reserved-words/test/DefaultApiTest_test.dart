@@ -13,7 +13,7 @@ void main() {
         final mockSetup = createMockDio();
         final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
 
-        final responseData = <String, dynamic>{};
+        final responseData = <String, dynamic>{'class': 'test_class', 'default': 'test_default', 'id': 'test_id'};
 
         mockSetup.adapter.onGetJson('/test', responseData);
 

@@ -45,6 +45,7 @@ extension MockResponseHelpers on DioAdapter {
     onPost(
       path,
       (server) => server.reply(statusCode, responseData),
+      data: Matchers.any,
     );
   }
 
@@ -53,6 +54,7 @@ extension MockResponseHelpers on DioAdapter {
     onPost(
       path,
       (server) => server.reply(statusCode, responseData),
+      data: Matchers.any,
     );
   }
 
@@ -61,6 +63,7 @@ extension MockResponseHelpers on DioAdapter {
     onPost(
       path,
       (server) => server.reply(statusCode, {'error': message}),
+      data: Matchers.any,
     );
   }
 
@@ -71,6 +74,7 @@ extension MockResponseHelpers on DioAdapter {
     onPut(
       path,
       (server) => server.reply(statusCode, responseData),
+      data: Matchers.any,
     );
   }
 
@@ -79,6 +83,7 @@ extension MockResponseHelpers on DioAdapter {
     onPut(
       path,
       (server) => server.reply(statusCode, responseData),
+      data: Matchers.any,
     );
   }
 
@@ -87,6 +92,7 @@ extension MockResponseHelpers on DioAdapter {
     onPut(
       path,
       (server) => server.reply(statusCode, {'error': message}),
+      data: Matchers.any,
     );
   }
 
@@ -97,6 +103,7 @@ extension MockResponseHelpers on DioAdapter {
     onPatch(
       path,
       (server) => server.reply(statusCode, responseData),
+      data: Matchers.any,
     );
   }
 
@@ -105,6 +112,7 @@ extension MockResponseHelpers on DioAdapter {
     onPatch(
       path,
       (server) => server.reply(statusCode, responseData),
+      data: Matchers.any,
     );
   }
 
@@ -113,6 +121,7 @@ extension MockResponseHelpers on DioAdapter {
     onPatch(
       path,
       (server) => server.reply(statusCode, {'error': message}),
+      data: Matchers.any,
     );
   }
 

@@ -14,7 +14,7 @@ void main() {
         final mockSetup = createMockDio();
         final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
 
-        final responseData = <String, dynamic>{};
+        final responseData = <String, dynamic>{'filename': 'test_filename', 'id': 'test_id', 'url': 'test_url'};
 
         mockSetup.adapter.onPostJson('/upload', responseData);
 
@@ -46,7 +46,7 @@ void main() {
         final mockSetup = createMockDio();
         final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
 
-        final responseData = [<String, dynamic>{}];
+        final responseData = [<String, dynamic>{'filename': 'test_filename', 'id': 'test_id', 'url': 'test_url'}];
 
         mockSetup.adapter.onPostList('/upload/multiple', responseData);
 
@@ -79,7 +79,7 @@ void main() {
         final mockSetup = createMockDio();
         final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
 
-        final responseData = <String, dynamic>{};
+        final responseData = <String, dynamic>{'avatarUrl': 'test_avatarUrl', 'id': 'test_id', 'name': 'test_name'};
 
         mockSetup.adapter.onPostJson('/upload/profile', responseData);
 

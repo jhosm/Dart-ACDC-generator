@@ -22,6 +22,7 @@ void main() {
 {{^isEnum}}
 {{^vendorExtensions.x-is-one-of}}
 {{^vendorExtensions.x-is-any-of}}
+{{^vendorExtensions.x-has-composition-property}}
     test('fromJson with all fields populated', () {
       final json = <String, dynamic>{
 {{#vars}}
@@ -164,7 +165,9 @@ void main() {
 {{/required}}
 {{/vars}}
     });
+{{/vendorExtensions.x-has-composition-property}}
 
+{{^vendorExtensions.x-has-composition-property}}
     test('toJson produces valid JSON', () {
       final model = {{classname}}(
 {{#vars}}
@@ -202,7 +205,7 @@ void main() {
 {{^isArray}}
 {{^isMap}}
 {{#complexType}}
-        {{name}}: null as {{dataType}}, // TODO: Provide valid test data
+        {{name}}: {{dataType}}.fromJson(const <String, dynamic>{}),
 {{/complexType}}
 {{/isMap}}
 {{/isArray}}
@@ -295,6 +298,7 @@ void main() {
 {{/required}}
 {{/vars}}
     });
+{{/vendorExtensions.x-has-composition-property}}
 {{/vendorExtensions.x-is-any-of}}
 {{/vendorExtensions.x-is-one-of}}
 {{/isEnum}}
