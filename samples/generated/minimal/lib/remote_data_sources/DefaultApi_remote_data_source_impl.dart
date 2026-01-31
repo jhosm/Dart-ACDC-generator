@@ -12,12 +12,21 @@ class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
 
   @override
   Future<Ping200Response> ping() async {
-    final response = await _dio.get<Response>(
+    final response = await _dio.get<Map<String, dynamic>>(
       '/ping',
     );
 
     // Handle single object response
-    return Ping200Response.fromJson(response.data as Map<String, dynamic>);
+    final data = response.data;
+    if (data != null) {
+      return Ping200Response.fromJson(data);
+    }
+    throw AcdcClientException(
+      message: 'Expected Ping200Response response but got null',
+      statusCode: response.statusCode ?? 0,
+      requestOptions: response.requestOptions,
+      originalException: null,
+    );
   }
 
 }

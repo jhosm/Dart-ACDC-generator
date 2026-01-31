@@ -21,7 +21,7 @@ void main() {
 
         final responseData = {{{vendorExtensions.sampleResponseJson}}};
 
-        mockSetup.adapter.on{{vendorExtensions.httpMethodCapitalized}}List('{{path}}'{{#pathParams}}.replaceAll('{{{baseName}}}', '{{vendorExtensions.testValueRaw}}'){{/pathParams}}, responseData);
+        mockSetup.adapter.on{{vendorExtensions.httpMethodCapitalized}}List('{{path}}'{{#pathParams}}.replaceAll('{' '{{{baseName}}}' '}', '{{vendorExtensions.testValueRaw}}'){{/pathParams}}, responseData);
 {{/isArray}}
 {{^isArray}}
 {{#returnTypeIsPrimitive}}
@@ -29,7 +29,7 @@ void main() {
         final responseData = {{{vendorExtensions.sampleResponseJson}}};
 
         mockSetup.adapter.on{{vendorExtensions.httpMethodCapitalized}}(
-          '{{path}}'{{#pathParams}}.replaceAll('{{{baseName}}}', '{{vendorExtensions.testValueRaw}}'){{/pathParams}},
+          '{{path}}'{{#pathParams}}.replaceAll('{' '{{{baseName}}}' '}', '{{vendorExtensions.testValueRaw}}'){{/pathParams}},
           (server) => server.reply(200, responseData),
         );
 {{/returnTypeIsPrimitive}}
@@ -37,14 +37,14 @@ void main() {
 
         final responseData = {{{vendorExtensions.sampleResponseJson}}};
 
-        mockSetup.adapter.on{{vendorExtensions.httpMethodCapitalized}}Json('{{path}}'{{#pathParams}}.replaceAll('{{{baseName}}}', '{{vendorExtensions.testValueRaw}}'){{/pathParams}}, responseData);
+        mockSetup.adapter.on{{vendorExtensions.httpMethodCapitalized}}Json('{{path}}'{{#pathParams}}.replaceAll('{' '{{{baseName}}}' '}', '{{vendorExtensions.testValueRaw}}'){{/pathParams}}, responseData);
 {{/returnTypeIsPrimitive}}
 {{/isArray}}
 {{/returnType}}
 {{^returnType}}
 
         mockSetup.adapter.on{{vendorExtensions.httpMethodCapitalized}}(
-          '{{path}}'{{#pathParams}}.replaceAll('{{{baseName}}}', '{{vendorExtensions.testValueRaw}}'){{/pathParams}},
+          '{{path}}'{{#pathParams}}.replaceAll('{' '{{{baseName}}}' '}', '{{vendorExtensions.testValueRaw}}'){{/pathParams}},
           (server) => server.reply(204, null),
         );
 {{/returnType}}
@@ -78,7 +78,7 @@ void main() {
         // The mock adapter matches the exact path, so a successful response
         // verifies that path parameters were correctly substituted
         mockSetup.adapter.on{{vendorExtensions.httpMethodCapitalized}}(
-          '{{path}}'{{#pathParams}}.replaceAll('{{{baseName}}}', '{{vendorExtensions.testValueRaw}}'){{/pathParams}},
+          '{{path}}'{{#pathParams}}.replaceAll('{' '{{{baseName}}}' '}', '{{vendorExtensions.testValueRaw}}'){{/pathParams}},
           (server) => server.reply({{#returnType}}200{{/returnType}}{{^returnType}}204{{/returnType}}, {{#returnType}}{{#isArray}}<dynamic>[]{{/isArray}}{{^isArray}}{{#returnTypeIsPrimitive}}{{#isString}}''{{/isString}}{{#isInteger}}0{{/isInteger}}{{#isLong}}0{{/isLong}}{{#isDouble}}0.0{{/isDouble}}{{#isFloat}}0.0{{/isFloat}}{{#isBoolean}}false{{/isBoolean}}{{/returnTypeIsPrimitive}}{{^returnTypeIsPrimitive}}<String, dynamic>{}{{/returnTypeIsPrimitive}}{{/isArray}}{{/returnType}}{{^returnType}}null{{/returnType}}),
         );
 
@@ -95,7 +95,7 @@ void main() {
         final api = {{classname}}RemoteDataSourceImpl(mockSetup.dio);
 
         mockSetup.adapter.on{{vendorExtensions.httpMethodCapitalized}}(
-          '{{path}}'{{#pathParams}}.replaceAll('{{{baseName}}}', '{{vendorExtensions.testValueRaw}}'){{/pathParams}},
+          '{{path}}'{{#pathParams}}.replaceAll('{' '{{{baseName}}}' '}', '{{vendorExtensions.testValueRaw}}'){{/pathParams}},
           (server) => server.reply({{#returnType}}200{{/returnType}}{{^returnType}}204{{/returnType}}, {{#returnType}}{{#isArray}}<dynamic>[]{{/isArray}}{{^isArray}}{{#returnTypeIsPrimitive}}{{#isString}}''{{/isString}}{{#isInteger}}0{{/isInteger}}{{#isLong}}0{{/isLong}}{{#isDouble}}0.0{{/isDouble}}{{#isFloat}}0.0{{/isFloat}}{{#isBoolean}}false{{/isBoolean}}{{/returnTypeIsPrimitive}}{{^returnTypeIsPrimitive}}<String, dynamic>{}{{/returnTypeIsPrimitive}}{{/isArray}}{{/returnType}}{{^returnType}}null{{/returnType}}),
         );
 
@@ -109,7 +109,7 @@ void main() {
         final mockSetup = createMockDio();
         final api = {{classname}}RemoteDataSourceImpl(mockSetup.dio);
 
-        mockSetup.adapter.on{{vendorExtensions.httpMethodCapitalized}}Error('{{path}}'{{#pathParams}}.replaceAll('{{{baseName}}}', '{{vendorExtensions.testValueRaw}}'){{/pathParams}}, statusCode: 500);
+        mockSetup.adapter.on{{vendorExtensions.httpMethodCapitalized}}Error('{{path}}'{{#pathParams}}.replaceAll('{' '{{{baseName}}}' '}', '{{vendorExtensions.testValueRaw}}'){{/pathParams}}, statusCode: 500);
 
         // Act & Assert
         expect(

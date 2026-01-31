@@ -46,7 +46,17 @@ class {{classname}}RemoteDataSourceImpl implements {{classname}}RemoteDataSource
 
 {{/hasFormParams}}
 {{#returnType}}
-    final response = await _dio.{{httpMethod}}<Response>(
+{{#isArray}}
+    final response = await _dio.{{httpMethod}}<List<dynamic>>(
+{{/isArray}}
+{{^isArray}}
+{{#returnTypeIsPrimitive}}
+    final response = await _dio.{{httpMethod}}<{{{returnType}}}>(
+{{/returnTypeIsPrimitive}}
+{{^returnTypeIsPrimitive}}
+    final response = await _dio.{{httpMethod}}<Map<String, dynamic>>(
+{{/returnTypeIsPrimitive}}
+{{/isArray}}
       '{{path}}'{{#pathParams}}.replaceAll('{' + '{{baseName}}' + '}', {{paramName}}.toString()){{/pathParams}},
 {{#hasQueryParams}}
       queryParameters: queryParameters,
@@ -87,13 +97,14 @@ class {{classname}}RemoteDataSourceImpl implements {{classname}}RemoteDataSource
 {{#returnType}}
 {{#isArray}}
     // Handle List response
-    if (response.data is List) {
-      return (response.data as List)
+    final data = response.data;
+    if (data != null) {
+      return data
           .map((item) => {{{returnBaseType}}}.fromJson(item as Map<String, dynamic>))
           .toList();
     }
     throw AcdcClientException(
-      message: 'Expected List response but got: ${response.data.runtimeType}',
+      message: 'Expected List response but got null',
       statusCode: response.statusCode ?? 0,
       requestOptions: response.requestOptions,
       originalException: null,
@@ -106,7 +117,16 @@ class {{classname}}RemoteDataSourceImpl implements {{classname}}RemoteDataSource
 {{/returnTypeIsPrimitive}}
 {{^returnTypeIsPrimitive}}
     // Handle single object response
-    return {{{returnType}}}.fromJson(response.data as Map<String, dynamic>);
+    final data = response.data;
+    if (data != null) {
+      return {{{returnType}}}.fromJson(data);
+    }
+    throw AcdcClientException(
+      message: 'Expected {{{returnType}}} response but got null',
+      statusCode: response.statusCode ?? 0,
+      requestOptions: response.requestOptions,
+      originalException: null,
+    );
 {{/returnTypeIsPrimitive}}
 {{/isArray}}
 {{/returnType}}

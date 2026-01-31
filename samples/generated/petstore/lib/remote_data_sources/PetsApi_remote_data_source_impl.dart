@@ -13,13 +13,22 @@ class PetsApiRemoteDataSourceImpl implements PetsApiRemoteDataSource {
 
   @override
   Future<Pet> createPet(NewPet newPet) async {
-    final response = await _dio.post<Response>(
+    final response = await _dio.post<Map<String, dynamic>>(
       '/pets',
       data: newPet.toJson(),
     );
 
     // Handle single object response
-    return Pet.fromJson(response.data as Map<String, dynamic>);
+    final data = response.data;
+    if (data != null) {
+      return Pet.fromJson(data);
+    }
+    throw AcdcClientException(
+      message: 'Expected Pet response but got null',
+      statusCode: response.statusCode ?? 0,
+      requestOptions: response.requestOptions,
+      originalException: null,
+    );
   }
 
   @override
@@ -37,19 +46,20 @@ class PetsApiRemoteDataSourceImpl implements PetsApiRemoteDataSource {
       queryParameters['limit'] = limit;
     }
 
-    final response = await _dio.get<Response>(
+    final response = await _dio.get<List<dynamic>>(
       '/pets',
       queryParameters: queryParameters,
     );
 
     // Handle List response
-    if (response.data is List) {
-      return (response.data as List)
+    final data = response.data;
+    if (data != null) {
+      return data
           .map((item) => Pet.fromJson(item as Map<String, dynamic>))
           .toList();
     }
     throw AcdcClientException(
-      message: 'Expected List response but got: ${response.data.runtimeType}',
+      message: 'Expected List response but got null',
       statusCode: response.statusCode ?? 0,
       requestOptions: response.requestOptions,
       originalException: null,
@@ -58,12 +68,21 @@ class PetsApiRemoteDataSourceImpl implements PetsApiRemoteDataSource {
 
   @override
   Future<Pet> showPetById(int petId) async {
-    final response = await _dio.get<Response>(
+    final response = await _dio.get<Map<String, dynamic>>(
       '/pets/{petId}'.replaceAll('{' + 'petId' + '}', petId.toString()),
     );
 
     // Handle single object response
-    return Pet.fromJson(response.data as Map<String, dynamic>);
+    final data = response.data;
+    if (data != null) {
+      return Pet.fromJson(data);
+    }
+    throw AcdcClientException(
+      message: 'Expected Pet response but got null',
+      statusCode: response.statusCode ?? 0,
+      requestOptions: response.requestOptions,
+      originalException: null,
+    );
   }
 
 }

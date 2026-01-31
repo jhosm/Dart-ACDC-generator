@@ -47,7 +47,7 @@ void main() {
         final api = PetsApiRemoteDataSourceImpl(mockSetup.dio);
 
         mockSetup.adapter.onDelete(
-          '/pets/{petId}'.replaceAll('petId', '42'),
+          '/pets/{petId}'.replaceAll('{' 'petId' '}', '42'),
           (server) => server.reply(204, null),
         );
 
@@ -65,7 +65,7 @@ void main() {
         // The mock adapter matches the exact path, so a successful response
         // verifies that path parameters were correctly substituted
         mockSetup.adapter.onDelete(
-          '/pets/{petId}'.replaceAll('petId', '42'),
+          '/pets/{petId}'.replaceAll('{' 'petId' '}', '42'),
           (server) => server.reply(204, null),
         );
 
@@ -79,7 +79,7 @@ void main() {
         final mockSetup = createMockDio();
         final api = PetsApiRemoteDataSourceImpl(mockSetup.dio);
 
-        mockSetup.adapter.onDeleteError('/pets/{petId}'.replaceAll('petId', '42'), statusCode: 500);
+        mockSetup.adapter.onDeleteError('/pets/{petId}'.replaceAll('{' 'petId' '}', '42'), statusCode: 500);
 
         // Act & Assert
         expect(
@@ -144,7 +144,7 @@ void main() {
 
         final responseData = <String, dynamic>{};
 
-        mockSetup.adapter.onGetJson('/pets/{petId}'.replaceAll('petId', '42'), responseData);
+        mockSetup.adapter.onGetJson('/pets/{petId}'.replaceAll('{' 'petId' '}', '42'), responseData);
 
         // Act
         final result = await api.showPetById(42);
@@ -161,7 +161,7 @@ void main() {
         // The mock adapter matches the exact path, so a successful response
         // verifies that path parameters were correctly substituted
         mockSetup.adapter.onGet(
-          '/pets/{petId}'.replaceAll('petId', '42'),
+          '/pets/{petId}'.replaceAll('{' 'petId' '}', '42'),
           (server) => server.reply(200, <String, dynamic>{}),
         );
 
@@ -175,7 +175,7 @@ void main() {
         final mockSetup = createMockDio();
         final api = PetsApiRemoteDataSourceImpl(mockSetup.dio);
 
-        mockSetup.adapter.onGetError('/pets/{petId}'.replaceAll('petId', '42'), statusCode: 500);
+        mockSetup.adapter.onGetError('/pets/{petId}'.replaceAll('{' 'petId' '}', '42'), statusCode: 500);
 
         // Act & Assert
         expect(

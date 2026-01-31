@@ -1836,6 +1836,11 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         // Trim whitespace
         returnType = returnType.trim();
 
+        // Handle array responses FIRST (before primitive check, since "List" is a primitive)
+        if (isArray) {
+            return "[<String, dynamic>{}]";
+        }
+
         // Handle primitive return types using enhanced switch expression
         if (languageSpecificPrimitives.contains(returnType)) {
             return switch (returnType) {
@@ -1845,11 +1850,6 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                 case "DateTime" -> "'2024-01-01T00:00:00.000Z'";
                 default -> "<String, dynamic>{}";
             };
-        }
-
-        // Handle array responses
-        if (isArray) {
-            return "[<String, dynamic>{}]";
         }
 
         // Handle object responses (model types)
@@ -1996,7 +1996,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                     operation.isArray);
             // Ensure sampleResponseJson is never empty - use fallback if needed
             if (sampleResponseJson == null || sampleResponseJson.trim().isEmpty()) {
-                sampleResponseJson = "<String, dynamic>{}";
+                // Use appropriate fallback based on whether it's an array
+                sampleResponseJson = operation.isArray ? "[<String, dynamic>{}]" : "<String, dynamic>{}";
                 LOGGER.warn("sampleResponseJson was empty for operation {}, using fallback",
                         operation.operationId);
             }

@@ -13,11 +13,11 @@ abstract class Notification {
   factory Notification.fromJson(dynamic json) {
     // Try EmailNotification
     try {
-      return EmailNotification.fromJson(json);
+      return EmailNotification.fromJson(json as Map<String, dynamic>);
     } catch (_) {}
     // Try SmsNotification
     try {
-      return SmsNotification.fromJson(json);
+      return SmsNotification.fromJson(json as Map<String, dynamic>);
     } catch (_) {}
     throw FormatException('No matching anyOf alternative for Notification');
   }

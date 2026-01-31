@@ -19,13 +19,22 @@ class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
       'description': description,
     });
 
-    final response = await _dio.post<Response>(
+    final response = await _dio.post<Map<String, dynamic>>(
       '/upload',
       data: formData,
     );
 
     // Handle single object response
-    return UploadResponse.fromJson(response.data as Map<String, dynamic>);
+    final data = response.data;
+    if (data != null) {
+      return UploadResponse.fromJson(data);
+    }
+    throw AcdcClientException(
+      message: 'Expected UploadResponse response but got null',
+      statusCode: response.statusCode ?? 0,
+      requestOptions: response.requestOptions,
+      originalException: null,
+    );
   }
 
   @override
@@ -36,19 +45,20 @@ class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
       'tags': tags,
     });
 
-    final response = await _dio.post<Response>(
+    final response = await _dio.post<List<dynamic>>(
       '/upload/multiple',
       data: formData,
     );
 
     // Handle List response
-    if (response.data is List) {
-      return (response.data as List)
+    final data = response.data;
+    if (data != null) {
+      return data
           .map((item) => UploadResponse.fromJson(item as Map<String, dynamic>))
           .toList();
     }
     throw AcdcClientException(
-      message: 'Expected List response but got: ${response.data.runtimeType}',
+      message: 'Expected List response but got null',
       statusCode: response.statusCode ?? 0,
       requestOptions: response.requestOptions,
       originalException: null,
@@ -64,13 +74,22 @@ class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
       'avatar': avatar,
     });
 
-    final response = await _dio.post<Response>(
+    final response = await _dio.post<Map<String, dynamic>>(
       '/upload/profile',
       data: formData,
     );
 
     // Handle single object response
-    return Profile.fromJson(response.data as Map<String, dynamic>);
+    final data = response.data;
+    if (data != null) {
+      return Profile.fromJson(data);
+    }
+    throw AcdcClientException(
+      message: 'Expected Profile response but got null',
+      statusCode: response.statusCode ?? 0,
+      requestOptions: response.requestOptions,
+      originalException: null,
+    );
   }
 
 }

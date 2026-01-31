@@ -12,12 +12,21 @@ class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
 
   @override
   Future<EnumTestModel> testEnums() async {
-    final response = await _dio.get<Response>(
+    final response = await _dio.get<Map<String, dynamic>>(
       '/test',
     );
 
     // Handle single object response
-    return EnumTestModel.fromJson(response.data as Map<String, dynamic>);
+    final data = response.data;
+    if (data != null) {
+      return EnumTestModel.fromJson(data);
+    }
+    throw AcdcClientException(
+      message: 'Expected EnumTestModel response but got null',
+      statusCode: response.statusCode ?? 0,
+      requestOptions: response.requestOptions,
+      originalException: null,
+    );
   }
 
 }

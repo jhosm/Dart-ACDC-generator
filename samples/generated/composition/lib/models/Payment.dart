@@ -11,11 +11,11 @@ abstract class Payment {
   factory Payment.fromJson(dynamic json) {
     // Try CreditCardPayment
     try {
-      return CreditCardPayment.fromJson(json);
+      return CreditCardPayment.fromJson(json as Map<String, dynamic>);
     } catch (_) {}
     // Try BankTransferPayment
     try {
-      return BankTransferPayment.fromJson(json);
+      return BankTransferPayment.fromJson(json as Map<String, dynamic>);
     } catch (_) {}
     throw FormatException('No matching oneOf alternative for Payment');
   }

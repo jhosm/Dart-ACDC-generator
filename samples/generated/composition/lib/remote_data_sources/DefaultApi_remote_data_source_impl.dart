@@ -12,18 +12,19 @@ class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
 
   @override
   Future<List<Entity>> getEntities() async {
-    final response = await _dio.get<Response>(
+    final response = await _dio.get<List<dynamic>>(
       '/entities',
     );
 
     // Handle List response
-    if (response.data is List) {
-      return (response.data as List)
+    final data = response.data;
+    if (data != null) {
+      return data
           .map((item) => Entity.fromJson(item as Map<String, dynamic>))
           .toList();
     }
     throw AcdcClientException(
-      message: 'Expected List response but got: ${response.data.runtimeType}',
+      message: 'Expected List response but got null',
       statusCode: response.statusCode ?? 0,
       requestOptions: response.requestOptions,
       originalException: null,

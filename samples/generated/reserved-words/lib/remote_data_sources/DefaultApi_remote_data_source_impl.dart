@@ -12,12 +12,21 @@ class DefaultApiRemoteDataSourceImpl implements DefaultApiRemoteDataSource {
 
   @override
   Future<TestObject> getTest() async {
-    final response = await _dio.get<Response>(
+    final response = await _dio.get<Map<String, dynamic>>(
       '/test',
     );
 
     // Handle single object response
-    return TestObject.fromJson(response.data as Map<String, dynamic>);
+    final data = response.data;
+    if (data != null) {
+      return TestObject.fromJson(data);
+    }
+    throw AcdcClientException(
+      message: 'Expected TestObject response but got null',
+      statusCode: response.statusCode ?? 0,
+      requestOptions: response.requestOptions,
+      originalException: null,
+    );
   }
 
 }

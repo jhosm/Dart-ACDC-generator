@@ -1,6 +1,5 @@
 // AUTO-GENERATED FILE - DO NOT EDIT
 import 'package:json_annotation/json_annotation.dart';
-import 'package:composition_client/models/list.dart';
 
 part 'node.g.dart';
 

@@ -33,7 +33,7 @@ void main() {
 
     test('toJson produces valid JSON', () {
       final model = VerifiedAnimal(
-        animal: null, // TODO: Provide valid test data
+        animal: null as Animal, // TODO: Provide valid test data
       );
 
       final json = model.toJson();
