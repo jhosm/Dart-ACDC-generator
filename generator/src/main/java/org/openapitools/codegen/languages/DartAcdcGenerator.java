@@ -929,23 +929,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      */
     @SuppressWarnings({ "rawtypes", "unchecked" })
     private void processOneOfComposition(String name, Schema schema, CodegenModel model) {
-        LOGGER.info("Processing oneOf composition for schema: {}", name);
-
-        // Mark this model as a oneOf composition
-        model.vendorExtensions.put("x-is-one-of", true);
-
-        // Process discriminator if present
-        processDiscriminator(name, schema, model);
-
-        // Process oneOf alternatives
-        List<Schema> oneOfSchemas = (List<Schema>) schema.getOneOf();
-        List<Map<String, Object>> alternatives = processCompositionAlternatives(name, oneOfSchemas, "oneOf");
-
-        // Track which schemas should extend this sealed class
-        registerSealedClassExtensions(name, oneOfSchemas);
-
-        model.vendorExtensions.put("x-one-of-alternatives", alternatives);
-        LOGGER.info("Processed oneOf for '{}': {} alternatives", name, alternatives.size());
+        processComposition(name, schema, model, "oneOf");
     }
 
     /**
@@ -958,23 +942,50 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      */
     @SuppressWarnings({ "rawtypes", "unchecked" })
     private void processAnyOfComposition(String name, Schema schema, CodegenModel model) {
-        LOGGER.info("Processing anyOf composition for schema: {}", name);
+        processComposition(name, schema, model, "anyOf");
+    }
 
-        // Mark this model as an anyOf composition
-        model.vendorExtensions.put("x-is-any-of", true);
+    /**
+     * Processes a composition schema (oneOf or anyOf) and adds metadata to the CodegenModel.
+     * This is the common implementation for both oneOf and anyOf composition types.
+     *
+     * @param name             the schema name
+     * @param schema           the schema with composition
+     * @param model            the codegen model to update
+     * @param compositionType  the type of composition ("oneOf" or "anyOf")
+     */
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    private void processComposition(String name, Schema schema, CodegenModel model, String compositionType) {
+        LOGGER.info("Processing {} composition for schema: {}", compositionType, name);
 
-        // anyOf never has discriminator (treat as try-each)
-        model.vendorExtensions.put("x-has-discriminator", false);
+        // Mark this model with the appropriate composition type
+        String vendorExtensionIsKey = "x-is-" + compositionType.toLowerCase().replace("of", "-of");
+        model.vendorExtensions.put(vendorExtensionIsKey, true);
 
-        // Process anyOf alternatives (same as oneOf)
-        List<Schema> anyOfSchemas = (List<Schema>) schema.getAnyOf();
-        List<Map<String, Object>> alternatives = processCompositionAlternatives(name, anyOfSchemas, "anyOf");
+        // Process discriminator if present (oneOf only, anyOf never has discriminator)
+        if ("oneOf".equals(compositionType)) {
+            processDiscriminator(name, schema, model);
+        } else {
+            // anyOf never has discriminator (treat as try-each)
+            model.vendorExtensions.put("x-has-discriminator", false);
+        }
+
+        // Get composition alternatives based on type
+        List<Schema> compositionSchemas = "oneOf".equals(compositionType)
+                ? (List<Schema>) schema.getOneOf()
+                : (List<Schema>) schema.getAnyOf();
+
+        // Process alternatives
+        List<Map<String, Object>> alternatives = processCompositionAlternatives(name, compositionSchemas, compositionType);
 
         // Track which schemas should extend this sealed class
-        registerSealedClassExtensions(name, anyOfSchemas);
+        registerSealedClassExtensions(name, compositionSchemas);
 
-        model.vendorExtensions.put("x-any-of-alternatives", alternatives);
-        LOGGER.info("Processed anyOf for '{}': {} alternatives", name, alternatives.size());
+        // Store alternatives with the appropriate vendor extension key
+        String alternativesKey = "x-" + compositionType.toLowerCase().replace("of", "-of") + "-alternatives";
+        model.vendorExtensions.put(alternativesKey, alternatives);
+        
+        LOGGER.info("Processed {} for '{}': {} alternatives", compositionType, name, alternatives.size());
     }
 
     /**
