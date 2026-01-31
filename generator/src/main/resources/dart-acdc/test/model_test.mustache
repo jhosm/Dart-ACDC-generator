@@ -202,7 +202,7 @@ void main() {
 {{^isArray}}
 {{^isMap}}
 {{#complexType}}
-        {{name}}: null, // TODO: Provide valid test data
+        {{name}}: null as {{dataType}}, // TODO: Provide valid test data
 {{/complexType}}
 {{/isMap}}
 {{/isArray}}
