@@ -58,19 +58,20 @@ The generator will integrate the four core features of Dart-ACDC:
    - dart-dio generator analyzed
    - Project vision defined
 
-2. **Generator Development** (Next)
-   - Bootstrap generator using OpenAPI Generator's `new.sh`
-   - Implement Java Codegen class
-   - Create Mustache templates for API classes, models, configuration
-   - Register generator in OpenAPI Generator's SPI system
-   - Test with Petstore OpenAPI spec
+2. ✅ **Generator Development** - Completed
+   - Bootstrapped generator structure
+   - Implemented DartAcdcGenerator Java class with helper classes
+   - Created Mustache templates for API classes, models, configuration
+   - Registered generator in OpenAPI Generator's SPI system
+   - Tested with multiple OpenAPI specs (Petstore, composition, enums, file uploads)
 
-3. **Refinement**
-   - Add configurable options for ACDC features
-   - Improve template quality and edge case handling
-   - Add comprehensive unit and integration tests
+3. 🔄 **Refinement & ACDC Integration** - In Progress
+   - Adding ACDC features (authentication, caching, offline support, security)
+   - Improving template quality and edge case handling
+   - Adding comprehensive unit and integration tests
+   - Refining error handling and exception mapping
 
-4. **Documentation**
+4. **Documentation** - Next
    - Usage guide and API reference
    - Developer guide for template customization
    - Migration guides from other generators
@@ -96,22 +97,47 @@ All research findings are located in `/research/`:
 
 ### Generator Architecture (Java)
 
-The generator will consist of:
+The generator consists of:
 
-1. **Codegen Class** - Extends `DefaultCodegen` or `DartDioClientCodegen`
+1. **DartAcdcGenerator** (Main Codegen Class) - Extends `DefaultCodegen`
+   - Location: `generator/src/main/java/org/openapitools/codegen/languages/DartAcdcGenerator.java`
    - Configures type mappings (OpenAPI → Dart types)
    - Defines custom generator options (authentication, caching, logging preferences)
    - Overrides code generation behavior for Dart/ACDC specifics
+   - Delegates specialized tasks to helper classes
 
-2. **Mustache Templates** - Generates Dart source files
+2. **Helper Classes** (Refactored for maintainability)
+   - **DartNameSanitizer** - Name and identifier sanitization
+     - Package name sanitization following Dart pub conventions
+     - Reserved word escaping for variables and models
+     - Case conversion (camelCase ↔ snake_case)
+   
+   - **DartTypeMapper** - OpenAPI to Dart type conversions
+     - Context-aware type mapping (multipart vs non-multipart)
+     - Binary/file type detection and mapping
+     - Handles MultipartFile vs List<int> for binary data
+   
+   - **DartTestDataGenerator** - Test value generation
+     - Generates test values for primitive and complex Dart types
+     - Creates test JSON for models with required fields
+     - Handles MultipartFile test data
+   
+   - **DartEnumHandler** - Enum-specific generation
+     - Enum variable name generation from values
+     - Collision resolution with numeric suffixes
+     - Reserved word handling for enum values
+     - Numeric value prefixing
+
+3. **Mustache Templates** - Generates Dart source files
    - `remote_data_source.mustache` - API interface classes
    - `remote_data_source_impl.mustache` - API implementation classes with exception handling
    - `model.mustache` - Data model classes with json_serializable
    - `api_client.mustache` - Main configuration and AcdcClientBuilder setup
    - `pubspec.mustache` - Package configuration with dependencies
+   - Config files: `acdc_config.mustache`, `auth_config.mustache`, `cache_config.mustache`, etc.
    - Supporting files: README, analysis_options.yaml, .gitignore
 
-3. **SPI Registration**
+4. **SPI Registration**
    - Registered in `META-INF/services/org.openapitools.codegen.CodegenConfig`
 
 ### Generator Options (Configuration)

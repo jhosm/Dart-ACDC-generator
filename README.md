@@ -156,18 +156,35 @@ output/
 
 ### Generator Architecture
 
+The generator is built with a modular architecture for maintainability:
+
+**Core Components**:
+- **DartAcdcGenerator** - Main codegen class that orchestrates generation
+- **DartNameSanitizer** - Name sanitization and reserved word handling
+- **DartTypeMapper** - OpenAPI to Dart type conversions
+- **DartTestDataGenerator** - Test value generation for templates
+- **DartEnumHandler** - Enum-specific generation logic
+
+**Mustache Templates**:
 ```
-generator/
-├── src/main/java/            # Generator implementation
-│   └── DartAcdcGenerator.java
-├── src/main/resources/       # Mustache templates
-│   └── dart-acdc/
-│       ├── model.mustache
-│       ├── remote_data_source.mustache
-│       ├── remote_data_source_impl.mustache
-│       └── ...
-└── src/test/java/            # Unit tests
+generator/src/main/resources/dart-acdc/
+├── model.mustache                    # Data models with json_serializable
+├── remote_data_source.mustache       # API interface classes
+├── remote_data_source_impl.mustache  # API implementations
+├── api_client.mustache               # ApiClient factory with ACDC
+├── config/                           # ACDC configuration classes
+│   ├── acdc_config.mustache
+│   ├── auth_config.mustache
+│   ├── cache_config.mustache
+│   └── ...
+└── test/                             # Test templates
 ```
+
+**Helper Classes**: Each helper class is fully documented with Javadoc and handles a specific concern:
+- `DartNameSanitizer` - Package names, variable names, snake_case conversion
+- `DartTypeMapper` - Context-aware file/binary type mapping (MultipartFile vs List<int>)
+- `DartTestDataGenerator` - Creates valid test data for all Dart types
+- `DartEnumHandler` - Handles enum collisions, numeric values, reserved words
 
 ## Examples
 
