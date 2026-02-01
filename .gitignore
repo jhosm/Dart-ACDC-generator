@@ -2,3 +2,4 @@
 .env
 .mcp.json
 openapi-generator-cli.jar
+coverage/
