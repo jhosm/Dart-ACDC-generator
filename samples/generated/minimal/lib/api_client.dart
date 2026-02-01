@@ -32,29 +32,36 @@ class ApiClient {
 
     // Conditionally add features based on config
     if (config.auth != null) {
-      builder = builder.withTokenRefreshEndpoint(
-        url: config.auth!.tokenRefreshUrl,
-        clientId: config.auth!.clientId ?? '',
-      );
+      if (config.auth!.customTokenProvider != null) {
+        builder = builder.withCustomTokenProvider(config.auth!.customTokenProvider!);
+      } else {
+        builder = builder.withAuthentication(
+          tokenRefreshUrl: config.auth!.tokenRefreshUrl,
+          clientId: config.auth!.clientId,
+          clientSecret: config.auth!.clientSecret,
+          refreshThreshold: Duration(seconds: config.auth!.refreshThreshold),
+        );
+      }
     }
 
     if (config.cache != null) {
-      // Map our CacheConfig to dart_acdc's CacheConfig
-      final acdcCacheConfig = acdc.CacheConfig(
+      builder = builder.withCache(
         ttl: config.cache!.ttl,
-        maxSize: config.cache!.maxDiskCacheSizeMB * 1024 * 1024,
-        inMemoryMaxSize: config.cache!.maxMemoryCacheSizeMB * 1024 * 1024,
+        maxDiskSize: config.cache!.maxDiskCacheSizeMB * 1024 * 1024,
+        maxMemorySize: config.cache!.maxMemoryCacheSizeMB * 1024 * 1024,
+        encrypt: config.cache!.encryptCache,
         cacheAuthenticatedRequests: true,
-        inMemory: true,
       );
-      builder = builder.withCache(acdcCacheConfig);
     }
 
     if (config.log != null) {
-      builder = builder.withLogLevel(config.log!.level);
-      if (config.log!.redactSensitiveData) {
-        builder = builder.withSensitiveFields(['password', 'token', 'secret', 'authorization']);
-      }
+      builder = builder.withLogging(
+        level: config.log!.level,
+        sensitiveFields: config.log!.redactSensitiveData
+            ? const ['password', 'token', 'secret', 'authorization']
+            : null,
+        delegate: config.log!.customLogger,
+      );
     }
 
     if (config.offline != null) {
@@ -64,18 +71,16 @@ class ApiClient {
     }
 
     if (config.security != null && config.security!.certificateFingerprints.isNotEmpty) {
-      // Map our SecurityConfig to dart_acdc's CertificatePinningConfig
-      // Group all fingerprints under the base URL's domain
       final domain = Uri.parse(config.baseUrl).host;
       final pinningConfig = acdc.CertificatePinningConfig(
-        allowedPins: {
+        pins: {
           domain: config.security!.certificateFingerprints
-            .map((fp) => fp.startsWith('SHA256:') ? fp : 'SHA256:$fp')
+            .map((fp) => fp.startsWith('sha256/') ? fp : 'sha256/$fp')
             .toList(),
         },
-        reportOnly: config.security!.allowSelfSigned,
+        enforced: !config.security!.reportOnlyMode,
       );
-      builder = builder.withCertificatePinning(pinningConfig);
+      builder = builder.withCertificatePinning(config: pinningConfig);
     }
 
     return await builder.build();

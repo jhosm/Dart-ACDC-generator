@@ -1,4 +1,5 @@
 // AUTO-GENERATED FILE - DO NOT EDIT
+import 'package:dart_acdc/dart_acdc.dart' as acdc;
 
 /// Authentication configuration for OAuth 2.1
 class AuthConfig {
@@ -17,8 +18,11 @@ class AuthConfig {
   /// Use secure token storage (default: true)
   final bool useSecureStorage;
 
-  /// Custom token provider function (optional, for advanced use cases)
-  final Function? customTokenProvider;
+  /// Custom token provider (optional, for advanced use cases)
+  ///
+  /// When set, this replaces the default token storage with a custom
+  /// implementation of dart_acdc's [acdc.TokenProvider] interface.
+  final acdc.TokenProvider? customTokenProvider;
 
   AuthConfig({
     required this.tokenRefreshUrl,

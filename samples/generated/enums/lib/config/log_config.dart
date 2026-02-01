@@ -9,8 +9,11 @@ class LogConfig {
   /// Enable automatic redaction of sensitive data (default: true)
   final bool redactSensitiveData;
 
-  /// Custom logger function (optional, for advanced use cases)
-  final Function? customLogger;
+  /// Custom log delegate (optional, for crash reporting integration)
+  ///
+  /// Implement [AcdcLogDelegate] to forward log output to services
+  /// like Sentry, Firebase Crashlytics, etc.
+  final AcdcLogDelegate? customLogger;
 
   LogConfig({
     this.level = LogLevel.info,
