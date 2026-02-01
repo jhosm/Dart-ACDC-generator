@@ -96,36 +96,32 @@ final user = await userApi.getUser('user-123');
 
 ## Project Status
 
-**Current Phase**: Phase 2 - Generator Development (95% Complete)
+**Current Phase**: Phase 3 - Refinement & ACDC Integration (In Progress)
 
 ### What's Implemented ✅
 
-- [x] Standalone generator architecture
+- [x] Standalone generator architecture (Java + Mustache)
 - [x] Dart type mappings (primitives, collections, dates, files)
-- [x] Schema composition (allOf, oneOf, anyOf)
+- [x] Schema composition (allOf, oneOf, anyOf) with Dart 3 sealed classes
 - [x] Nested and circular schema handling
-- [x] Reserved keyword escaping
+- [x] Reserved keyword escaping (including ACDC types)
 - [x] Enum generation with collision handling
 - [x] File upload support (MultipartFile)
-- [x] Comprehensive test suite (39 tests passing)
-- [x] Documentation
-
-### Current Limitations ⚠️
-
-The generator currently produces **complete code** for:
-- oneOf/anyOf sealed class hierarchies
-- Enum types
-- API client configuration
-
-**Note**: Regular object model generation shows TODO placeholders. Full model template implementation is planned for Phase 3.
+- [x] Full model templates (regular objects, composition, enums)
+- [x] API implementation templates with ACDC exception handling
+- [x] Full ACDC integration (authentication, caching, logging, offline, certificate pinning)
+- [x] Generated configuration classes for all ACDC features
+- [x] Generated README with comprehensive ACDC documentation
+- [x] Refactored architecture (DartNameSanitizer, DartTypeMapper, DartTestDataGenerator, DartEnumHandler)
+- [x] Comprehensive test suite (158 Java tests, 134 Dart tests, 84.2% coverage)
+- [x] Integration tests (code generation, dart analyze, dart test)
 
 ### What's Next
 
-**Phase 3**: Refinement
-- Implement full model templates (regular objects)
-- Add configurable options for ACDC features
-- Improve edge case handling
-- Add integration tests
+**Phase 3 (remaining)**: Configurable Generator Options
+- Add CLI options to enable/disable individual ACDC features
+- Support YAML configuration for complex option sets
+- Add code style preferences (serialization library, naming)
 
 **Phase 4**: Documentation
 - Usage guide and API reference
