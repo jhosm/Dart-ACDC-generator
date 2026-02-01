@@ -25,12 +25,40 @@ void main() {
         expect(result, isA<UploadResponse>());
       });
 
-      test('server error throws exception', () async {
+      test('server error (500) throws exception', () async {
         // Arrange
         final mockSetup = createMockDio();
         final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
 
         mockSetup.adapter.onPostError('/upload', statusCode: 500);
+
+        // Act & Assert
+        expect(
+          () => api.uploadFile(MultipartFile.fromString('test', filename: 'test.txt'), 'test_value'),
+          throwsA(isA<DioException>()),
+        );
+      });
+
+      test('client error (404) throws exception', () async {
+        // Arrange
+        final mockSetup = createMockDio();
+        final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
+
+        mockSetup.adapter.onPostError('/upload', statusCode: 404);
+
+        // Act & Assert
+        expect(
+          () => api.uploadFile(MultipartFile.fromString('test', filename: 'test.txt'), 'test_value'),
+          throwsA(isA<DioException>()),
+        );
+      });
+
+      test('network error throws exception', () async {
+        // Arrange
+        final mockSetup = createMockDio();
+        final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
+
+        mockSetup.adapter.onPostNetworkError('/upload');
 
         // Act & Assert
         expect(
@@ -58,12 +86,40 @@ void main() {
         expect(result.length, equals(1));
       });
 
-      test('server error throws exception', () async {
+      test('server error (500) throws exception', () async {
         // Arrange
         final mockSetup = createMockDio();
         final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
 
         mockSetup.adapter.onPostError('/upload/multiple', statusCode: 500);
+
+        // Act & Assert
+        expect(
+          () => api.uploadMultipleFiles(const [], const []),
+          throwsA(isA<DioException>()),
+        );
+      });
+
+      test('client error (404) throws exception', () async {
+        // Arrange
+        final mockSetup = createMockDio();
+        final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
+
+        mockSetup.adapter.onPostError('/upload/multiple', statusCode: 404);
+
+        // Act & Assert
+        expect(
+          () => api.uploadMultipleFiles(const [], const []),
+          throwsA(isA<DioException>()),
+        );
+      });
+
+      test('network error throws exception', () async {
+        // Arrange
+        final mockSetup = createMockDio();
+        final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
+
+        mockSetup.adapter.onPostNetworkError('/upload/multiple');
 
         // Act & Assert
         expect(
@@ -90,12 +146,40 @@ void main() {
         expect(result, isA<Profile>());
       });
 
-      test('server error throws exception', () async {
+      test('server error (500) throws exception', () async {
         // Arrange
         final mockSetup = createMockDio();
         final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
 
         mockSetup.adapter.onPostError('/upload/profile', statusCode: 500);
+
+        // Act & Assert
+        expect(
+          () => api.uploadProfile('test_value', MultipartFile.fromString('test', filename: 'test.txt'), 'test_value'),
+          throwsA(isA<DioException>()),
+        );
+      });
+
+      test('client error (404) throws exception', () async {
+        // Arrange
+        final mockSetup = createMockDio();
+        final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
+
+        mockSetup.adapter.onPostError('/upload/profile', statusCode: 404);
+
+        // Act & Assert
+        expect(
+          () => api.uploadProfile('test_value', MultipartFile.fromString('test', filename: 'test.txt'), 'test_value'),
+          throwsA(isA<DioException>()),
+        );
+      });
+
+      test('network error throws exception', () async {
+        // Arrange
+        final mockSetup = createMockDio();
+        final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
+
+        mockSetup.adapter.onPostNetworkError('/upload/profile');
 
         // Act & Assert
         expect(

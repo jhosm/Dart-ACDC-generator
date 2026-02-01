@@ -38,6 +38,20 @@ extension MockResponseHelpers on DioAdapter {
     );
   }
 
+  /// Mock a GET network error (connection failure)
+  void onGetNetworkError(String path) {
+    onGet(
+      path,
+      (server) => server.throws(
+        404,
+        DioException.connectionError(
+          requestOptions: RequestOptions(path: path),
+          reason: 'Connection failed',
+        ),
+      ),
+    );
+  }
+
   // ── POST helpers ──────────────────────────────────────────────
 
   /// Mock a successful POST request with JSON response
@@ -63,6 +77,21 @@ extension MockResponseHelpers on DioAdapter {
     onPost(
       path,
       (server) => server.reply(statusCode, {'error': message}),
+      data: Matchers.any,
+    );
+  }
+
+  /// Mock a POST network error (connection failure)
+  void onPostNetworkError(String path) {
+    onPost(
+      path,
+      (server) => server.throws(
+        404,
+        DioException.connectionError(
+          requestOptions: RequestOptions(path: path),
+          reason: 'Connection failed',
+        ),
+      ),
       data: Matchers.any,
     );
   }
@@ -96,6 +125,21 @@ extension MockResponseHelpers on DioAdapter {
     );
   }
 
+  /// Mock a PUT network error (connection failure)
+  void onPutNetworkError(String path) {
+    onPut(
+      path,
+      (server) => server.throws(
+        404,
+        DioException.connectionError(
+          requestOptions: RequestOptions(path: path),
+          reason: 'Connection failed',
+        ),
+      ),
+      data: Matchers.any,
+    );
+  }
+
   // ── PATCH helpers ─────────────────────────────────────────────
 
   /// Mock a successful PATCH request with JSON response
@@ -125,6 +169,21 @@ extension MockResponseHelpers on DioAdapter {
     );
   }
 
+  /// Mock a PATCH network error (connection failure)
+  void onPatchNetworkError(String path) {
+    onPatch(
+      path,
+      (server) => server.throws(
+        404,
+        DioException.connectionError(
+          requestOptions: RequestOptions(path: path),
+          reason: 'Connection failed',
+        ),
+      ),
+      data: Matchers.any,
+    );
+  }
+
   // ── DELETE helpers ────────────────────────────────────────────
 
   /// Mock a successful DELETE request with JSON response
@@ -148,6 +207,20 @@ extension MockResponseHelpers on DioAdapter {
     onDelete(
       path,
       (server) => server.reply(statusCode, {'error': message}),
+    );
+  }
+
+  /// Mock a DELETE network error (connection failure)
+  void onDeleteNetworkError(String path) {
+    onDelete(
+      path,
+      (server) => server.throws(
+        404,
+        DioException.connectionError(
+          requestOptions: RequestOptions(path: path),
+          reason: 'Connection failed',
+        ),
+      ),
     );
   }
 }

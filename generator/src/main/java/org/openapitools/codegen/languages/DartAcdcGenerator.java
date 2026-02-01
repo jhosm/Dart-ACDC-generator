@@ -911,10 +911,14 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                 // "AnimalDog")
                 String subclassName = toModelName(schemaName);
 
+                // Generate test JSON for this discriminator alternative
+                String testJson = getTestDataGenerator().generateTestJsonForModel(schemaName);
+
                 Map<String, Object> mappingEntry = Map.of(
                         "mappingKey", mappingKey,
                         "schemaName", schemaName,
-                        "subclassName", subclassName);
+                        "subclassName", subclassName,
+                        "testJson", testJson);
                 discriminatorMapping.add(mappingEntry);
             }
 
@@ -972,12 +976,16 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             // "AnimalDog")
             String subclassName = toModelName(schemaName);
 
+            // Generate test JSON for this alternative schema
+            String testJson = getTestDataGenerator().generateTestJsonForModel(schemaName);
+
             return Map.of(
                     "parentClassName", parentName,
                     "isRef", true,
                     "schemaName", schemaName,
                     "subclassName", subclassName,
                     "importPath", toModelImport(schemaName),
+                    "testJson", testJson,
                     "hasNext", hasNext);
         } else if (schema.getType() != null) {
             // Inline schema (primitive or object)
@@ -989,11 +997,15 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                 String dartType = getTypeDeclaration(schema);
                 String wrapperName = toModelName(parentName + capitalize(dartType));
 
+                // Generate test value for primitive
+                String testValue = getTestDataGenerator().getTestValueForType(dartType);
+
                 return Map.of(
                         "parentClassName", parentName,
                         "isPrimitive", true,
                         "dartType", dartType,
                         "subclassName", wrapperName,
+                        "testValue", testValue,
                         "hasNext", hasNext);
             } else {
                 // Inline complex type - use Option naming
@@ -1003,6 +1015,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                         "isInline", true,
                         "subclassName", subclassName,
                         "index", index + 1,
+                        "testJson", "<String, dynamic>{}",
                         "hasNext", hasNext);
             }
         } else {

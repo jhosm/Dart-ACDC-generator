@@ -104,12 +104,40 @@ void main() {
       });
 {{/hasQueryParams}}
 
-      test('server error throws exception', () async {
+      test('server error (500) throws exception', () async {
         // Arrange
         final mockSetup = createMockDio();
         final api = {{classname}}RemoteDataSourceImpl(mockSetup.dio);
 
         mockSetup.adapter.on{{vendorExtensions.httpMethodCapitalized}}Error('{{path}}'{{#pathParams}}.replaceAll('{' '{{{baseName}}}' '}', '{{vendorExtensions.testValueRaw}}'){{/pathParams}}, statusCode: 500);
+
+        // Act & Assert
+        expect(
+          () => api.{{operationId}}({{#allParams}}{{^-first}}, {{/-first}}{{#isPathParam}}{{{vendorExtensions.testValue}}}{{/isPathParam}}{{#isBodyParam}}{{{vendorExtensions.testValue}}}{{/isBodyParam}}{{#isQueryParam}}{{{vendorExtensions.testValue}}}{{/isQueryParam}}{{#isHeaderParam}}{{{vendorExtensions.testValue}}}{{/isHeaderParam}}{{#isFormParam}}{{{vendorExtensions.testValue}}}{{/isFormParam}}{{/allParams}}),
+          throwsA(isA<DioException>()),
+        );
+      });
+
+      test('client error (404) throws exception', () async {
+        // Arrange
+        final mockSetup = createMockDio();
+        final api = {{classname}}RemoteDataSourceImpl(mockSetup.dio);
+
+        mockSetup.adapter.on{{vendorExtensions.httpMethodCapitalized}}Error('{{path}}'{{#pathParams}}.replaceAll('{' '{{{baseName}}}' '}', '{{vendorExtensions.testValueRaw}}'){{/pathParams}}, statusCode: 404);
+
+        // Act & Assert
+        expect(
+          () => api.{{operationId}}({{#allParams}}{{^-first}}, {{/-first}}{{#isPathParam}}{{{vendorExtensions.testValue}}}{{/isPathParam}}{{#isBodyParam}}{{{vendorExtensions.testValue}}}{{/isBodyParam}}{{#isQueryParam}}{{{vendorExtensions.testValue}}}{{/isQueryParam}}{{#isHeaderParam}}{{{vendorExtensions.testValue}}}{{/isHeaderParam}}{{#isFormParam}}{{{vendorExtensions.testValue}}}{{/isFormParam}}{{/allParams}}),
+          throwsA(isA<DioException>()),
+        );
+      });
+
+      test('network error throws exception', () async {
+        // Arrange
+        final mockSetup = createMockDio();
+        final api = {{classname}}RemoteDataSourceImpl(mockSetup.dio);
+
+        mockSetup.adapter.on{{vendorExtensions.httpMethodCapitalized}}NetworkError('{{path}}'{{#pathParams}}.replaceAll('{' '{{{baseName}}}' '}', '{{vendorExtensions.testValueRaw}}'){{/pathParams}});
 
         // Act & Assert
         expect(

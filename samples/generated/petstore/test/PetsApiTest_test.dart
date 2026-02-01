@@ -25,12 +25,40 @@ void main() {
         expect(result, isA<Pet>());
       });
 
-      test('server error throws exception', () async {
+      test('server error (500) throws exception', () async {
         // Arrange
         final mockSetup = createMockDio();
         final api = PetsApiRemoteDataSourceImpl(mockSetup.dio);
 
         mockSetup.adapter.onPostError('/pets', statusCode: 500);
+
+        // Act & Assert
+        expect(
+          () => api.createPet(NewPet.fromJson(const <String, dynamic>{'name': 'test_name'})),
+          throwsA(isA<DioException>()),
+        );
+      });
+
+      test('client error (404) throws exception', () async {
+        // Arrange
+        final mockSetup = createMockDio();
+        final api = PetsApiRemoteDataSourceImpl(mockSetup.dio);
+
+        mockSetup.adapter.onPostError('/pets', statusCode: 404);
+
+        // Act & Assert
+        expect(
+          () => api.createPet(NewPet.fromJson(const <String, dynamic>{'name': 'test_name'})),
+          throwsA(isA<DioException>()),
+        );
+      });
+
+      test('network error throws exception', () async {
+        // Arrange
+        final mockSetup = createMockDio();
+        final api = PetsApiRemoteDataSourceImpl(mockSetup.dio);
+
+        mockSetup.adapter.onPostNetworkError('/pets');
 
         // Act & Assert
         expect(
@@ -74,12 +102,40 @@ void main() {
         await api.deletePet(42);
       });
 
-      test('server error throws exception', () async {
+      test('server error (500) throws exception', () async {
         // Arrange
         final mockSetup = createMockDio();
         final api = PetsApiRemoteDataSourceImpl(mockSetup.dio);
 
         mockSetup.adapter.onDeleteError('/pets/{petId}'.replaceAll('{' 'petId' '}', '42'), statusCode: 500);
+
+        // Act & Assert
+        expect(
+          () => api.deletePet(42),
+          throwsA(isA<DioException>()),
+        );
+      });
+
+      test('client error (404) throws exception', () async {
+        // Arrange
+        final mockSetup = createMockDio();
+        final api = PetsApiRemoteDataSourceImpl(mockSetup.dio);
+
+        mockSetup.adapter.onDeleteError('/pets/{petId}'.replaceAll('{' 'petId' '}', '42'), statusCode: 404);
+
+        // Act & Assert
+        expect(
+          () => api.deletePet(42),
+          throwsA(isA<DioException>()),
+        );
+      });
+
+      test('network error throws exception', () async {
+        // Arrange
+        final mockSetup = createMockDio();
+        final api = PetsApiRemoteDataSourceImpl(mockSetup.dio);
+
+        mockSetup.adapter.onDeleteNetworkError('/pets/{petId}'.replaceAll('{' 'petId' '}', '42'));
 
         // Act & Assert
         expect(
@@ -121,12 +177,40 @@ void main() {
         await api.listPets(42);
       });
 
-      test('server error throws exception', () async {
+      test('server error (500) throws exception', () async {
         // Arrange
         final mockSetup = createMockDio();
         final api = PetsApiRemoteDataSourceImpl(mockSetup.dio);
 
         mockSetup.adapter.onGetError('/pets', statusCode: 500);
+
+        // Act & Assert
+        expect(
+          () => api.listPets(42),
+          throwsA(isA<DioException>()),
+        );
+      });
+
+      test('client error (404) throws exception', () async {
+        // Arrange
+        final mockSetup = createMockDio();
+        final api = PetsApiRemoteDataSourceImpl(mockSetup.dio);
+
+        mockSetup.adapter.onGetError('/pets', statusCode: 404);
+
+        // Act & Assert
+        expect(
+          () => api.listPets(42),
+          throwsA(isA<DioException>()),
+        );
+      });
+
+      test('network error throws exception', () async {
+        // Arrange
+        final mockSetup = createMockDio();
+        final api = PetsApiRemoteDataSourceImpl(mockSetup.dio);
+
+        mockSetup.adapter.onGetNetworkError('/pets');
 
         // Act & Assert
         expect(
@@ -170,12 +254,40 @@ void main() {
         await api.showPetById(42);
       });
 
-      test('server error throws exception', () async {
+      test('server error (500) throws exception', () async {
         // Arrange
         final mockSetup = createMockDio();
         final api = PetsApiRemoteDataSourceImpl(mockSetup.dio);
 
         mockSetup.adapter.onGetError('/pets/{petId}'.replaceAll('{' 'petId' '}', '42'), statusCode: 500);
+
+        // Act & Assert
+        expect(
+          () => api.showPetById(42),
+          throwsA(isA<DioException>()),
+        );
+      });
+
+      test('client error (404) throws exception', () async {
+        // Arrange
+        final mockSetup = createMockDio();
+        final api = PetsApiRemoteDataSourceImpl(mockSetup.dio);
+
+        mockSetup.adapter.onGetError('/pets/{petId}'.replaceAll('{' 'petId' '}', '42'), statusCode: 404);
+
+        // Act & Assert
+        expect(
+          () => api.showPetById(42),
+          throwsA(isA<DioException>()),
+        );
+      });
+
+      test('network error throws exception', () async {
+        // Arrange
+        final mockSetup = createMockDio();
+        final api = PetsApiRemoteDataSourceImpl(mockSetup.dio);
+
+        mockSetup.adapter.onGetNetworkError('/pets/{petId}'.replaceAll('{' 'petId' '}', '42'));
 
         // Act & Assert
         expect(

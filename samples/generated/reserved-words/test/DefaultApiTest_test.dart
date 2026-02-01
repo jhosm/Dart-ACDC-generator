@@ -24,12 +24,40 @@ void main() {
         expect(result, isA<TestObject>());
       });
 
-      test('server error throws exception', () async {
+      test('server error (500) throws exception', () async {
         // Arrange
         final mockSetup = createMockDio();
         final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
 
         mockSetup.adapter.onGetError('/test', statusCode: 500);
+
+        // Act & Assert
+        expect(
+          () => api.getTest(),
+          throwsA(isA<DioException>()),
+        );
+      });
+
+      test('client error (404) throws exception', () async {
+        // Arrange
+        final mockSetup = createMockDio();
+        final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
+
+        mockSetup.adapter.onGetError('/test', statusCode: 404);
+
+        // Act & Assert
+        expect(
+          () => api.getTest(),
+          throwsA(isA<DioException>()),
+        );
+      });
+
+      test('network error throws exception', () async {
+        // Arrange
+        final mockSetup = createMockDio();
+        final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
+
+        mockSetup.adapter.onGetNetworkError('/test');
 
         // Act & Assert
         expect(

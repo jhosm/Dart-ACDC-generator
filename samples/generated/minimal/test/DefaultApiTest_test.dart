@@ -24,12 +24,40 @@ void main() {
         expect(result, isA<Ping200Response>());
       });
 
-      test('server error throws exception', () async {
+      test('server error (500) throws exception', () async {
         // Arrange
         final mockSetup = createMockDio();
         final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
 
         mockSetup.adapter.onGetError('/ping', statusCode: 500);
+
+        // Act & Assert
+        expect(
+          () => api.ping(),
+          throwsA(isA<DioException>()),
+        );
+      });
+
+      test('client error (404) throws exception', () async {
+        // Arrange
+        final mockSetup = createMockDio();
+        final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
+
+        mockSetup.adapter.onGetError('/ping', statusCode: 404);
+
+        // Act & Assert
+        expect(
+          () => api.ping(),
+          throwsA(isA<DioException>()),
+        );
+      });
+
+      test('network error throws exception', () async {
+        // Arrange
+        final mockSetup = createMockDio();
+        final api = DefaultApiRemoteDataSourceImpl(mockSetup.dio);
+
+        mockSetup.adapter.onGetNetworkError('/ping');
 
         // Act & Assert
         expect(

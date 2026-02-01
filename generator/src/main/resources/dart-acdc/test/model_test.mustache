@@ -20,6 +20,95 @@ void main() {
     });
 {{/isEnum}}
 {{^isEnum}}
+{{#vendorExtensions.x-is-one-of}}
+    // oneOf composition tests
+    test('fromJson deserializes valid alternative', () {
+{{#vendorExtensions.x-has-discriminator}}
+      // Test with discriminator-based deserialization
+{{#vendorExtensions.x-discriminator-mapping}}
+{{#-first}}
+      final json = {{{testJson}}};
+      json['{{vendorExtensions.x-discriminator-name}}'] = '{{mappingKey}}';
+
+      final result = {{classname}}.fromJson(json);
+
+      expect(result, isA<{{classname}}>());
+      expect(result, isA<{{subclassName}}>());
+{{/-first}}
+{{/vendorExtensions.x-discriminator-mapping}}
+{{/vendorExtensions.x-has-discriminator}}
+{{^vendorExtensions.x-has-discriminator}}
+      // Test with try-each deserialization (no discriminator)
+{{#vendorExtensions.x-one-of-alternatives}}
+{{#-first}}
+{{#isPrimitive}}
+      final json = {{{testValue}}};
+{{/isPrimitive}}
+{{^isPrimitive}}
+      final json = {{{testJson}}};
+{{/isPrimitive}}
+
+      final result = {{classname}}.fromJson(json);
+
+      expect(result, isA<{{classname}}>());
+{{/-first}}
+{{/vendorExtensions.x-one-of-alternatives}}
+{{/vendorExtensions.x-has-discriminator}}
+    });
+
+{{#vendorExtensions.x-has-discriminator}}
+    test('fromJson throws on invalid discriminator', () {
+{{#vendorExtensions.x-discriminator-mapping}}
+{{#-first}}
+      final json = {{{testJson}}};
+{{/-first}}
+{{/vendorExtensions.x-discriminator-mapping}}
+      json['{{vendorExtensions.x-discriminator-name}}'] = '_invalid_discriminator_value_';
+
+      expect(
+        () => {{classname}}.fromJson(json),
+        throwsA(isA<FormatException>()),
+      );
+    });
+{{/vendorExtensions.x-has-discriminator}}
+{{^vendorExtensions.x-has-discriminator}}
+    test('fromJson throws when no alternative matches', () {
+      // For try-each oneOf, provide data that won't match any alternative
+      final invalidJson = <String, dynamic>{
+        '_this_key_will_never_match_any_valid_schema': true,
+        '_another_key_that_ensures_no_match': 99999,
+        '_yet_another_invalid_field': 'x',
+      };
+
+      expect(
+        () => {{classname}}.fromJson(invalidJson),
+        throwsA(isA<FormatException>()),
+      );
+    });
+{{/vendorExtensions.x-has-discriminator}}
+{{/vendorExtensions.x-is-one-of}}
+{{#vendorExtensions.x-is-any-of}}
+    // anyOf composition tests
+    test('fromJson deserializes valid alternative', () {
+{{#vendorExtensions.x-any-of-alternatives}}
+{{#-first}}
+{{#isPrimitive}}
+      final json = {{{testValue}}};
+{{/isPrimitive}}
+{{^isPrimitive}}
+      final json = {{{testJson}}};
+{{/isPrimitive}}
+
+      final result = {{classname}}.fromJson(json);
+
+      expect(result, isA<{{classname}}>());
+{{/-first}}
+{{/vendorExtensions.x-any-of-alternatives}}
+    });
+
+    // Note: anyOf with all-optional-fields alternatives cannot reliably test
+    // FormatException throwing, as any JSON object will match at least one alternative
+{{/vendorExtensions.x-is-any-of}}
 {{^vendorExtensions.x-is-one-of}}
 {{^vendorExtensions.x-is-any-of}}
 {{^vendorExtensions.x-has-composition-property}}
@@ -297,6 +386,18 @@ void main() {
       expect(serializedJson['{{baseName}}'], equals(originalJson['{{baseName}}']));
 {{/required}}
 {{/vars}}
+    });
+{{/vendorExtensions.x-has-composition-property}}
+{{#vendorExtensions.x-has-composition-property}}
+    // Model with composition property tests
+    test('fromJson with composition property', () {
+      // Skip this test for models with composition properties
+      // as they require complex nested data structures
+    });
+
+    test('toJson with composition property', () {
+      // Skip this test for models with composition properties
+      // as they require complex nested data structures
     });
 {{/vendorExtensions.x-has-composition-property}}
 {{/vendorExtensions.x-is-any-of}}

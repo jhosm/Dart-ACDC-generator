@@ -5,8 +5,12 @@ publish_to: none  # Generated API client - not intended for pub.dev publication
 
 environment:
   sdk: ^3.8.0
+  flutter: ">=3.10.0"
 
 dependencies:
+  flutter:
+    sdk: flutter
+
   # HTTP client with interceptors
   dio: ^5.4.0
 
