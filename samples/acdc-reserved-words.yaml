@@ -1,0 +1,60 @@
+openapi: 3.0.3
+info:
+  title: ACDC Reserved Words Test API
+  description: Tests ACDC class name collision handling
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api/v1
+paths:
+  /config:
+    get:
+      summary: Get configuration (tests collision with AcdcConfig)
+      operationId: getConfig
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcdcConfig'
+  /auth:
+    get:
+      summary: Get auth settings (tests collision with AuthConfig)
+      operationId: getAuth
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthConfig'
+components:
+  schemas:
+    AcdcConfig:
+      type: object
+      description: Model named 'AcdcConfig' (ACDC reserved class name)
+      properties:
+        setting:
+          type: string
+        enabled:
+          type: boolean
+    AuthConfig:
+      type: object
+      description: Model named 'AuthConfig' (ACDC reserved class name)
+      properties:
+        tokenUrl:
+          type: string
+        clientId:
+          type: string
+    CacheConfig:
+      type: object
+      description: Model named 'CacheConfig' (ACDC reserved class name)
+      properties:
+        ttlSeconds:
+          type: integer
+    LogConfig:
+      type: object
+      description: Model named 'LogConfig' (ACDC reserved class name)
+      properties:
+        level:
+          type: string

@@ -102,7 +102,13 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             "rethrow", "return", "set", "show", "static",
             "super", "switch", "sync", "this", "throw",
             "true", "try", "typedef", "var", "void",
-            "while", "with", "yield"));
+            "while", "with", "yield",
+            // ACDC-specific types to prevent naming collisions
+            "AcdcConfig", "AuthConfig", "CacheConfig", "LogConfig",
+            "OfflineConfig", "SecurityConfig", "CertificatePinningConfig",
+            "AcdcClientBuilder", "AcdcException", "AcdcAuthException",
+            "AcdcNetworkException", "AcdcServerException", "AcdcSecurityException",
+            "TokenProvider", "AcdcLogDelegate", "LogLevel"));
 
     /**
      * Constructor - configures the generator with Dart-ACDC specific settings.
@@ -130,6 +136,10 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         modelPackage = "lib.models";
 
         // Supporting files
+        // Note: dart_acdc imports are handled directly in templates:
+        // - api_client.mustache imports 'package:dart_acdc/dart_acdc.dart' as acdc
+        // - remote_data_source*.mustache import 'package:dart_acdc/dart_acdc.dart'
+        // - *config.mustache files import dart_acdc for types like LogLevel, TokenProvider
         supportingFiles.add(new SupportingFile("pubspec.mustache", "", "pubspec.yaml"));
         supportingFiles.add(new SupportingFile("README.mustache", "", "README.md"));
         supportingFiles.add(new SupportingFile("analysis_options.mustache", "", "analysis_options.yaml"));
