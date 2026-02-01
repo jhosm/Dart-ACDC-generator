@@ -70,7 +70,7 @@ For the impatient, here's the minimal workflow:
 ```bash
 # 1. Generate the client
 openapi-generator generate \
-  -g dart-acdc-generator \
+  -g dart-acdc \
   -i your-api-spec.yaml \
   -o ./packages/my_api_client \
   --additional-properties pubName=my_api_client
@@ -90,7 +90,7 @@ cd packages/my_api_client && dart run build_runner build
 import 'package:my_api_client/my_api_client.dart';
 
 void main() async {
-  final dio = ApiClient.createDio(
+  final dio = await ApiClient.createDio(
     AcdcConfig(baseUrl: 'https://api.example.com'),
   );
 
@@ -110,7 +110,7 @@ Run the generator with your OpenAPI spec:
 
 ```bash
 openapi-generator generate \
-  -g dart-acdc-generator \
+  -g dart-acdc \
   -i path/to/your/openapi.yaml \
   -o ./packages/my_api_client \
   --additional-properties pubName=my_api_client,pubVersion=1.0.0
@@ -124,17 +124,15 @@ openapi-generator generate \
 | `pubVersion` | Package version | `1.0.0` |
 | `pubDescription` | Package description | Generated from spec |
 | `pubAuthor` | Package author | - |
-| `enableAuthentication` | Include auth support | `true` |
-| `enableCaching` | Include caching support | `true` |
-| `enableOfflineSupport` | Include offline detection | `true` |
-| `useJsonSerializable` | Use json_serializable | `true` |
+
+> **Note**: Options to enable/disable individual ACDC features (authentication, caching, offline support) are planned for a future release. Currently all features are generated and controlled at runtime via the `AcdcConfig` class — set a config section to `null` to disable that feature.
 
 #### Using a Configuration File
 
 For complex setups, create a config file (`generator-config.yaml`):
 
 ```yaml
-generatorName: dart-acdc-generator
+generatorName: dart-acdc
 inputSpec: ./openapi.yaml
 outputDir: ./packages/my_api_client
 additionalProperties:
@@ -142,9 +140,6 @@ additionalProperties:
   pubVersion: 1.0.0
   pubDescription: "My API Client"
   pubAuthor: "Your Name"
-  enableAuthentication: true
-  enableCaching: true
-  enableOfflineSupport: true
 ```
 
 Then run:
@@ -197,8 +192,8 @@ class ApiService {
   late final UserRemoteDataSource _userApi;
   late final ProductRemoteDataSource _productApi;
 
-  void initialize() {
-    _dio = ApiClient.createDio(
+  Future<void> initialize() async {
+    _dio = await ApiClient.createDio(
       AcdcConfig(
         baseUrl: 'https://api.example.com',
         auth: AuthConfig(
@@ -263,7 +258,7 @@ await userApi.deleteUser('user-123');
 For simple APIs without authentication:
 
 ```dart
-final dio = ApiClient.createDio(
+final dio = await ApiClient.createDio(
   AcdcConfig(baseUrl: 'https://api.example.com'),
 );
 ```
@@ -273,7 +268,7 @@ final dio = ApiClient.createDio(
 Enable all Dart-ACDC features:
 
 ```dart
-final dio = ApiClient.createDio(
+final dio = await ApiClient.createDio(
   AcdcConfig(
     baseUrl: 'https://api.example.com',
 
@@ -282,16 +277,17 @@ final dio = ApiClient.createDio(
       tokenRefreshUrl: 'https://api.example.com/auth/refresh',
       clientId: 'my-flutter-app',
       clientSecret: 'optional-secret',
-      refreshThreshold: Duration(minutes: 5),
-      useSecureStorage: true, // Use Keychain/EncryptedSharedPreferences
+      refreshThreshold: 300,     // Seconds before expiry to proactively refresh
+      useSecureStorage: true,    // Use Keychain/EncryptedSharedPreferences
     ),
 
     // Two-tier caching (Memory + Disk)
     cache: CacheConfig(
       ttl: Duration(hours: 2),
-      maxDiskSizeBytes: 50 * 1024 * 1024, // 50 MB
-      encrypt: true,             // AES-256 encryption
-      enableUserIsolation: true, // Separate cache per user
+      maxDiskCacheSizeMB: 50,    // Persistent disk cache limit
+      maxMemoryCacheSizeMB: 10,  // In-memory LRU cache limit
+      encryptCache: true,        // AES-256 encryption
+      userIsolation: true,       // Separate cache per user
     ),
 
     // Logging
@@ -302,15 +298,14 @@ final dio = ApiClient.createDio(
 
     // Offline detection
     offline: OfflineConfig(
-      enabled: true,
-      failFast: false, // false = queue requests, true = immediate failure
+      failFast: true, // true = immediate failure (default), false = attempt anyway
     ),
 
     // Certificate pinning
     security: SecurityConfig(
-      certificatePins: [
-        'sha256/AAAA...',
-        'sha256/BBBB...',
+      certificateFingerprints: [
+        'AAAA...', // sha256/ prefix added automatically
+        'BBBB...', // Backup pin
       ],
       reportOnlyMode: false,
     ),
@@ -347,21 +342,21 @@ class AppConfig {
     ),
     cache: CacheConfig(
       ttl: Duration(hours: 2),
-      encrypt: true,
+      encryptCache: true,
     ),
     log: LogConfig(
       level: LogLevel.warning,
       redactSensitiveData: true,
     ),
-    offline: OfflineConfig(enabled: true),
+    offline: OfflineConfig(),
     security: SecurityConfig(
-      certificatePins: ['sha256/...'],
+      certificateFingerprints: ['AAAA...'],
     ),
   );
 }
 
 // Usage
-final dio = ApiClient.createDio(
+final dio = await ApiClient.createDio(
   kDebugMode ? AppConfig.development : AppConfig.production,
 );
 ```
@@ -439,7 +434,7 @@ class MyTokenProvider implements TokenProvider {
 }
 
 // Use custom provider
-final dio = ApiClient.createDio(
+final dio = await ApiClient.createDio(
   AcdcConfig(
     baseUrl: 'https://api.example.com',
     auth: AuthConfig(
@@ -543,35 +538,27 @@ await dio.clearAcdcCacheForUser(userId);
 
 ## Offline Support
 
-When offline support is enabled, the client detects network status and responds accordingly.
+When offline support is enabled, the client checks connectivity before making requests. Enable it by providing an `OfflineConfig`; omit it (or set `offline: null`) to disable.
 
-### Fail-Fast Mode
+### Fail-Fast Mode (Default)
 
 ```dart
 offline: OfflineConfig(
-  enabled: true,
   failFast: true, // Immediately throws AcdcNetworkException when offline
 ),
 ```
 
-### Queue Mode (Default)
+Avoids connection timeout delays — requests fail instantly when the device is offline with no cached response.
+
+### Attempt-Anyway Mode
 
 ```dart
 offline: OfflineConfig(
-  enabled: true,
-  failFast: false, // Queues requests, executes when back online
+  failFast: false, // Attempts the network call regardless, fails on timeout
 ),
 ```
 
-### Check Network Status
-
-```dart
-final isOnline = await dio.isAcdcOnline();
-
-if (!isOnline) {
-  showOfflineBanner();
-}
-```
+Useful when device connectivity checks are unreliable. The request is sent normally and will throw an appropriate exception if the network is truly unavailable.
 
 ---
 
@@ -649,10 +636,10 @@ Use your preferred DI solution (get_it, riverpod, provider):
 // Using get_it
 final getIt = GetIt.instance;
 
-void setupDependencies() {
+Future<void> setupDependencies() async {
   // Register Dio
   getIt.registerSingleton<Dio>(
-    ApiClient.createDio(AppConfig.production),
+    await ApiClient.createDio(AppConfig.production),
   );
 
   // Register data sources
@@ -674,7 +661,7 @@ final userApi = getIt<UserRemoteDataSource>();
 Add custom interceptors for logging, analytics, etc.:
 
 ```dart
-final dio = ApiClient.createDio(config);
+final dio = await ApiClient.createDio(config);
 
 // Add custom interceptor
 dio.interceptors.add(
@@ -745,11 +732,11 @@ dart run build_runner build --delete-conflicting-outputs
 Disable certificate pinning for development:
 
 ```dart
-final dio = ApiClient.createDio(
+final dio = await ApiClient.createDio(
   AcdcConfig(
     baseUrl: 'https://api.example.com',
     security: kDebugMode ? null : SecurityConfig(
-      certificatePins: ['sha256/...'],
+      certificateFingerprints: ['AAAA...'],
     ),
   ),
 );
@@ -779,7 +766,7 @@ auth: AuthConfig(
 
 ## Summary
 
-1. **Generate** → `openapi-generator generate -g dart-acdc-generator ...`
+1. **Generate** → `openapi-generator generate -g dart-acdc ...`
 2. **Add dependency** → `pubspec.yaml`
 3. **Build** → `dart run build_runner build`
 4. **Configure** → `ApiClient.createDio(AcdcConfig(...))`
