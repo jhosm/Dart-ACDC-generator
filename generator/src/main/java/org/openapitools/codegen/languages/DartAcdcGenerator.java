@@ -47,24 +47,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     // Constants for default values
     private static final String DEFAULT_PACKAGE_NAME = "openapi_client";
-    private static final String DEFAULT_ENUM_VALUE = "empty";
-    private static final String NUMERIC_ENUM_PREFIX = "value";
     private static final String RESERVED_WORD_MODEL_SUFFIX = "Model";
-    private static final String RESERVED_WORD_VAR_SUFFIX = "_";
-    private static final String NUMERIC_PACKAGE_PREFIX = "api_";
-
-    // Pre-compiled regex patterns for performance
-    // Enum value patterns
-    private static final Pattern PATTERN_NUMERIC_VALUE = Pattern.compile("^-?\\d+(\\.\\d+)?$");
-    private static final Pattern PATTERN_NON_DIGITS = Pattern.compile("[^0-9]");
-
-    // CamelCase conversion patterns
-    private static final Pattern PATTERN_SEPARATORS = Pattern.compile("[-_./\\s]+");
-    private static final Pattern PATTERN_WHITESPACE = Pattern.compile("\\s+");
-    private static final Pattern PATTERN_NON_ALPHANUMERIC_CAMEL = Pattern.compile("[^a-zA-Z0-9]");
-
-    // Name sanitization pattern (still used in enum handling)
-    private static final Pattern PATTERN_STARTS_WITH_DIGIT = Pattern.compile("^[0-9].*");
 
     /**
      * Map to track which schemas should extend sealed classes.
@@ -94,6 +77,12 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      * Initialized lazily after modelSchemas and languageSpecificPrimitives are populated.
      */
     private DartTestDataGenerator testDataGenerator;
+
+    /**
+     * Helper for enum handling.
+     * Initialized lazily after reserved words are set.
+     */
+    private DartEnumHandler enumHandler;
 
     /**
      * Dart reserved keywords that require escaping.
@@ -371,82 +360,19 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      */
     @Override
     public String toEnumVarName(String value, String datatype) {
-        if (value == null || value.isEmpty()) {
-            return DEFAULT_ENUM_VALUE;
-        }
-
-        // Check if value is numeric
-        if (PATTERN_NUMERIC_VALUE.matcher(value).matches()) {
-            // Numeric value - prefix with 'value' and remove any decimals/negatives
-            String sanitized = PATTERN_NON_DIGITS.matcher(value).replaceAll("");
-            if (sanitized.isEmpty()) {
-                sanitized = "0";
-            }
-            return NUMERIC_ENUM_PREFIX + sanitized;
-        }
-
-        // Convert to camelCase
-        String identifier = toCamelCase(value);
-
-        // If empty after sanitization, use 'empty'
-        if (identifier.isEmpty()) {
-            return DEFAULT_ENUM_VALUE;
-        }
-
-        // If starts with digit, prefix with 'value'
-        if (PATTERN_STARTS_WITH_DIGIT.matcher(identifier).matches()) {
-            identifier = NUMERIC_ENUM_PREFIX + capitalize(identifier);
-        }
-
-        // Handle reserved words - suffix with underscore for enum values
-        if (isReservedWord(identifier)) {
-            identifier = identifier + RESERVED_WORD_VAR_SUFFIX;
-        }
-
-        return identifier;
+        return getEnumHandler().toEnumVarName(value, datatype);
     }
 
     /**
-     * Converts a string to camelCase, handling various input formats.
+     * Converts a string from PascalCase/camelCase to snake_case.
+     * Used for generating Dart file names from model class names.
      *
-     * @param input the string to convert
-     * @return camelCase version of the string
+     * @param name the name in PascalCase or camelCase
+     * @return the name in snake_case
      */
-    private String toCamelCase(String input) {
-        if (input == null || input.isEmpty()) {
-            return "";
-        }
-
-        // Replace various separators with spaces
-        String processed = PATTERN_SEPARATORS.matcher(input).replaceAll(" ").trim();
-
-        if (processed.isEmpty()) {
-            return "";
-        }
-
-        // Split into words
-        String[] words = PATTERN_WHITESPACE.split(processed);
-        StringBuilder result = new StringBuilder();
-
-        for (int i = 0; i < words.length; i++) {
-            String word = words[i];
-            if (word.isEmpty()) {
-                continue;
-            }
-
-            if (i == 0) {
-                // First word: lowercase
-                result.append(word.toLowerCase());
-            } else {
-                // Subsequent words: capitalize first letter
-                result.append(capitalize(word.toLowerCase()));
-            }
-        }
-
-        // Remove any remaining non-alphanumeric characters
-        String sanitized = PATTERN_NON_ALPHANUMERIC_CAMEL.matcher(result.toString()).replaceAll("");
-
-        return sanitized;
+    private String underscore(String name) {
+        // Delegate to DartNameSanitizer
+        return nameSanitizer.toSnakeCase(name);
     }
 
     /**
@@ -463,15 +389,16 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
-     * Converts a string from PascalCase/camelCase to snake_case.
-     * Used for generating Dart file names from model class names.
+     * Converts a string to camelCase by lowercasing the first letter.
      *
-     * @param name the name in PascalCase or camelCase
-     * @return the name in snake_case
+     * @param str the string to convert
+     * @return camelCase version
      */
-    private String underscore(String name) {
-        // Delegate to DartNameSanitizer
-        return nameSanitizer.toSnakeCase(name);
+    private String toCamelCase(String str) {
+        if (str == null || str.isEmpty()) {
+            return str;
+        }
+        return str.substring(0, 1).toLowerCase() + str.substring(1);
     }
 
     /**
@@ -1392,32 +1319,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      * @return list of enumVar maps with 'name' and 'value' keys
      */
     private List<Map<String, Object>> createEnumVars(List<Object> values, String datatype) {
-        List<Map<String, Object>> enumVars = new ArrayList<>();
-        Map<String, Integer> nameCount = new HashMap<>();
-
-        for (Object value : values) {
-            String valueStr = String.valueOf(value);
-            String baseName = toEnumVarName(valueStr, datatype);
-
-            // Handle collision resolution
-            String finalName;
-            if (nameCount.containsKey(baseName)) {
-                int count = nameCount.get(baseName) + 1;
-                nameCount.put(baseName, count);
-                finalName = baseName + count;
-            } else {
-                nameCount.put(baseName, 1);
-                finalName = baseName;
-            }
-
-            Map<String, Object> enumVar = Map.of(
-                    "name", finalName,
-                    "value", valueStr,
-                    "isString", "string".equalsIgnoreCase(datatype));
-            enumVars.add(enumVar);
-        }
-
-        return enumVars;
+        return getEnumHandler().createEnumVars(values, datatype);
     }
 
     /**
@@ -1581,6 +1483,19 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             testDataGenerator = new DartTestDataGenerator(modelSchemas, languageSpecificPrimitives);
         }
         return testDataGenerator;
+    }
+
+    /**
+     * Gets or initializes the enum handler.
+     * Lazily creates the handler with current reserved words.
+     *
+     * @return the enum handler instance
+     */
+    private DartEnumHandler getEnumHandler() {
+        if (enumHandler == null) {
+            enumHandler = new DartEnumHandler(reservedWords);
+        }
+        return enumHandler;
     }
 
     /**
