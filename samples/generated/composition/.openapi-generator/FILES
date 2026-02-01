@@ -1,5 +1,4 @@
 .gitignore
-.openapi-generator-ignore
 README.md
 analysis_options.yaml
 lib/api_client.dart
@@ -31,20 +30,4 @@ lib/remote_data_sources/DefaultApi_remote_data_source_impl.dart
 lib/remote_data_sources/remote_data_sources.dart
 lib/{{pubName}}.dart
 pubspec.yaml
-test/AnimalTest_test.dart
-test/BankTransferPaymentTest_test.dart
-test/BaseEntityTest_test.dart
-test/CatTest_test.dart
-test/CreditCardPaymentTest_test.dart
-test/DefaultApiTest_test.dart
-test/DogTest_test.dart
-test/EmailNotificationTest_test.dart
-test/EntityTest_test.dart
-test/NodeTest_test.dart
-test/NotificationTest_test.dart
-test/PaymentTest_test.dart
-test/SmsNotificationTest_test.dart
-test/StringOrNumberTest_test.dart
-test/TimestampedTest_test.dart
-test/VerifiedAnimalTest_test.dart
 test/test_helpers.dart
