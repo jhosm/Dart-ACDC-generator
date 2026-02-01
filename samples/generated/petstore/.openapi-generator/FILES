@@ -13,9 +13,9 @@ lib/models/error.dart
 lib/models/models.dart
 lib/models/new_pet.dart
 lib/models/pet.dart
+lib/petstore_client.dart
 lib/remote_data_sources/PetsApi_remote_data_source.dart
 lib/remote_data_sources/PetsApi_remote_data_source_impl.dart
 lib/remote_data_sources/remote_data_sources.dart
-lib/{{pubName}}.dart
 pubspec.yaml
 test/test_helpers.dart

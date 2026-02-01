@@ -150,7 +150,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         supportingFiles.add(new SupportingFile("models.mustache", "lib/models", "models.dart"));
         supportingFiles.add(new SupportingFile("remote_data_sources.mustache", "lib/remote_data_sources",
                 "remote_data_sources.dart"));
-        supportingFiles.add(new SupportingFile("library.mustache", "lib", "{{pubName}}.dart"));
+        // library.mustache barrel file is registered in processOpts() where pubName is resolved
 
         // Config supporting files
         supportingFiles.add(new SupportingFile("config.mustache", "lib/config", "config.dart"));
@@ -353,6 +353,12 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             String sanitizedPubName = sanitizePubName(pubName);
             additionalProperties.put("pubName", sanitizedPubName);
         }
+
+        // Register the main barrel export file now that pubName is resolved
+        String pubName = additionalProperties.containsKey("pubName")
+                ? (String) additionalProperties.get("pubName")
+                : DEFAULT_PACKAGE_NAME;
+        supportingFiles.add(new SupportingFile("library.mustache", "lib", pubName + ".dart"));
     }
 
     /**

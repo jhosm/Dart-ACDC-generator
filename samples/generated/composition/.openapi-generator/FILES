@@ -2,6 +2,7 @@
 README.md
 analysis_options.yaml
 lib/api_client.dart
+lib/composition_client.dart
 lib/config/acdc_config.dart
 lib/config/auth_config.dart
 lib/config/cache_config.dart
@@ -28,6 +29,5 @@ lib/models/verified_animal.dart
 lib/remote_data_sources/DefaultApi_remote_data_source.dart
 lib/remote_data_sources/DefaultApi_remote_data_source_impl.dart
 lib/remote_data_sources/remote_data_sources.dart
-lib/{{pubName}}.dart
 pubspec.yaml
 test/test_helpers.dart
