@@ -30,7 +30,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DartAcdcGenerator.class);
 
-    // Constants for content types
+    // Constants for content types and media
     private static final String CONTENT_TYPE_MULTIPART_FORM_DATA = "multipart/form-data";
     private static final String MEDIA_TYPE_KEY = "mediaType";
 
@@ -54,13 +54,6 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     private static final String NUMERIC_PACKAGE_PREFIX = "api_";
 
     // Pre-compiled regex patterns for performance
-    // Package name sanitization patterns
-    private static final Pattern PATTERN_SPACES_HYPHENS = Pattern.compile("[ -]");
-    private static final Pattern PATTERN_NON_ALPHANUMERIC_PACKAGE = Pattern.compile("[^a-z0-9_]");
-    private static final Pattern PATTERN_CONSECUTIVE_UNDERSCORES = Pattern.compile("_+");
-    private static final Pattern PATTERN_LEADING_TRAILING_UNDERSCORES = Pattern.compile("^_+|_+$");
-    private static final Pattern PATTERN_STARTS_WITH_DIGIT = Pattern.compile("^[0-9].*");
-
     // Enum value patterns
     private static final Pattern PATTERN_NUMERIC_VALUE = Pattern.compile("^-?\\d+(\\.\\d+)?$");
     private static final Pattern PATTERN_NON_DIGITS = Pattern.compile("[^0-9]");
@@ -70,16 +63,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     private static final Pattern PATTERN_WHITESPACE = Pattern.compile("\\s+");
     private static final Pattern PATTERN_NON_ALPHANUMERIC_CAMEL = Pattern.compile("[^a-zA-Z0-9]");
 
-    // Underscore conversion patterns
-    private static final Pattern PATTERN_LOWERCASE_UPPERCASE = Pattern.compile("([a-z0-9])([A-Z])");
-    private static final Pattern PATTERN_UPPERCASE_SEQUENCE = Pattern.compile("([A-Z])([A-Z][a-z])");
-
-    /**
-     * ThreadLocal to track whether we're currently processing a multipart/form-data
-     * request body.
-     * This allows context-aware type mapping for file/binary types.
-     */
-    private static final ThreadLocal<Boolean> IS_MULTIPART_CONTEXT = ThreadLocal.withInitial(() -> false);
+    // Name sanitization pattern (still used in enum handling)
+    private static final Pattern PATTERN_STARTS_WITH_DIGIT = Pattern.compile("^[0-9].*");
 
     /**
      * Map to track which schemas should extend sealed classes.
@@ -93,6 +78,22 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      * Key: model name (e.g., "Pet", "NewPet"), Value: the schema definition
      */
     private Map<String, Schema> modelSchemas = new HashMap<>();
+
+    /**
+     * Helper for name sanitization and case conversion.
+     */
+    private final DartNameSanitizer nameSanitizer = new DartNameSanitizer();
+
+    /**
+     * Helper for type mapping and multipart context management.
+     */
+    private final DartTypeMapper typeMapper = new DartTypeMapper();
+
+    /**
+     * Helper for test data generation.
+     * Initialized lazily after modelSchemas and languageSpecificPrimitives are populated.
+     */
+    private DartTestDataGenerator testDataGenerator;
 
     /**
      * Dart reserved keywords that require escaping.
@@ -265,8 +266,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      */
     @Override
     public String escapeReservedWord(String name) {
-        // For property names, suffix with underscore
-        return name + RESERVED_WORD_VAR_SUFFIX;
+        // Delegate to DartNameSanitizer
+        return nameSanitizer.escapeReservedWord(name);
     }
 
     /**
@@ -329,50 +330,13 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     /**
      * Sanitizes a package name to follow Dart pub package naming conventions.
-     *
-     * Rules:
-     * - Convert to lowercase
-     * - Replace spaces and hyphens with underscores
-     * - Remove all characters except a-z, 0-9, and _
-     * - Collapse consecutive underscores to single underscore
-     * - Remove leading/trailing underscores
-     * - Prefix with 'api_' if name starts with a digit
-     * - Use 'openapi_client' if sanitization results in empty string
+     * Delegates to DartNameSanitizer.
      *
      * @param name the package name to sanitize
      * @return the sanitized package name following Dart conventions
      */
     protected String sanitizePubName(String name) {
-        if (name == null || name.isEmpty()) {
-            return DEFAULT_PACKAGE_NAME;
-        }
-
-        // Convert to lowercase
-        String sanitized = name.toLowerCase();
-
-        // Replace spaces and hyphens with underscores
-        sanitized = PATTERN_SPACES_HYPHENS.matcher(sanitized).replaceAll("_");
-
-        // Remove all characters except a-z, 0-9, and _
-        sanitized = PATTERN_NON_ALPHANUMERIC_PACKAGE.matcher(sanitized).replaceAll("");
-
-        // Collapse consecutive underscores to single underscore
-        sanitized = PATTERN_CONSECUTIVE_UNDERSCORES.matcher(sanitized).replaceAll("_");
-
-        // Remove leading/trailing underscores
-        sanitized = PATTERN_LEADING_TRAILING_UNDERSCORES.matcher(sanitized).replaceAll("");
-
-        // If empty after sanitization, use default
-        if (sanitized.isEmpty()) {
-            return DEFAULT_PACKAGE_NAME;
-        }
-
-        // Prefix with 'api_' if name starts with a digit
-        if (PATTERN_STARTS_WITH_DIGIT.matcher(sanitized).matches()) {
-            sanitized = NUMERIC_PACKAGE_PREFIX + sanitized;
-        }
-
-        return sanitized;
+        return nameSanitizer.sanitizePubName(name);
     }
 
     /**
@@ -506,18 +470,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      * @return the name in snake_case
      */
     private String underscore(String name) {
-        if (name == null || name.isEmpty()) {
-            return name;
-        }
-
-        // Insert underscore before uppercase letters (except at the start)
-        // and convert to lowercase
-        // e.g., "UserProfile" -> "user_profile", "HTTPResponse" -> "http_response"
-        String result = PATTERN_LOWERCASE_UPPERCASE.matcher(name).replaceAll("$1_$2");
-        result = PATTERN_UPPERCASE_SEQUENCE.matcher(result).replaceAll("$1_$2");
-        result = result.toLowerCase();
-
-        return result;
+        // Delegate to DartNameSanitizer
+        return nameSanitizer.toSnakeCase(name);
     }
 
     /**
@@ -1468,15 +1422,13 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     /**
      * Detects if the given content map contains multipart/form-data media type.
+     * Delegates to DartTypeMapper.
      *
      * @param content the content map from a request body
      * @return true if multipart/form-data is present, false otherwise
      */
     private boolean isMultipartContent(Content content) {
-        if (content == null) {
-            return false;
-        }
-        return content.containsKey(CONTENT_TYPE_MULTIPART_FORM_DATA);
+        return typeMapper.isMultipartContent(content);
     }
 
     /**
@@ -1498,8 +1450,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                 boolean isMultipart = isMultipartContent(content);
 
                 if (isMultipart) {
-                    // Set ThreadLocal context for property processing
-                    IS_MULTIPART_CONTEXT.set(true);
+                    // Set multipart context for property processing
+                    typeMapper.enterMultipartContext();
                 }
             }
 
@@ -1510,7 +1462,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             }
 
             // Mark the parameter with multipart context information
-            if (IS_MULTIPART_CONTEXT.get()) {
+            if (typeMapper.isInMultipartContext()) {
                 parameter.vendorExtensions.put(VENDOR_EXTENSION_IS_MULTIPART_CONTEXT, true);
 
                 // If this parameter itself is a file/binary type, mark it specifically
@@ -1521,17 +1473,17 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
             return parameter;
         } finally {
-            // Always clear ThreadLocal after processing to avoid memory leaks
-            IS_MULTIPART_CONTEXT.remove();
+            // Always clear context after processing to avoid memory leaks
+            typeMapper.exitMultipartContext();
         }
     }
 
     /**
      * Overrides type declaration to provide context-aware mapping for file/binary
-     * types.
+     * types. Delegates to DartTypeMapper.
      *
      * In multipart/form-data context: binary/file → MultipartFile
-     * In non-multipart context: binary/file → List<int>
+     * In non-multipart context: binary/file → List&lt;int&gt;
      *
      * @param schema the schema
      * @return the Dart type declaration
@@ -1543,15 +1495,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         }
 
         // Check if this is a binary/file type
-        String format = schema.getFormat();
-        String type = schema.getType();
-
-        boolean isBinary = "string".equals(type) && "binary".equals(format);
-
-        if (isBinary) {
-            // For binary types, we need to check the context
-            // However, at this point we don't have access to the parameter context
-            // So we'll use the default mapping (List<int>) here
+        if (typeMapper.isBinaryType(schema)) {
+            // Get context-aware type from DartTypeMapper
+            // For binary types, we use the default mapping (List<int>) here
             // The multipart-specific mapping will be handled in fromProperty
             return DART_TYPE_LIST_INT;
         }
@@ -1586,15 +1532,14 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         }
 
         // Check if this is a binary type (type=string, format=binary)
-        String format = schema.getFormat();
-        String type = schema.getType();
-        boolean isBinary = "string".equals(type) && "binary".equals(format);
+        boolean isBinary = typeMapper.isBinaryType(schema);
 
-        if (isBinary && IS_MULTIPART_CONTEXT.get()) {
+        if (isBinary && typeMapper.isInMultipartContext()) {
             // We're in multipart/form-data context - use MultipartFile
-            property.dataType = DART_TYPE_MULTIPART_FILE;
-            property.datatypeWithEnum = DART_TYPE_MULTIPART_FILE;
-            property.baseType = DART_TYPE_MULTIPART_FILE;
+            String multipartType = typeMapper.getMultipartFileType();
+            property.dataType = multipartType;
+            property.datatypeWithEnum = multipartType;
+            property.baseType = multipartType;
             property.isBinary = true;
 
             // Mark for template usage
@@ -1626,9 +1571,21 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
+     * Gets or initializes the test data generator.
+     * Lazily creates the generator with current modelSchemas and primitives.
+     *
+     * @return the test data generator instance
+     */
+    private DartTestDataGenerator getTestDataGenerator() {
+        if (testDataGenerator == null) {
+            testDataGenerator = new DartTestDataGenerator(modelSchemas, languageSpecificPrimitives);
+        }
+        return testDataGenerator;
+    }
+
+    /**
      * Generates valid test JSON for a model type with required fields populated.
-     * Looks up the model schema and generates appropriate test values for all
-     * required fields.
+     * Delegates to DartTestDataGenerator.
      *
      * @param modelName the model name (e.g., "Pet", "NewPet")
      * @return a JSON string with required fields populated, or empty JSON if no
@@ -1636,185 +1593,29 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      */
     @SuppressWarnings("rawtypes")
     private String generateTestJsonForModel(String modelName) {
-        if (modelSchemas == null || !modelSchemas.containsKey(modelName)) {
-            return "<String, dynamic>{}";
-        }
-
-        Schema schema = modelSchemas.get(modelName);
-        if (schema == null || schema.getProperties() == null) {
-            return "<String, dynamic>{}";
-        }
-
-        // Get required fields
-        List<String> required = schema.getRequired();
-        if (required == null || required.isEmpty()) {
-            return "<String, dynamic>{}";
-        }
-
-        // Build JSON with required fields
-        StringBuilder json = new StringBuilder("<String, dynamic>{");
-        boolean first = true;
-
-        for (String fieldName : required) {
-            Schema fieldSchema = (Schema) schema.getProperties().get(fieldName);
-            if (fieldSchema == null) {
-                continue;
-            }
-
-            if (!first) {
-                json.append(", ");
-            }
-            first = false;
-
-            // Add field name
-            json.append("'").append(fieldName).append("': ");
-
-            // Add field value based on type
-            String fieldType = fieldSchema.getType();
-            if (fieldType != null) {
-                switch (fieldType) {
-                    case "string":
-                        json.append("'test_").append(fieldName).append("'");
-                        break;
-                    case "integer":
-                    case "number":
-                        json.append("42");
-                        break;
-                    case "boolean":
-                        json.append("true");
-                        break;
-                    case "array":
-                        json.append("[]");
-                        break;
-                    case "object":
-                        json.append("{}");
-                        break;
-                    default:
-                        json.append("null");
-                        break;
-                }
-            } else {
-                // Handle $ref or complex types
-                json.append("null");
-            }
-        }
-
-        json.append("}");
-        return json.toString();
+        return getTestDataGenerator().generateTestJsonForModel(modelName);
     }
 
     /**
      * Generates a test value for a given Dart data type.
-     * Used by test templates to generate valid test data for parameters.
+     * Delegates to DartTestDataGenerator.
      *
      * @param dataType the Dart data type (e.g., "int", "String", "Pet")
      * @return a Dart code string representing a test value
      */
     private String getTestValueForType(String dataType) {
-        if (dataType == null || dataType.isEmpty()) {
-            return "null";
-        }
-
-        // Handle primitive types using enhanced switch expression
-        return switch (dataType) {
-            case "int" -> "42";
-            case "double" -> "3.14";
-            case "num" -> "123.45";
-            case "bool" -> "true";
-            case "String" -> "'test_value'";
-            case "DateTime" -> "DateTime.parse('2024-01-01T00:00:00.000Z')";
-            default -> {
-                // Handle bare List type (without generics)
-                if (dataType.equals("List")) {
-                    yield "const []";
-                }
-                // Handle List types with generics
-                else if (dataType.startsWith("List<")) {
-                    String innerType = extractGenericType(dataType);
-                    if (isPrimitiveOrSimpleType(innerType)) {
-                        yield "[]";
-                    }
-                    // For lists of complex types, use empty list
-                    yield "const []";
-                }
-                // Handle Map types
-                else if (dataType.startsWith("Map<")) {
-                    yield "const <String, dynamic>{}";
-                }
-                // Handle MultipartFile
-                else if (dataType.equals("MultipartFile")) {
-                    yield "MultipartFile.fromString('test', filename: 'test.txt')";
-                }
-                // For model types, generate fromJson with valid test data for required fields
-                // This ensures tests compile and run successfully
-                else {
-                    String testJson = generateTestJsonForModel(dataType);
-                    yield dataType + ".fromJson(const " + testJson + ")";
-                }
-            }
-        };
+        return getTestDataGenerator().getTestValueForType(dataType);
     }
 
     /**
      * Generates a raw (unquoted) test value for URL path embedding.
-     * Unlike getTestValueForType(), this returns values without Dart string
-     * delimiters.
-     * Used in path parameter replacement: .replaceAll('{param}', 'rawValue')
+     * Delegates to DartTestDataGenerator.
      *
      * @param dataType the Dart data type
      * @return a raw string suitable for URL embedding
      */
     private String getTestValueRawForType(String dataType) {
-        if (dataType == null || dataType.isEmpty()) {
-            return "null";
-        }
-
-        return switch (dataType) {
-            case "int" -> "42";
-            case "double" -> "3.14";
-            case "num" -> "123.45";
-            case "bool" -> "true";
-            case "String" -> "test_value";
-            case "DateTime" -> "2024-01-01T00:00:00.000Z";
-            default -> "test_value";
-        };
-    }
-
-    /**
-     * Extracts the inner type from a generic type declaration.
-     * E.g., "List<Pet>" -> "Pet", "Map<String, Pet>" -> "Pet"
-     *
-     * @param genericType the generic type string
-     * @return the inner type, or empty string if not found
-     */
-    private String extractGenericType(String genericType) {
-        int start = genericType.indexOf('<');
-        int end = genericType.lastIndexOf('>');
-        if (start != -1 && end != -1 && end > start) {
-            String inner = genericType.substring(start + 1, end).trim();
-            // For Map<String, Pet>, extract the last type
-            int commaIndex = inner.lastIndexOf(',');
-            if (commaIndex != -1) {
-                return inner.substring(commaIndex + 1).trim();
-            }
-            return inner;
-        }
-        return "";
-    }
-
-    /**
-     * Checks if a type is a primitive or simple Dart type.
-     *
-     * @param type the type to check
-     * @return true if primitive or simple type, false if model type
-     */
-    private boolean isPrimitiveOrSimpleType(String type) {
-        if (type == null || type.isEmpty()) {
-            return false;
-        }
-        return languageSpecificPrimitives.contains(type) ||
-                type.equals("Object") ||
-                type.equals("dynamic");
+        return getTestDataGenerator().getTestValueRawForType(dataType);
     }
 
     /**
