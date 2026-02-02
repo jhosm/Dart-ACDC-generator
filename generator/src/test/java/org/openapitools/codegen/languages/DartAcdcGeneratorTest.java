@@ -126,6 +126,73 @@ class DartAcdcGeneratorTest {
         assertEquals(5, actualOptions.size(), "All 5 package metadata options should be registered");
     }
 
+    @Test
+    @DisplayName("CLI options: should register enableAuthentication with default true")
+    void testCliOptions_EnableAuthentication() {
+        Optional<org.openapitools.codegen.CliOption> option = generator.cliOptions().stream()
+                .filter(opt -> "enableAuthentication".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(option.isPresent(), "enableAuthentication CLI option should be registered");
+        assertEquals("true", option.get().getDefault(), "enableAuthentication should default to true");
+    }
+
+    @Test
+    @DisplayName("CLI options: should register enableCaching with default true")
+    void testCliOptions_EnableCaching() {
+        Optional<org.openapitools.codegen.CliOption> option = generator.cliOptions().stream()
+                .filter(opt -> "enableCaching".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(option.isPresent(), "enableCaching CLI option should be registered");
+        assertEquals("true", option.get().getDefault(), "enableCaching should default to true");
+    }
+
+    @Test
+    @DisplayName("CLI options: should register enableLogging with default true")
+    void testCliOptions_EnableLogging() {
+        Optional<org.openapitools.codegen.CliOption> option = generator.cliOptions().stream()
+                .filter(opt -> "enableLogging".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(option.isPresent(), "enableLogging CLI option should be registered");
+        assertEquals("true", option.get().getDefault(), "enableLogging should default to true");
+    }
+
+    @Test
+    @DisplayName("CLI options: should register enableOfflineSupport with default true")
+    void testCliOptions_EnableOfflineSupport() {
+        Optional<org.openapitools.codegen.CliOption> option = generator.cliOptions().stream()
+                .filter(opt -> "enableOfflineSupport".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(option.isPresent(), "enableOfflineSupport CLI option should be registered");
+        assertEquals("true", option.get().getDefault(), "enableOfflineSupport should default to true");
+    }
+
+    @Test
+    @DisplayName("CLI options: should register enableCertificatePinning with default false")
+    void testCliOptions_EnableCertificatePinning() {
+        Optional<org.openapitools.codegen.CliOption> option = generator.cliOptions().stream()
+                .filter(opt -> "enableCertificatePinning".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(option.isPresent(), "enableCertificatePinning CLI option should be registered");
+        assertEquals("false", option.get().getDefault(), "enableCertificatePinning should default to false");
+    }
+
+    @Test
+    @DisplayName("CLI options: should register all 5 feature toggle options")
+    void testCliOptions_AllFeatureToggles() {
+        List<String> expectedOptions = List.of(
+                "enableAuthentication",
+                "enableCaching",
+                "enableLogging",
+                "enableOfflineSupport",
+                "enableCertificatePinning"
+        );
+        List<String> actualOptions = generator.cliOptions().stream()
+                .map(org.openapitools.codegen.CliOption::getOpt)
+                .filter(expectedOptions::contains)
+                .toList();
+        assertEquals(5, actualOptions.size(), "All 5 feature toggle options should be registered");
+    }
+
     // ========================================
     // processOpts() Tests
     // ========================================
@@ -262,6 +329,151 @@ class DartAcdcGeneratorTest {
 
         String result = (String) generator.additionalProperties().get("pubName");
         assertEquals("my_coolapi2024", result, "pubName with special characters should be properly sanitized");
+    }
+
+    // ========================================
+    // Feature Toggle Options Tests
+    // ========================================
+
+    @Test
+    @DisplayName("processOpts: should use default values for feature toggles when not provided")
+    void testProcessOpts_FeatureToggleDefaults() {
+        generator.processOpts();
+
+        // Verify all feature toggles have their defaults
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("enableAuthentication"),
+                "enableAuthentication should default to true");
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("enableCaching"),
+                "enableCaching should default to true");
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("enableLogging"),
+                "enableLogging should default to true");
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("enableOfflineSupport"),
+                "enableOfflineSupport should default to true");
+        assertEquals(Boolean.FALSE, generator.additionalProperties().get("enableCertificatePinning"),
+                "enableCertificatePinning should default to false");
+    }
+
+    @Test
+    @DisplayName("processOpts: should store feature toggles as Boolean objects, not strings")
+    void testProcessOpts_FeatureTogglesAreBoolean() {
+        generator.processOpts();
+
+        // Verify all values are Boolean objects
+        assertInstanceOf(Boolean.class, generator.additionalProperties().get("enableAuthentication"),
+                "enableAuthentication should be a Boolean object");
+        assertInstanceOf(Boolean.class, generator.additionalProperties().get("enableCaching"),
+                "enableCaching should be a Boolean object");
+        assertInstanceOf(Boolean.class, generator.additionalProperties().get("enableLogging"),
+                "enableLogging should be a Boolean object");
+        assertInstanceOf(Boolean.class, generator.additionalProperties().get("enableOfflineSupport"),
+                "enableOfflineSupport should be a Boolean object");
+        assertInstanceOf(Boolean.class, generator.additionalProperties().get("enableCertificatePinning"),
+                "enableCertificatePinning should be a Boolean object");
+    }
+
+    @Test
+    @DisplayName("processOpts: should accept explicit true value for feature toggles")
+    void testProcessOpts_FeatureTogglesExplicitTrue() {
+        generator.additionalProperties().put("enableAuthentication", "true");
+        generator.additionalProperties().put("enableCaching", true);
+        generator.additionalProperties().put("enableLogging", Boolean.TRUE);
+
+        generator.processOpts();
+
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("enableAuthentication"),
+                "String 'true' should be converted to Boolean.TRUE");
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("enableCaching"),
+                "boolean true should be converted to Boolean.TRUE");
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("enableLogging"),
+                "Boolean.TRUE should remain Boolean.TRUE");
+    }
+
+    @Test
+    @DisplayName("processOpts: should accept explicit false value for feature toggles")
+    void testProcessOpts_FeatureTogglesExplicitFalse() {
+        generator.additionalProperties().put("enableAuthentication", "false");
+        generator.additionalProperties().put("enableCaching", false);
+        generator.additionalProperties().put("enableLogging", Boolean.FALSE);
+
+        generator.processOpts();
+
+        assertEquals(Boolean.FALSE, generator.additionalProperties().get("enableAuthentication"),
+                "String 'false' should be converted to Boolean.FALSE");
+        assertEquals(Boolean.FALSE, generator.additionalProperties().get("enableCaching"),
+                "boolean false should be converted to Boolean.FALSE");
+        assertEquals(Boolean.FALSE, generator.additionalProperties().get("enableLogging"),
+                "Boolean.FALSE should remain Boolean.FALSE");
+    }
+
+    @Test
+    @DisplayName("processOpts: should handle case-insensitive string boolean values")
+    void testProcessOpts_FeatureTogglesCaseInsensitive() {
+        generator.additionalProperties().put("enableAuthentication", "TRUE");
+        generator.additionalProperties().put("enableCaching", "False");
+        generator.additionalProperties().put("enableLogging", "TrUe");
+
+        generator.processOpts();
+
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("enableAuthentication"),
+                "String 'TRUE' should be converted to Boolean.TRUE");
+        assertEquals(Boolean.FALSE, generator.additionalProperties().get("enableCaching"),
+                "String 'False' should be converted to Boolean.FALSE");
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("enableLogging"),
+                "String 'TrUe' should be converted to Boolean.TRUE");
+    }
+
+    @Test
+    @DisplayName("processOpts: should use default for invalid boolean values")
+    void testProcessOpts_FeatureTogglesInvalidValues() {
+        generator.additionalProperties().put("enableAuthentication", "invalid");
+        generator.additionalProperties().put("enableCaching", 123);
+        generator.additionalProperties().put("enableLogging", null);
+
+        generator.processOpts();
+
+        // Should fall back to defaults
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("enableAuthentication"),
+                "Invalid string should use default (true)");
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("enableCaching"),
+                "Invalid integer should use default (true)");
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("enableLogging"),
+                "null should use default (true)");
+    }
+
+    @Test
+    @DisplayName("processOpts: should allow all features to be disabled")
+    void testProcessOpts_AllFeaturesDisabled() {
+        generator.additionalProperties().put("enableAuthentication", false);
+        generator.additionalProperties().put("enableCaching", false);
+        generator.additionalProperties().put("enableLogging", false);
+        generator.additionalProperties().put("enableOfflineSupport", false);
+        generator.additionalProperties().put("enableCertificatePinning", false);
+
+        generator.processOpts();
+
+        assertEquals(Boolean.FALSE, generator.additionalProperties().get("enableAuthentication"));
+        assertEquals(Boolean.FALSE, generator.additionalProperties().get("enableCaching"));
+        assertEquals(Boolean.FALSE, generator.additionalProperties().get("enableLogging"));
+        assertEquals(Boolean.FALSE, generator.additionalProperties().get("enableOfflineSupport"));
+        assertEquals(Boolean.FALSE, generator.additionalProperties().get("enableCertificatePinning"));
+    }
+
+    @Test
+    @DisplayName("processOpts: should allow all features to be enabled")
+    void testProcessOpts_AllFeaturesEnabled() {
+        generator.additionalProperties().put("enableAuthentication", true);
+        generator.additionalProperties().put("enableCaching", true);
+        generator.additionalProperties().put("enableLogging", true);
+        generator.additionalProperties().put("enableOfflineSupport", true);
+        generator.additionalProperties().put("enableCertificatePinning", true);
+
+        generator.processOpts();
+
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("enableAuthentication"));
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("enableCaching"));
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("enableLogging"));
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("enableOfflineSupport"));
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("enableCertificatePinning"));
     }
 
     // ========================================

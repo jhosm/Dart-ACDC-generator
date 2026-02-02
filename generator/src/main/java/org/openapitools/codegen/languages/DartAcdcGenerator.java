@@ -133,6 +133,24 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         cliOptions.add(CliOption.newString("pubHomepage",
                 "Package homepage URL for pubspec.yaml"));
 
+        // Register CLI options for ACDC feature toggles
+        // These boolean options control which Dart-ACDC features are included in generated code
+        cliOptions.add(CliOption.newBoolean("enableAuthentication",
+                "Enable OAuth 2.1 authentication with automatic token refresh",
+                true));
+        cliOptions.add(CliOption.newBoolean("enableCaching",
+                "Enable two-tier caching (memory + disk) with encryption",
+                true));
+        cliOptions.add(CliOption.newBoolean("enableLogging",
+                "Enable configurable logging with sensitive data redaction",
+                true));
+        cliOptions.add(CliOption.newBoolean("enableOfflineSupport",
+                "Enable offline detection and support",
+                true));
+        cliOptions.add(CliOption.newBoolean("enableCertificatePinning",
+                "Enable certificate pinning for enhanced security",
+                false));
+
         // Basic configuration
         outputFolder = "generated-code/dart-acdc";
         modelTemplateFiles.put("model.mustache", ".dart");
@@ -409,8 +427,64 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         // 5. pubHomepage - no smart default, use value if provided
         // (already in additionalProperties if provided via CLI)
 
+        // Process ACDC feature toggle options
+        // These must be stored as Boolean objects (not strings) for Mustache template conditionals
+        // to work correctly (e.g., {{#enableAuthentication}}...{{/enableAuthentication}})
+
+        // enableAuthentication - default: true
+        Boolean enableAuthentication = convertToBoolean(additionalProperties.get("enableAuthentication"), true);
+        additionalProperties.put("enableAuthentication", enableAuthentication);
+
+        // enableCaching - default: true
+        Boolean enableCaching = convertToBoolean(additionalProperties.get("enableCaching"), true);
+        additionalProperties.put("enableCaching", enableCaching);
+
+        // enableLogging - default: true
+        Boolean enableLogging = convertToBoolean(additionalProperties.get("enableLogging"), true);
+        additionalProperties.put("enableLogging", enableLogging);
+
+        // enableOfflineSupport - default: true
+        Boolean enableOfflineSupport = convertToBoolean(additionalProperties.get("enableOfflineSupport"), true);
+        additionalProperties.put("enableOfflineSupport", enableOfflineSupport);
+
+        // enableCertificatePinning - default: false
+        Boolean enableCertificatePinning = convertToBoolean(additionalProperties.get("enableCertificatePinning"), false);
+        additionalProperties.put("enableCertificatePinning", enableCertificatePinning);
+
         // Register the main barrel export file now that pubName is resolved
         supportingFiles.add(new SupportingFile("library.mustache", "lib", sanitizedPubName + ".dart"));
+    }
+
+    /**
+     * Converts a CLI option value to a Boolean object.
+     * Handles null, Boolean, String ("true"/"false"), and other types.
+     * Returns the default value if the input is null or cannot be converted.
+     *
+     * @param value        the CLI option value (may be null, Boolean, or String)
+     * @param defaultValue the default value to use if conversion fails
+     * @return a Boolean object
+     */
+    private Boolean convertToBoolean(Object value, boolean defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        }
+
+        if (value instanceof Boolean) {
+            return (Boolean) value;
+        }
+
+        if (value instanceof String) {
+            String strValue = (String) value;
+            if ("true".equalsIgnoreCase(strValue)) {
+                return Boolean.TRUE;
+            } else if ("false".equalsIgnoreCase(strValue)) {
+                return Boolean.FALSE;
+            }
+        }
+
+        // If we can't parse the value, use default
+        LOGGER.warn("Unable to convert '{}' to Boolean, using default: {}", value, defaultValue);
+        return defaultValue;
     }
 
     /**
