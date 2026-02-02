@@ -2,11 +2,11 @@
 
 ## 1. Package Metadata Options
 
-- [ ] 1.1 Add `pubName` option (string, required)
-- [ ] 1.2 Add `pubVersion` option (string, default: "1.0.0")
-- [ ] 1.3 Add `pubDescription` option (string)
-- [ ] 1.4 Add `pubAuthor` option (string)
-- [ ] 1.5 Add `pubHomepage` option (string)
+- [x] 1.1 Add `pubName` option (string, required)
+- [x] 1.2 Add `pubVersion` option (string, default: "1.0.0")
+- [x] 1.3 Add `pubDescription` option (string)
+- [x] 1.4 Add `pubAuthor` option (string)
+- [x] 1.5 Add `pubHomepage` option (string)
 
 ## 2. Feature Toggle Options
 
@@ -43,10 +43,10 @@
 
 ## 7. Codegen Class Implementation
 
-- [ ] 7.1 Add all options using `cliOptions.add(CliOption...)`
-- [ ] 7.2 Implement `processOpts()` to read and validate options
-- [ ] 7.3 Store options in additionalProperties for template access
-- [ ] 7.4 Add validation for required options (pubName)
+- [x] 7.1 Add all options using `cliOptions.add(CliOption...)` *(5 package metadata options registered)*
+- [x] 7.2 Implement `processOpts()` to read and validate options *(with smart defaults from OpenAPI spec)*
+- [x] 7.3 Store options in additionalProperties for template access *(pubName, pubVersion, pubDescription, pubAuthor, pubHomepage)*
+- [x] 7.4 Add validation for required options (pubName) *(smart default from info.title ensures never empty)*
 
 ## 8. Template Updates
 
