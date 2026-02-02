@@ -10,11 +10,11 @@
 
 ## 2. Feature Toggle Options
 
-- [ ] 2.1 Add `enableAuthentication` option (boolean, default: true)
-- [ ] 2.2 Add `enableCaching` option (boolean, default: true)
-- [ ] 2.3 Add `enableLogging` option (boolean, default: true)
-- [ ] 2.4 Add `enableOfflineSupport` option (boolean, default: true)
-- [ ] 2.5 Add `enableCertificatePinning` option (boolean, default: false)
+- [x] 2.1 Add `enableAuthentication` option (boolean, default: true)
+- [x] 2.2 Add `enableCaching` option (boolean, default: true)
+- [x] 2.3 Add `enableLogging` option (boolean, default: true)
+- [x] 2.4 Add `enableOfflineSupport` option (boolean, default: true)
+- [x] 2.5 Add `enableCertificatePinning` option (boolean, default: false)
 
 ## 3. Authentication Options
 
@@ -43,9 +43,9 @@
 
 ## 7. Codegen Class Implementation
 
-- [x] 7.1 Add all options using `cliOptions.add(CliOption...)` *(5 package metadata options registered)*
-- [x] 7.2 Implement `processOpts()` to read and validate options *(with smart defaults from OpenAPI spec)*
-- [x] 7.3 Store options in additionalProperties for template access *(pubName, pubVersion, pubDescription, pubAuthor, pubHomepage)*
+- [x] 7.1 Add all options using `cliOptions.add(CliOption...)` *(5 package metadata + 5 feature toggle options registered)*
+- [x] 7.2 Implement `processOpts()` to read and validate options *(with smart defaults from OpenAPI spec + convertToBoolean helper)*
+- [x] 7.3 Store options in additionalProperties for template access *(package metadata + feature toggles as Boolean objects)*
 - [x] 7.4 Add validation for required options (pubName) *(smart default from info.title ensures never empty)*
 
 ## 8. Template Updates
