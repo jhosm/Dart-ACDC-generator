@@ -94,6 +94,177 @@ class DartAcdcGeneratorTest {
     }
 
     // ========================================
+    // CLI Options Tests
+    // ========================================
+
+    @Test
+    @DisplayName("CLI options: should register pubName option")
+    void testCliOptions_PubName() {
+        boolean hasPubName = generator.cliOptions().stream()
+                .anyMatch(opt -> "pubName".equals(opt.getOpt()));
+        assertTrue(hasPubName, "pubName CLI option should be registered");
+    }
+
+    @Test
+    @DisplayName("CLI options: should register pubVersion option with default")
+    void testCliOptions_PubVersion() {
+        Optional<org.openapitools.codegen.CliOption> pubVersionOpt = generator.cliOptions().stream()
+                .filter(opt -> "pubVersion".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(pubVersionOpt.isPresent(), "pubVersion CLI option should be registered");
+        assertEquals("1.0.0", pubVersionOpt.get().getDefault(), "pubVersion should default to 1.0.0");
+    }
+
+    @Test
+    @DisplayName("CLI options: should register all 5 package metadata options")
+    void testCliOptions_AllPackageMetadata() {
+        List<String> expectedOptions = List.of("pubName", "pubVersion", "pubDescription", "pubAuthor", "pubHomepage");
+        List<String> actualOptions = generator.cliOptions().stream()
+                .map(org.openapitools.codegen.CliOption::getOpt)
+                .filter(expectedOptions::contains)
+                .toList();
+        assertEquals(5, actualOptions.size(), "All 5 package metadata options should be registered");
+    }
+
+    // ========================================
+    // processOpts() Tests
+    // ========================================
+
+    @Test
+    @DisplayName("processOpts: should use provided pubName and sanitize it")
+    void testProcessOpts_ProvidedPubName() {
+        generator.additionalProperties().put("pubName", "My API Client");
+        generator.processOpts();
+
+        String result = (String) generator.additionalProperties().get("pubName");
+        assertEquals("my_api_client", result, "pubName should be sanitized");
+    }
+
+    @Test
+    @DisplayName("processOpts: should derive pubName from OpenAPI info.title")
+    void testProcessOpts_DerivedPubName() {
+        // Create mock OpenAPI spec
+        io.swagger.v3.oas.models.OpenAPI openAPI = new io.swagger.v3.oas.models.OpenAPI();
+        io.swagger.v3.oas.models.info.Info info = new io.swagger.v3.oas.models.info.Info();
+        info.setTitle("Petstore API");
+        openAPI.setInfo(info);
+        generator.setOpenAPI(openAPI);
+
+        generator.processOpts();
+
+        String result = (String) generator.additionalProperties().get("pubName");
+        assertEquals("petstore_api", result, "pubName should be derived from info.title and sanitized");
+    }
+
+    @Test
+    @DisplayName("processOpts: should use default pubName when not provided and no OpenAPI info")
+    void testProcessOpts_DefaultPubName() {
+        generator.processOpts();
+
+        String result = (String) generator.additionalProperties().get("pubName");
+        assertEquals("openapi_client", result, "pubName should use default");
+    }
+
+    @Test
+    @DisplayName("processOpts: should derive pubVersion from OpenAPI info.version")
+    void testProcessOpts_DerivedPubVersion() {
+        // Create mock OpenAPI spec
+        io.swagger.v3.oas.models.OpenAPI openAPI = new io.swagger.v3.oas.models.OpenAPI();
+        io.swagger.v3.oas.models.info.Info info = new io.swagger.v3.oas.models.info.Info();
+        info.setVersion("2.5.3");
+        openAPI.setInfo(info);
+        generator.setOpenAPI(openAPI);
+
+        generator.processOpts();
+
+        String result = (String) generator.additionalProperties().get("pubVersion");
+        assertEquals("2.5.3", result, "pubVersion should be derived from info.version");
+    }
+
+    @Test
+    @DisplayName("processOpts: should use provided pubVersion over OpenAPI info.version")
+    void testProcessOpts_ProvidedPubVersionOverridesDefault() {
+        generator.additionalProperties().put("pubVersion", "3.0.0");
+
+        // Create mock OpenAPI spec with different version
+        io.swagger.v3.oas.models.OpenAPI openAPI = new io.swagger.v3.oas.models.OpenAPI();
+        io.swagger.v3.oas.models.info.Info info = new io.swagger.v3.oas.models.info.Info();
+        info.setVersion("2.5.3");
+        openAPI.setInfo(info);
+        generator.setOpenAPI(openAPI);
+
+        generator.processOpts();
+
+        String result = (String) generator.additionalProperties().get("pubVersion");
+        assertEquals("3.0.0", result, "Provided pubVersion should take precedence");
+    }
+
+    @Test
+    @DisplayName("processOpts: should use default pubVersion when not provided and no OpenAPI info")
+    void testProcessOpts_DefaultPubVersion() {
+        generator.processOpts();
+
+        String result = (String) generator.additionalProperties().get("pubVersion");
+        assertEquals("1.0.0", result, "pubVersion should use default");
+    }
+
+    @Test
+    @DisplayName("processOpts: should derive pubDescription from OpenAPI info.description")
+    void testProcessOpts_DerivedPubDescription() {
+        // Create mock OpenAPI spec
+        io.swagger.v3.oas.models.OpenAPI openAPI = new io.swagger.v3.oas.models.OpenAPI();
+        io.swagger.v3.oas.models.info.Info info = new io.swagger.v3.oas.models.info.Info();
+        info.setDescription("A sample Petstore API");
+        openAPI.setInfo(info);
+        generator.setOpenAPI(openAPI);
+
+        generator.processOpts();
+
+        String result = (String) generator.additionalProperties().get("pubDescription");
+        assertEquals("A sample Petstore API", result, "pubDescription should be derived from info.description");
+    }
+
+    @Test
+    @DisplayName("processOpts: should use provided pubDescription over OpenAPI info.description")
+    void testProcessOpts_ProvidedPubDescriptionOverridesDefault() {
+        generator.additionalProperties().put("pubDescription", "Custom description");
+
+        // Create mock OpenAPI spec with different description
+        io.swagger.v3.oas.models.OpenAPI openAPI = new io.swagger.v3.oas.models.OpenAPI();
+        io.swagger.v3.oas.models.info.Info info = new io.swagger.v3.oas.models.info.Info();
+        info.setDescription("Default description");
+        openAPI.setInfo(info);
+        generator.setOpenAPI(openAPI);
+
+        generator.processOpts();
+
+        String result = (String) generator.additionalProperties().get("pubDescription");
+        assertEquals("Custom description", result, "Provided pubDescription should take precedence");
+    }
+
+    @Test
+    @DisplayName("processOpts: should preserve provided pubAuthor and pubHomepage")
+    void testProcessOpts_PreserveAuthorAndHomepage() {
+        generator.additionalProperties().put("pubAuthor", "John Doe");
+        generator.additionalProperties().put("pubHomepage", "https://example.com");
+
+        generator.processOpts();
+
+        assertEquals("John Doe", generator.additionalProperties().get("pubAuthor"));
+        assertEquals("https://example.com", generator.additionalProperties().get("pubHomepage"));
+    }
+
+    @Test
+    @DisplayName("processOpts: should handle pubName sanitization with special characters")
+    void testProcessOpts_PubNameSanitizationComplex() {
+        generator.additionalProperties().put("pubName", "My-Cool@API#2024!");
+        generator.processOpts();
+
+        String result = (String) generator.additionalProperties().get("pubName");
+        assertEquals("my_coolapi2024", result, "pubName with special characters should be properly sanitized");
+    }
+
+    // ========================================
     // Enum Variable Name Tests
     // ========================================
 

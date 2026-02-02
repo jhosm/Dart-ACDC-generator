@@ -119,6 +119,20 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         // Set reserved words for the generator
         reservedWords.addAll(DART_RESERVED_WORDS);
 
+        // Register CLI options for package metadata
+        // These options control the generated package's pubspec.yaml metadata
+        cliOptions.add(CliOption.newString("pubName",
+                "Package name for pubspec.yaml (derived from OpenAPI info.title if not provided)"));
+        cliOptions.add(CliOption.newString("pubVersion",
+                "Package version for pubspec.yaml (derived from OpenAPI info.version if not provided)")
+                .defaultValue("1.0.0"));
+        cliOptions.add(CliOption.newString("pubDescription",
+                "Package description for pubspec.yaml (derived from OpenAPI info.description if not provided)"));
+        cliOptions.add(CliOption.newString("pubAuthor",
+                "Package author for pubspec.yaml"));
+        cliOptions.add(CliOption.newString("pubHomepage",
+                "Package homepage URL for pubspec.yaml"));
+
         // Basic configuration
         outputFolder = "generated-code/dart-acdc";
         modelTemplateFiles.put("model.mustache", ".dart");
@@ -340,25 +354,63 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     /**
      * Processes additional properties and applies sanitization where needed.
-     *
-     * @param objs the map of additional properties
+     * Also derives smart defaults from the OpenAPI specification (info.title, info.version, info.description).
      */
     @Override
     public void processOpts() {
         super.processOpts();
 
-        // Sanitize pubName if provided
+        // Process package metadata options with smart defaults from OpenAPI spec
+
+        // 1. pubName - derive from info.title if not provided
+        String pubName;
         if (additionalProperties.containsKey("pubName")) {
-            String pubName = (String) additionalProperties.get("pubName");
-            String sanitizedPubName = sanitizePubName(pubName);
-            additionalProperties.put("pubName", sanitizedPubName);
+            pubName = (String) additionalProperties.get("pubName");
+        } else if (openAPI != null && openAPI.getInfo() != null && openAPI.getInfo().getTitle() != null) {
+            // Derive from OpenAPI info.title
+            pubName = openAPI.getInfo().getTitle();
+            LOGGER.info("Derived pubName from OpenAPI info.title: {}", pubName);
+        } else {
+            // Use default
+            pubName = DEFAULT_PACKAGE_NAME;
+        }
+        // Sanitize and store
+        String sanitizedPubName = sanitizePubName(pubName);
+        additionalProperties.put("pubName", sanitizedPubName);
+        LOGGER.info("Using pubName: {}", sanitizedPubName);
+
+        // 2. pubVersion - derive from info.version if not provided
+        String pubVersion;
+        if (additionalProperties.containsKey("pubVersion")) {
+            pubVersion = (String) additionalProperties.get("pubVersion");
+        } else if (openAPI != null && openAPI.getInfo() != null && openAPI.getInfo().getVersion() != null) {
+            // Derive from OpenAPI info.version
+            pubVersion = openAPI.getInfo().getVersion();
+            LOGGER.info("Derived pubVersion from OpenAPI info.version: {}", pubVersion);
+        } else {
+            // Use default from CliOption (1.0.0)
+            pubVersion = "1.0.0";
+        }
+        additionalProperties.put("pubVersion", pubVersion);
+
+        // 3. pubDescription - derive from info.description if not provided
+        if (!additionalProperties.containsKey("pubDescription")) {
+            if (openAPI != null && openAPI.getInfo() != null && openAPI.getInfo().getDescription() != null) {
+                // Derive from OpenAPI info.description
+                String pubDescription = openAPI.getInfo().getDescription();
+                additionalProperties.put("pubDescription", pubDescription);
+                LOGGER.info("Derived pubDescription from OpenAPI info.description");
+            }
         }
 
+        // 4. pubAuthor - no smart default, use value if provided
+        // (already in additionalProperties if provided via CLI)
+
+        // 5. pubHomepage - no smart default, use value if provided
+        // (already in additionalProperties if provided via CLI)
+
         // Register the main barrel export file now that pubName is resolved
-        String pubName = additionalProperties.containsKey("pubName")
-                ? (String) additionalProperties.get("pubName")
-                : DEFAULT_PACKAGE_NAME;
-        supportingFiles.add(new SupportingFile("library.mustache", "lib", pubName + ".dart"));
+        supportingFiles.add(new SupportingFile("library.mustache", "lib", sanitizedPubName + ".dart"));
     }
 
     /**
