@@ -57,10 +57,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     private final Map<String, String> sealedClassExtensions = new HashMap<>();
 
     /**
-     * Map to store model schemas for test data generation.
-     * Key: model name (e.g., "Pet", "NewPet"), Value: the schema definition
+     * Central registry for schema storage and lookup.
      */
-    private Map<String, Schema> modelSchemas = new HashMap<>();
+    private final DartSchemaRegistry schemaRegistry = new DartSchemaRegistry();
 
     /**
      * Helper for name sanitization and case conversion.
@@ -74,7 +73,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     /**
      * Helper for test data generation.
-     * Initialized lazily after modelSchemas and languageSpecificPrimitives are populated.
+     * Initialized lazily after schemaRegistry and languageSpecificPrimitives are populated.
      */
     private DartTestDataGenerator testDataGenerator;
 
@@ -454,22 +453,23 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         // Second pass: detect and mark circular references
         detectAllCircularReferences(schemas);
 
-        // Store processed schemas for test data generation
-        this.modelSchemas = schemas;
+        // Store processed schemas in registry for test data generation
+        schemaRegistry.updateSchemas(schemas);
     }
 
     /**
      * Safely extracts schemas from the OpenAPI specification.
+     * Delegates to the schema registry.
      *
      * @param openAPI the OpenAPI specification
      * @return the schemas map, or null if not available
      */
     @SuppressWarnings("rawtypes")
     private Map<String, Schema> extractSchemas(io.swagger.v3.oas.models.OpenAPI openAPI) {
-        if (openAPI == null || openAPI.getComponents() == null) {
-            return null;
-        }
-        return openAPI.getComponents().getSchemas();
+        // Register schemas in the registry and return them
+        schemaRegistry.registerSchemas(openAPI);
+        Map<String, Schema> schemas = schemaRegistry.getAllSchemas();
+        return schemas.isEmpty() ? null : schemas;
     }
 
     /**
@@ -1518,7 +1518,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      */
     private DartTestDataGenerator getTestDataGenerator() {
         if (testDataGenerator == null) {
-            testDataGenerator = new DartTestDataGenerator(modelSchemas, languageSpecificPrimitives);
+            testDataGenerator = new DartTestDataGenerator(schemaRegistry.getAllSchemas(), languageSpecificPrimitives);
         }
         return testDataGenerator;
     }

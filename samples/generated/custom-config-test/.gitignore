@@ -1,0 +1,27 @@
+# Files and directories created by pub
+.dart_tool/
+.packages
+build/
+pubspec.lock
+
+# Generated files
+*.g.dart
+*.freezed.dart
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# macOS
+.DS_Store
+
+# Test coverage
+coverage/
+
+# Misc
+*.log
+.flutter-plugins
+.flutter-plugins-dependencies

@@ -1,0 +1,23 @@
+// AUTO-GENERATED FILE - DO NOT EDIT
+import 'package:dart_acdc/dart_acdc.dart';
+
+/// Logging configuration for debugging and monitoring
+class LogConfig {
+  /// Log level (default: LogLevel.info)
+  final LogLevel level;
+
+  /// Enable automatic redaction of sensitive data (default: true)
+  final bool redactSensitiveData;
+
+  /// Custom log delegate (optional, for crash reporting integration)
+  ///
+  /// Implement [AcdcLogDelegate] to forward log output to services
+  /// like Sentry, Firebase Crashlytics, etc.
+  final AcdcLogDelegate? customLogger;
+
+  LogConfig({
+    this.level = LogLevel.debug,
+    this.redactSensitiveData = false,
+    this.customLogger,
+  });
+}

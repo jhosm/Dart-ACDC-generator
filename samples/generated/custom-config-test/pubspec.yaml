@@ -1,0 +1,40 @@
+name: custom_config_test_client
+description: Test client with custom ACDC configuration values
+version: 1.0.0
+publish_to: none  # Generated API client - not intended for pub.dev publication
+author: OpenAPI Generator
+
+environment:
+  sdk: ^3.8.0
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # HTTP client with interceptors
+  dio: ^5.4.0
+
+  # Dart-ACDC library for authentication, caching, debugging, and client features
+  dart_acdc:
+    git:
+      url: https://github.com/jhosm/Dart-ACDC.git
+
+  # JSON serialization annotations
+  json_annotation: ^4.9.0
+
+dev_dependencies:
+  # Code generation for json_serializable
+  build_runner: ^2.4.6
+
+  # JSON serialization code generation
+  json_serializable: ^6.7.1
+
+  # Testing framework
+  test: ^1.24.0
+
+  # HTTP mocking for Dio (runtime tests)
+  http_mock_adapter: ^0.6.1
+
+  # Linting rules
+  lints: ^3.0.0
