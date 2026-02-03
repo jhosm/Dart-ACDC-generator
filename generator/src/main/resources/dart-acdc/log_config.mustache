@@ -16,8 +16,8 @@ class LogConfig {
   final AcdcLogDelegate? customLogger;
 
   LogConfig({
-    this.level = LogLevel.info,
-    this.redactSensitiveData = true,
+    this.level = {{{defaultLogLevel}}},
+    this.redactSensitiveData = {{redactSensitiveData}},
     this.customLogger,
   });
 }

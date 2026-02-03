@@ -25,11 +25,16 @@ class AuthConfig {
   final acdc.TokenProvider? customTokenProvider;
 
   AuthConfig({
+    {{#defaultTokenRefreshUrl}}
+    this.tokenRefreshUrl = '{{{defaultTokenRefreshUrl}}}',
+    {{/defaultTokenRefreshUrl}}
+    {{^defaultTokenRefreshUrl}}
     required this.tokenRefreshUrl,
+    {{/defaultTokenRefreshUrl}}
     this.clientId,
     this.clientSecret,
-    this.refreshThreshold = 300,
-    this.useSecureStorage = true,
+    this.refreshThreshold = {{refreshThresholdMinutes}} * 60, // Convert minutes to seconds
+    this.useSecureStorage = {{useSecureTokenStorage}},
     this.customTokenProvider,
   });
 }

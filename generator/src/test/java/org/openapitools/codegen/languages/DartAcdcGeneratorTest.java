@@ -1102,4 +1102,387 @@ class DartAcdcGeneratorTest {
         assertTrue(multipartResult.contains("MultipartFile"),
             "MultipartFile type should generate MultipartFile value");
     }
+
+    // ========================================
+    // ACDC Default Value Options Tests
+    // ========================================
+
+    @Test
+    @DisplayName("CLI options: should register all 9 ACDC default value options")
+    void testCliOptions_AllAcdcDefaultValues() {
+        List<String> expectedOptions = List.of(
+                "defaultTokenRefreshUrl",
+                "useSecureTokenStorage",
+                "refreshThresholdMinutes",
+                "defaultCacheTtlHours",
+                "cacheDiskSizeMb",
+                "encryptCache",
+                "enableUserCacheIsolation",
+                "defaultLogLevel",
+                "redactSensitiveData"
+        );
+        List<String> actualOptions = generator.cliOptions().stream()
+                .map(org.openapitools.codegen.CliOption::getOpt)
+                .filter(expectedOptions::contains)
+                .toList();
+        assertEquals(9, actualOptions.size(), "All 9 ACDC default value options should be registered");
+    }
+
+    @Test
+    @DisplayName("CLI options: defaultTokenRefreshUrl should be registered as string")
+    void testCliOptions_DefaultTokenRefreshUrl() {
+        Optional<org.openapitools.codegen.CliOption> option = generator.cliOptions().stream()
+                .filter(opt -> "defaultTokenRefreshUrl".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(option.isPresent(), "defaultTokenRefreshUrl CLI option should be registered");
+    }
+
+    @Test
+    @DisplayName("CLI options: useSecureTokenStorage should have default true")
+    void testCliOptions_UseSecureTokenStorage() {
+        Optional<org.openapitools.codegen.CliOption> option = generator.cliOptions().stream()
+                .filter(opt -> "useSecureTokenStorage".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(option.isPresent(), "useSecureTokenStorage CLI option should be registered");
+        assertEquals("true", option.get().getDefault(), "useSecureTokenStorage should default to true");
+    }
+
+    @Test
+    @DisplayName("CLI options: refreshThresholdMinutes should have default 5")
+    void testCliOptions_RefreshThresholdMinutes() {
+        Optional<org.openapitools.codegen.CliOption> option = generator.cliOptions().stream()
+                .filter(opt -> "refreshThresholdMinutes".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(option.isPresent(), "refreshThresholdMinutes CLI option should be registered");
+        assertEquals("5", option.get().getDefault(), "refreshThresholdMinutes should default to 5");
+    }
+
+    @Test
+    @DisplayName("CLI options: defaultCacheTtlHours should have default 1")
+    void testCliOptions_DefaultCacheTtlHours() {
+        Optional<org.openapitools.codegen.CliOption> option = generator.cliOptions().stream()
+                .filter(opt -> "defaultCacheTtlHours".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(option.isPresent(), "defaultCacheTtlHours CLI option should be registered");
+        assertEquals("1", option.get().getDefault(), "defaultCacheTtlHours should default to 1");
+    }
+
+    @Test
+    @DisplayName("CLI options: cacheDiskSizeMb should have default 20")
+    void testCliOptions_CacheDiskSizeMb() {
+        Optional<org.openapitools.codegen.CliOption> option = generator.cliOptions().stream()
+                .filter(opt -> "cacheDiskSizeMb".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(option.isPresent(), "cacheDiskSizeMb CLI option should be registered");
+        assertEquals("20", option.get().getDefault(), "cacheDiskSizeMb should default to 20");
+    }
+
+    @Test
+    @DisplayName("CLI options: encryptCache should have default true")
+    void testCliOptions_EncryptCache() {
+        Optional<org.openapitools.codegen.CliOption> option = generator.cliOptions().stream()
+                .filter(opt -> "encryptCache".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(option.isPresent(), "encryptCache CLI option should be registered");
+        assertEquals("true", option.get().getDefault(), "encryptCache should default to true");
+    }
+
+    @Test
+    @DisplayName("CLI options: enableUserCacheIsolation should have default true")
+    void testCliOptions_EnableUserCacheIsolation() {
+        Optional<org.openapitools.codegen.CliOption> option = generator.cliOptions().stream()
+                .filter(opt -> "enableUserCacheIsolation".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(option.isPresent(), "enableUserCacheIsolation CLI option should be registered");
+        assertEquals("true", option.get().getDefault(), "enableUserCacheIsolation should default to true");
+    }
+
+    @Test
+    @DisplayName("CLI options: defaultLogLevel should have default info")
+    void testCliOptions_DefaultLogLevel() {
+        Optional<org.openapitools.codegen.CliOption> option = generator.cliOptions().stream()
+                .filter(opt -> "defaultLogLevel".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(option.isPresent(), "defaultLogLevel CLI option should be registered");
+        assertEquals("info", option.get().getDefault(), "defaultLogLevel should default to info");
+    }
+
+    @Test
+    @DisplayName("CLI options: defaultLogLevel should have enum values")
+    void testCliOptions_DefaultLogLevelEnum() {
+        Optional<org.openapitools.codegen.CliOption> option = generator.cliOptions().stream()
+                .filter(opt -> "defaultLogLevel".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(option.isPresent(), "defaultLogLevel CLI option should be registered");
+        assertNotNull(option.get().getEnum(), "defaultLogLevel should have enum values");
+        assertEquals(6, option.get().getEnum().size(), "defaultLogLevel should have 6 enum values");
+        assertTrue(option.get().getEnum().containsKey("none"), "Should have 'none' enum value");
+        assertTrue(option.get().getEnum().containsKey("error"), "Should have 'error' enum value");
+        assertTrue(option.get().getEnum().containsKey("warning"), "Should have 'warning' enum value");
+        assertTrue(option.get().getEnum().containsKey("info"), "Should have 'info' enum value");
+        assertTrue(option.get().getEnum().containsKey("debug"), "Should have 'debug' enum value");
+        assertTrue(option.get().getEnum().containsKey("verbose"), "Should have 'verbose' enum value");
+    }
+
+    @Test
+    @DisplayName("CLI options: redactSensitiveData should have default true")
+    void testCliOptions_RedactSensitiveData() {
+        Optional<org.openapitools.codegen.CliOption> option = generator.cliOptions().stream()
+                .filter(opt -> "redactSensitiveData".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(option.isPresent(), "redactSensitiveData CLI option should be registered");
+        assertEquals("true", option.get().getDefault(), "redactSensitiveData should default to true");
+    }
+
+    // processOpts() tests for ACDC default values
+
+    @Test
+    @DisplayName("processOpts: should use default values for ACDC options when not provided")
+    void testProcessOpts_AcdcDefaultValuesDefaults() {
+        generator.processOpts();
+
+        // Authentication defaults
+        assertNull(generator.additionalProperties().get("defaultTokenRefreshUrl"),
+                "defaultTokenRefreshUrl should be null when not provided");
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("useSecureTokenStorage"),
+                "useSecureTokenStorage should default to true");
+        assertEquals(5, generator.additionalProperties().get("refreshThresholdMinutes"),
+                "refreshThresholdMinutes should default to 5");
+
+        // Cache defaults
+        assertEquals(1, generator.additionalProperties().get("defaultCacheTtlHours"),
+                "defaultCacheTtlHours should default to 1");
+        assertEquals(20, generator.additionalProperties().get("cacheDiskSizeMb"),
+                "cacheDiskSizeMb should default to 20");
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("encryptCache"),
+                "encryptCache should default to true");
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("enableUserCacheIsolation"),
+                "enableUserCacheIsolation should default to true");
+
+        // Logging defaults
+        assertEquals("LogLevel.info", generator.additionalProperties().get("defaultLogLevel"),
+                "defaultLogLevel should default to LogLevel.info");
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("redactSensitiveData"),
+                "redactSensitiveData should default to true");
+    }
+
+    @Test
+    @DisplayName("processOpts: should accept provided defaultTokenRefreshUrl")
+    void testProcessOpts_ProvidedTokenRefreshUrl() {
+        generator.additionalProperties().put("defaultTokenRefreshUrl", "https://api.example.com/auth/refresh");
+        generator.processOpts();
+
+        assertEquals("https://api.example.com/auth/refresh",
+                generator.additionalProperties().get("defaultTokenRefreshUrl"),
+                "Provided defaultTokenRefreshUrl should be used");
+    }
+
+    @Test
+    @DisplayName("processOpts: should accept explicit boolean values for ACDC options")
+    void testProcessOpts_AcdcBooleanValues() {
+        generator.additionalProperties().put("useSecureTokenStorage", false);
+        generator.additionalProperties().put("encryptCache", "false");
+        generator.additionalProperties().put("enableUserCacheIsolation", Boolean.FALSE);
+        generator.additionalProperties().put("redactSensitiveData", false);
+
+        generator.processOpts();
+
+        assertEquals(Boolean.FALSE, generator.additionalProperties().get("useSecureTokenStorage"));
+        assertEquals(Boolean.FALSE, generator.additionalProperties().get("encryptCache"));
+        assertEquals(Boolean.FALSE, generator.additionalProperties().get("enableUserCacheIsolation"));
+        assertEquals(Boolean.FALSE, generator.additionalProperties().get("redactSensitiveData"));
+    }
+
+    @Test
+    @DisplayName("processOpts: should accept valid integer values for ACDC numeric options")
+    void testProcessOpts_AcdcValidIntegers() {
+        generator.additionalProperties().put("refreshThresholdMinutes", 10);
+        generator.additionalProperties().put("defaultCacheTtlHours", 24);
+        generator.additionalProperties().put("cacheDiskSizeMb", 100);
+
+        generator.processOpts();
+
+        assertEquals(10, generator.additionalProperties().get("refreshThresholdMinutes"));
+        assertEquals(24, generator.additionalProperties().get("defaultCacheTtlHours"));
+        assertEquals(100, generator.additionalProperties().get("cacheDiskSizeMb"));
+    }
+
+    @Test
+    @DisplayName("processOpts: should accept string integers for ACDC numeric options")
+    void testProcessOpts_AcdcStringIntegers() {
+        generator.additionalProperties().put("refreshThresholdMinutes", "15");
+        generator.additionalProperties().put("defaultCacheTtlHours", "48");
+        generator.additionalProperties().put("cacheDiskSizeMb", "50");
+
+        generator.processOpts();
+
+        assertEquals(15, generator.additionalProperties().get("refreshThresholdMinutes"));
+        assertEquals(48, generator.additionalProperties().get("defaultCacheTtlHours"));
+        assertEquals(50, generator.additionalProperties().get("cacheDiskSizeMb"));
+    }
+
+    @Test
+    @DisplayName("processOpts: should reject refreshThresholdMinutes below minimum")
+    void testProcessOpts_RefreshThresholdMinutesTooLow() {
+        generator.additionalProperties().put("refreshThresholdMinutes", 0);
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            generator.processOpts();
+        });
+        assertTrue(exception.getMessage().contains("refreshThresholdMinutes"));
+        assertTrue(exception.getMessage().contains("between 1 and 60"));
+    }
+
+    @Test
+    @DisplayName("processOpts: should reject refreshThresholdMinutes above maximum")
+    void testProcessOpts_RefreshThresholdMinutesTooHigh() {
+        generator.additionalProperties().put("refreshThresholdMinutes", 61);
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            generator.processOpts();
+        });
+        assertTrue(exception.getMessage().contains("refreshThresholdMinutes"));
+        assertTrue(exception.getMessage().contains("between 1 and 60"));
+    }
+
+    @Test
+    @DisplayName("processOpts: should reject defaultCacheTtlHours below minimum")
+    void testProcessOpts_CacheTtlTooLow() {
+        generator.additionalProperties().put("defaultCacheTtlHours", 0);
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            generator.processOpts();
+        });
+        assertTrue(exception.getMessage().contains("defaultCacheTtlHours"));
+        assertTrue(exception.getMessage().contains("between 1 and 720"));
+    }
+
+    @Test
+    @DisplayName("processOpts: should reject defaultCacheTtlHours above maximum")
+    void testProcessOpts_CacheTtlTooHigh() {
+        generator.additionalProperties().put("defaultCacheTtlHours", 721);
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            generator.processOpts();
+        });
+        assertTrue(exception.getMessage().contains("defaultCacheTtlHours"));
+        assertTrue(exception.getMessage().contains("between 1 and 720"));
+    }
+
+    @Test
+    @DisplayName("processOpts: should reject cacheDiskSizeMb below minimum")
+    void testProcessOpts_CacheDiskSizeTooLow() {
+        generator.additionalProperties().put("cacheDiskSizeMb", 0);
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            generator.processOpts();
+        });
+        assertTrue(exception.getMessage().contains("cacheDiskSizeMb"));
+        assertTrue(exception.getMessage().contains("between 1 and 1024"));
+    }
+
+    @Test
+    @DisplayName("processOpts: should reject cacheDiskSizeMb above maximum")
+    void testProcessOpts_CacheDiskSizeTooHigh() {
+        generator.additionalProperties().put("cacheDiskSizeMb", 1025);
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            generator.processOpts();
+        });
+        assertTrue(exception.getMessage().contains("cacheDiskSizeMb"));
+        assertTrue(exception.getMessage().contains("between 1 and 1024"));
+    }
+
+    @Test
+    @DisplayName("processOpts: should reject invalid integer format for numeric options")
+    void testProcessOpts_InvalidIntegerFormat() {
+        generator.additionalProperties().put("refreshThresholdMinutes", "not-a-number");
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            generator.processOpts();
+        });
+        assertTrue(exception.getMessage().contains("refreshThresholdMinutes"));
+        assertTrue(exception.getMessage().contains("valid integer"));
+    }
+
+    @Test
+    @DisplayName("processOpts: should accept all valid defaultLogLevel enum values")
+    void testProcessOpts_ValidLogLevels() {
+        String[] validLevels = {"none", "error", "warning", "info", "debug", "verbose"};
+
+        for (String level : validLevels) {
+            DartAcdcGenerator testGenerator = new DartAcdcGenerator();
+            testGenerator.additionalProperties().put("defaultLogLevel", level);
+            testGenerator.processOpts();
+
+            assertEquals("LogLevel." + level, testGenerator.additionalProperties().get("defaultLogLevel"),
+                    "Should accept log level: " + level);
+        }
+    }
+
+    @Test
+    @DisplayName("processOpts: should handle case-insensitive defaultLogLevel")
+    void testProcessOpts_LogLevelCaseInsensitive() {
+        generator.additionalProperties().put("defaultLogLevel", "ERROR");
+        generator.processOpts();
+
+        assertEquals("LogLevel.error", generator.additionalProperties().get("defaultLogLevel"),
+                "defaultLogLevel should be case-insensitive");
+    }
+
+    @Test
+    @DisplayName("processOpts: should reject invalid defaultLogLevel value")
+    void testProcessOpts_InvalidLogLevel() {
+        generator.additionalProperties().put("defaultLogLevel", "invalid");
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            generator.processOpts();
+        });
+        assertTrue(exception.getMessage().contains("defaultLogLevel"));
+        assertTrue(exception.getMessage().contains("Valid values are"));
+        assertTrue(exception.getMessage().contains("none"));
+        assertTrue(exception.getMessage().contains("error"));
+        assertTrue(exception.getMessage().contains("warning"));
+        assertTrue(exception.getMessage().contains("info"));
+        assertTrue(exception.getMessage().contains("debug"));
+        assertTrue(exception.getMessage().contains("verbose"));
+    }
+
+    @Test
+    @DisplayName("processOpts: should trim whitespace from defaultLogLevel")
+    void testProcessOpts_LogLevelTrimWhitespace() {
+        generator.additionalProperties().put("defaultLogLevel", "  warning  ");
+        generator.processOpts();
+
+        assertEquals("LogLevel.warning", generator.additionalProperties().get("defaultLogLevel"),
+                "defaultLogLevel should trim whitespace");
+    }
+
+    @Test
+    @DisplayName("processOpts: should store ACDC default values as correct types")
+    void testProcessOpts_AcdcDefaultValueTypes() {
+        generator.processOpts();
+
+        // String types
+        assertInstanceOf(String.class, generator.additionalProperties().get("defaultLogLevel"),
+                "defaultLogLevel should be String");
+
+        // Boolean types
+        assertInstanceOf(Boolean.class, generator.additionalProperties().get("useSecureTokenStorage"),
+                "useSecureTokenStorage should be Boolean");
+        assertInstanceOf(Boolean.class, generator.additionalProperties().get("encryptCache"),
+                "encryptCache should be Boolean");
+        assertInstanceOf(Boolean.class, generator.additionalProperties().get("enableUserCacheIsolation"),
+                "enableUserCacheIsolation should be Boolean");
+        assertInstanceOf(Boolean.class, generator.additionalProperties().get("redactSensitiveData"),
+                "redactSensitiveData should be Boolean");
+
+        // Integer types
+        assertInstanceOf(Integer.class, generator.additionalProperties().get("refreshThresholdMinutes"),
+                "refreshThresholdMinutes should be Integer");
+        assertInstanceOf(Integer.class, generator.additionalProperties().get("defaultCacheTtlHours"),
+                "defaultCacheTtlHours should be Integer");
+        assertInstanceOf(Integer.class, generator.additionalProperties().get("cacheDiskSizeMb"),
+                "cacheDiskSizeMb should be Integer");
+    }
 }

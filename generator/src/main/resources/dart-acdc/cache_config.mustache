@@ -21,11 +21,11 @@ class CacheConfig {
   final bool userIsolation;
 
   CacheConfig({
-    this.ttl = const Duration(hours: 1),
+    this.ttl = const Duration(hours: {{defaultCacheTtlHours}}),
     this.enableDiskCache = true,
-    this.encryptCache = true,
+    this.encryptCache = {{encryptCache}},
     this.maxMemoryCacheSizeMB = 10,
-    this.maxDiskCacheSizeMB = 50,
-    this.userIsolation = true,
+    this.maxDiskCacheSizeMB = {{cacheDiskSizeMb}},
+    this.userIsolation = {{enableUserCacheIsolation}},
   });
 }
