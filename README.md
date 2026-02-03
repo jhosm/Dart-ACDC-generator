@@ -231,6 +231,23 @@ mvn test
 mvn test -Dtest=DartAcdcGeneratorTest
 ```
 
+### Testing
+
+The generator has comprehensive testing across three layers:
+
+```bash
+# Java unit tests (35+ tests)
+mvn test
+
+# CLI options integration tests (18 checks)
+./scripts/verify-cli-options.sh
+
+# Generated Dart tests (134+ tests)
+./scripts/test-samples.sh
+```
+
+See [TESTING.md](./TESTING.md) for detailed testing documentation.
+
 ### Using Beads for Issue Tracking
 
 This project uses [beads](https://github.com/beadsinc/beads) for git-backed issue tracking:

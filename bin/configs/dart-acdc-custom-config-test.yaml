@@ -1,0 +1,19 @@
+generatorName: dart-acdc
+outputDir: samples/generated/custom-config-test
+inputSpec: samples/petstore.yaml
+additionalProperties:
+  pubName: custom_config_test_client
+  pubVersion: 1.0.0
+  pubDescription: "Test client with custom ACDC configuration values"
+  pubAuthor: OpenAPI Generator
+  pubAuthorEmail: team@openapitools.org
+  # Custom values (different from defaults) to test CLI options
+  defaultCacheTtlHours: 24
+  defaultLogLevel: "debug"
+  encryptCache: false
+  cacheDiskSizeMb: 50
+  enableUserCacheIsolation: false
+  redactSensitiveData: false
+  refreshThresholdMinutes: 10
+  useSecureTokenStorage: false
+  defaultTokenRefreshUrl: "https://api.example.com/auth/refresh"
