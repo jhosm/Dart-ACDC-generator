@@ -85,6 +85,11 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     private DartEnumHandler enumHandler;
 
     /**
+     * Configuration manager for CLI options and generator settings.
+     */
+    private final DartGeneratorConfig config;
+
+    /**
      * Dart reserved keywords that require escaping.
      * These cannot be used as identifiers in Dart code.
      */
@@ -119,82 +124,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         // Set reserved words for the generator
         reservedWords.addAll(DART_RESERVED_WORDS);
 
-        // Register CLI options for package metadata
-        // These options control the generated package's pubspec.yaml metadata
-        cliOptions.add(CliOption.newString("pubName",
-                "Package name for pubspec.yaml (derived from OpenAPI info.title if not provided)"));
-        cliOptions.add(CliOption.newString("pubVersion",
-                "Package version for pubspec.yaml (derived from OpenAPI info.version if not provided)")
-                .defaultValue("1.0.0"));
-        cliOptions.add(CliOption.newString("pubDescription",
-                "Package description for pubspec.yaml (derived from OpenAPI info.description if not provided)"));
-        cliOptions.add(CliOption.newString("pubAuthor",
-                "Package author for pubspec.yaml"));
-        cliOptions.add(CliOption.newString("pubHomepage",
-                "Package homepage URL for pubspec.yaml"));
-
-        // Register CLI options for ACDC feature toggles
-        // These boolean options control which Dart-ACDC features are included in generated code
-        cliOptions.add(CliOption.newBoolean("enableAuthentication",
-                "Enable OAuth 2.1 authentication with automatic token refresh",
-                true));
-        cliOptions.add(CliOption.newBoolean("enableCaching",
-                "Enable two-tier caching (memory + disk) with encryption",
-                true));
-        cliOptions.add(CliOption.newBoolean("enableLogging",
-                "Enable configurable logging with sensitive data redaction",
-                true));
-        cliOptions.add(CliOption.newBoolean("enableOfflineSupport",
-                "Enable offline detection and support",
-                true));
-        cliOptions.add(CliOption.newBoolean("enableCertificatePinning",
-                "Enable certificate pinning for enhanced security",
-                false));
-
-        // Register CLI options for ACDC default values
-        // These options configure default values for authentication, caching, and logging features
-
-        // Authentication default values
-        cliOptions.add(CliOption.newString("defaultTokenRefreshUrl",
-                "Default token refresh URL for authentication (e.g., https://api.example.com/auth/refresh)"));
-        cliOptions.add(CliOption.newBoolean("useSecureTokenStorage",
-                "Enable secure token storage using platform-specific secure storage")
-                .defaultValue("true"));
-        cliOptions.add(CliOption.newString("refreshThresholdMinutes",
-                "Threshold in minutes before token expiration to trigger refresh")
-                .defaultValue("5"));
-
-        // Cache default values
-        cliOptions.add(CliOption.newString("defaultCacheTtlHours",
-                "Default cache time-to-live in hours")
-                .defaultValue("1"));
-        cliOptions.add(CliOption.newString("cacheDiskSizeMb",
-                "Maximum disk cache size in megabytes")
-                .defaultValue("20"));
-        cliOptions.add(CliOption.newBoolean("encryptCache",
-                "Enable cache encryption using AES-256")
-                .defaultValue("true"));
-        cliOptions.add(CliOption.newBoolean("enableUserCacheIsolation",
-                "Enable user-specific cache isolation")
-                .defaultValue("true"));
-
-        // Logging default values
-        CliOption logLevelOption = CliOption.newString("defaultLogLevel",
-                "Default logging level (none, error, warning, info, debug, verbose)")
-                .defaultValue("info");
-        logLevelOption.setEnum(Map.of(
-                "none", "LogLevel.none",
-                "error", "LogLevel.error",
-                "warning", "LogLevel.warning",
-                "info", "LogLevel.info",
-                "debug", "LogLevel.debug",
-                "verbose", "LogLevel.verbose"
-        ));
-        cliOptions.add(logLevelOption);
-
-        cliOptions.add(CliOption.newBoolean("redactSensitiveData",
-                "Enable automatic redaction of sensitive data in logs")
-                .defaultValue("true"));
+        // Initialize configuration manager and register CLI options
+        config = new DartGeneratorConfig(nameSanitizer);
+        cliOptions.addAll(config.registerCliOptions());
 
         // Basic configuration
         outputFolder = "generated-code/dart-acdc";
@@ -390,10 +322,15 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      */
     @Override
     public String toModelImport(String name) {
-        // Get the pubName from additional properties, or use default
-        String pubName = (String) additionalProperties.get("pubName");
-        if (pubName == null || pubName.isEmpty()) {
-            pubName = DEFAULT_PACKAGE_NAME;
+        // Get the pubName from config (after processOpts) or additionalProperties (during tests)
+        String pubName = config.getPubName();
+
+        // Fallback to additionalProperties if config hasn't been processed yet (e.g., in tests)
+        if (pubName == null || pubName.equals(DEFAULT_PACKAGE_NAME)) {
+            Object pubNameProp = additionalProperties.get("pubName");
+            if (pubNameProp instanceof String && !((String) pubNameProp).isEmpty()) {
+                pubName = (String) pubNameProp;
+            }
         }
 
         // Convert model name to filename
@@ -423,238 +360,15 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     public void processOpts() {
         super.processOpts();
 
-        // Process package metadata options with smart defaults from OpenAPI spec
-
-        // 1. pubName - derive from info.title if not provided
-        String pubName;
-        if (additionalProperties.containsKey("pubName")) {
-            pubName = (String) additionalProperties.get("pubName");
-        } else if (openAPI != null && openAPI.getInfo() != null && openAPI.getInfo().getTitle() != null) {
-            // Derive from OpenAPI info.title
-            pubName = openAPI.getInfo().getTitle();
-            LOGGER.info("Derived pubName from OpenAPI info.title: {}", pubName);
-        } else {
-            // Use default
-            pubName = DEFAULT_PACKAGE_NAME;
-        }
-        // Sanitize and store
-        String sanitizedPubName = sanitizePubName(pubName);
-        additionalProperties.put("pubName", sanitizedPubName);
-        LOGGER.info("Using pubName: {}", sanitizedPubName);
-
-        // 2. pubVersion - derive from info.version if not provided
-        String pubVersion;
-        if (additionalProperties.containsKey("pubVersion")) {
-            pubVersion = (String) additionalProperties.get("pubVersion");
-        } else if (openAPI != null && openAPI.getInfo() != null && openAPI.getInfo().getVersion() != null) {
-            // Derive from OpenAPI info.version
-            pubVersion = openAPI.getInfo().getVersion();
-            LOGGER.info("Derived pubVersion from OpenAPI info.version: {}", pubVersion);
-        } else {
-            // Use default from CliOption (1.0.0)
-            pubVersion = "1.0.0";
-        }
-        additionalProperties.put("pubVersion", pubVersion);
-
-        // 3. pubDescription - derive from info.description if not provided
-        if (!additionalProperties.containsKey("pubDescription")) {
-            if (openAPI != null && openAPI.getInfo() != null && openAPI.getInfo().getDescription() != null) {
-                // Derive from OpenAPI info.description
-                String pubDescription = openAPI.getInfo().getDescription();
-                additionalProperties.put("pubDescription", pubDescription);
-                LOGGER.info("Derived pubDescription from OpenAPI info.description");
-            }
-        }
-
-        // 4. pubAuthor - no smart default, use value if provided
-        // (already in additionalProperties if provided via CLI)
-
-        // 5. pubHomepage - no smart default, use value if provided
-        // (already in additionalProperties if provided via CLI)
-
-        // Process ACDC feature toggle options
-        // These must be stored as Boolean objects (not strings) for Mustache template conditionals
-        // to work correctly (e.g., {{#enableAuthentication}}...{{/enableAuthentication}})
-
-        // enableAuthentication - default: true
-        Boolean enableAuthentication = convertToBoolean(additionalProperties.get("enableAuthentication"), true);
-        additionalProperties.put("enableAuthentication", enableAuthentication);
-
-        // enableCaching - default: true
-        Boolean enableCaching = convertToBoolean(additionalProperties.get("enableCaching"), true);
-        additionalProperties.put("enableCaching", enableCaching);
-
-        // enableLogging - default: true
-        Boolean enableLogging = convertToBoolean(additionalProperties.get("enableLogging"), true);
-        additionalProperties.put("enableLogging", enableLogging);
-
-        // enableOfflineSupport - default: true
-        Boolean enableOfflineSupport = convertToBoolean(additionalProperties.get("enableOfflineSupport"), true);
-        additionalProperties.put("enableOfflineSupport", enableOfflineSupport);
-
-        // enableCertificatePinning - default: false
-        Boolean enableCertificatePinning = convertToBoolean(additionalProperties.get("enableCertificatePinning"), false);
-        additionalProperties.put("enableCertificatePinning", enableCertificatePinning);
-
-        // Process ACDC default value options
-        // These configure default values for authentication, caching, and logging features
-
-        // Authentication default values
-        processStringOption("defaultTokenRefreshUrl", null);
-        processBooleanOption("useSecureTokenStorage", true);
-        processIntegerOption("refreshThresholdMinutes", 5, 1, 60);
-
-        // Cache default values
-        processIntegerOption("defaultCacheTtlHours", 1, 1, 720); // Max 30 days
-        processIntegerOption("cacheDiskSizeMb", 20, 1, 1024); // Max 1GB
-        processBooleanOption("encryptCache", true);
-        processBooleanOption("enableUserCacheIsolation", true);
-
-        // Logging default values
-        processLogLevelOption();
-        processBooleanOption("redactSensitiveData", true);
+        // Process all configuration options using the config manager
+        config.processOptions(additionalProperties, openAPI);
+        config.applyToAdditionalProperties(additionalProperties);
 
         // Register the main barrel export file now that pubName is resolved
+        String sanitizedPubName = config.getPubName();
         supportingFiles.add(new SupportingFile("library.mustache", "lib", sanitizedPubName + ".dart"));
     }
 
-    /**
-     * Converts a CLI option value to a Boolean object.
-     * Handles null, Boolean, String ("true"/"false"), and other types.
-     * Returns the default value if the input is null or cannot be converted.
-     *
-     * @param value        the CLI option value (may be null, Boolean, or String)
-     * @param defaultValue the default value to use if conversion fails
-     * @return a Boolean object
-     */
-    private Boolean convertToBoolean(Object value, boolean defaultValue) {
-        if (value == null) {
-            return defaultValue;
-        }
-
-        if (value instanceof Boolean) {
-            return (Boolean) value;
-        }
-
-        if (value instanceof String) {
-            String strValue = (String) value;
-            if ("true".equalsIgnoreCase(strValue)) {
-                return Boolean.TRUE;
-            } else if ("false".equalsIgnoreCase(strValue)) {
-                return Boolean.FALSE;
-            }
-        }
-
-        // If we can't parse the value, use default
-        LOGGER.warn("Unable to convert '{}' to Boolean, using default: {}", value, defaultValue);
-        return defaultValue;
-    }
-
-    /**
-     * Processes a string CLI option and stores it in additionalProperties.
-     * If the option is not provided or is null, stores the default value (may be null).
-     *
-     * @param optionName   the CLI option name
-     * @param defaultValue the default value (may be null)
-     */
-    private void processStringOption(String optionName, String defaultValue) {
-        String value;
-        if (additionalProperties.containsKey(optionName)) {
-            value = (String) additionalProperties.get(optionName);
-        } else {
-            value = defaultValue;
-        }
-        additionalProperties.put(optionName, value);
-        LOGGER.debug("Processed string option '{}': {}", optionName, value);
-    }
-
-    /**
-     * Processes a boolean CLI option and stores it in additionalProperties as a Boolean object.
-     *
-     * @param optionName   the CLI option name
-     * @param defaultValue the default value
-     */
-    private void processBooleanOption(String optionName, boolean defaultValue) {
-        Boolean value = convertToBoolean(additionalProperties.get(optionName), defaultValue);
-        additionalProperties.put(optionName, value);
-        LOGGER.debug("Processed boolean option '{}': {}", optionName, value);
-    }
-
-    /**
-     * Processes an integer CLI option with validation and bounds checking.
-     * Validates that the value is a valid integer within the specified range.
-     *
-     * @param optionName   the CLI option name
-     * @param defaultValue the default value
-     * @param minValue     the minimum allowed value
-     * @param maxValue     the maximum allowed value
-     */
-    private void processIntegerOption(String optionName, int defaultValue, int minValue, int maxValue) {
-        int value = defaultValue;
-
-        if (additionalProperties.containsKey(optionName)) {
-            Object optionValue = additionalProperties.get(optionName);
-            try {
-                if (optionValue instanceof Integer) {
-                    value = (Integer) optionValue;
-                } else if (optionValue instanceof String) {
-                    value = Integer.parseInt((String) optionValue);
-                } else {
-                    LOGGER.warn("Option '{}' has unexpected type: {}. Using default: {}",
-                            optionName, optionValue.getClass().getName(), defaultValue);
-                    value = defaultValue;
-                }
-
-                // Validate bounds
-                if (value < minValue || value > maxValue) {
-                    throw new IllegalArgumentException(
-                            String.format("Option '%s' must be between %d and %d, got: %d",
-                                    optionName, minValue, maxValue, value));
-                }
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException(
-                        String.format("Option '%s' must be a valid integer, got: %s", optionName, optionValue), e);
-            }
-        }
-
-        additionalProperties.put(optionName, value);
-        LOGGER.info("Processed integer option '{}': {}", optionName, value);
-    }
-
-    /**
-     * Processes the defaultLogLevel CLI option with enum validation.
-     * Validates that the value is one of: none, error, warning, info, debug, verbose.
-     * Converts the value to the Dart LogLevel enum format (e.g., "info" -> "LogLevel.info").
-     */
-    private void processLogLevelOption() {
-        final String optionName = "defaultLogLevel";
-        final String defaultValue = "info";
-        final Set<String> validLevels = Set.of("none", "error", "warning", "info", "debug", "verbose");
-
-        String value = defaultValue;
-        if (additionalProperties.containsKey(optionName)) {
-            Object optionValue = additionalProperties.get(optionName);
-            if (optionValue instanceof String) {
-                value = ((String) optionValue).toLowerCase().trim();
-
-                // Validate against allowed enum values
-                if (!validLevels.contains(value)) {
-                    throw new IllegalArgumentException(
-                            String.format("Invalid value for option '%s': '%s'. Valid values are: %s",
-                                    optionName, optionValue, String.join(", ", validLevels)));
-                }
-            } else {
-                LOGGER.warn("Option '{}' has unexpected type: {}. Using default: {}",
-                        optionName, optionValue.getClass().getName(), defaultValue);
-                value = defaultValue;
-            }
-        }
-
-        // Convert to Dart LogLevel enum format for templates
-        String dartLogLevel = "LogLevel." + value;
-        additionalProperties.put(optionName, dartLogLevel);
-        LOGGER.info("Processed log level option '{}': {}", optionName, dartLogLevel);
-    }
 
     /**
      * Converts an enum value to a valid Dart identifier using camelCase.
