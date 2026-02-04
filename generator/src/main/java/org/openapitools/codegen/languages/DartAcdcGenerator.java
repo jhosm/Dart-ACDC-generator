@@ -104,6 +104,11 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     private final DartSchemaPreprocessor schemaPreprocessor;
 
     /**
+     * Factory for creating and configuring CodegenModel instances.
+     */
+    private final DartModelFactory modelFactory;
+
+    /**
      * Dart reserved keywords that require escaping.
      * These cannot be used as identifiers in Dart code.
      */
@@ -144,6 +149,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
         // Initialize schema preprocessor with its dependencies
         schemaPreprocessor = new DartSchemaPreprocessor(schemaRegistry, allOfFlattener, circularReferenceDetector);
+
+        // Initialize model factory
+        modelFactory = new DartModelFactory(this, sealedClassExtensions);
 
         // Basic configuration
         outputFolder = "generated-code/dart-acdc";
@@ -464,6 +472,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      * allOf composition is now handled in preprocessOpenAPI() which runs before
      * model generation.
      *
+     * Delegates to DartModelFactory for coordinated model creation.
+     *
      * For enum schemas:
      * - Ensures that schemas with enum values are properly processed as enums
      * with populated allowableValues and enumVars for template rendering.
@@ -479,37 +489,46 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      */
     @Override
     public CodegenModel fromModel(String name, Schema schema) {
-        CodegenModel model = super.fromModel(name, schema);
+        return modelFactory.createModel(name, schema);
+    }
 
-        // Check if this schema has enum values and no properties (standalone enum)
-        if (schema != null && schema.getEnum() != null && !schema.getEnum().isEmpty()) {
-            if (schema.getProperties() == null || schema.getProperties().isEmpty()) {
-                model.isEnum = true;
-                // Note: allowableValues and enumVars are processed in postProcessModels
-            }
-        }
+    /**
+     * Creates a base CodegenModel using the parent generator's fromModel.
+     * This is a delegation point for DartModelFactory.
+     *
+     * @param name   the model name
+     * @param schema the schema
+     * @return the base CodegenModel
+     */
+    @SuppressWarnings("rawtypes")
+    CodegenModel createBaseModel(String name, Schema schema) {
+        return super.fromModel(name, schema);
+    }
 
-        // Check for oneOf composition
-        if (schema != null && schema.getOneOf() != null && !schema.getOneOf().isEmpty()) {
-            processOneOfComposition(name, schema, model);
-        }
+    /**
+     * Processes oneOf composition for a model.
+     * Delegation point for DartModelFactory.
+     *
+     * @param name   the schema name
+     * @param schema the schema with oneOf
+     * @param model  the codegen model to update
+     */
+    @SuppressWarnings("rawtypes")
+    void processOneOfCompositionForFactory(String name, Schema schema, CodegenModel model) {
+        processOneOfComposition(name, schema, model);
+    }
 
-        // Check for anyOf composition
-        if (schema != null && schema.getAnyOf() != null && !schema.getAnyOf().isEmpty()) {
-            processAnyOfComposition(name, schema, model);
-        }
-
-        // Check if this model should extend a sealed class
-        String parentSealedClass = sealedClassExtensions.get(model.classname);
-        if (parentSealedClass != null) {
-            model.parent = parentSealedClass;
-            model.vendorExtensions.put("x-extends-sealed-class", true);
-            model.vendorExtensions.put("x-sealed-parent", parentSealedClass);
-            model.vendorExtensions.put("x-sealed-parent-filename", toModelFilename(parentSealedClass));
-            LOGGER.info("Model {} will extend sealed class {}", model.classname, parentSealedClass);
-        }
-
-        return model;
+    /**
+     * Processes anyOf composition for a model.
+     * Delegation point for DartModelFactory.
+     *
+     * @param name   the schema name
+     * @param schema the schema with anyOf
+     * @param model  the codegen model to update
+     */
+    @SuppressWarnings("rawtypes")
+    void processAnyOfCompositionForFactory(String name, Schema schema, CodegenModel model) {
+        processAnyOfComposition(name, schema, model);
     }
 
     /**
