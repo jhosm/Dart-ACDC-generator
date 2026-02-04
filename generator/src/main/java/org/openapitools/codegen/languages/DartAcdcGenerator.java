@@ -99,6 +99,11 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     private final DartCircularReferenceDetector circularReferenceDetector = new DartCircularReferenceDetector();
 
     /**
+     * Coordinator for schema preprocessing (allOf flattening and circular reference detection).
+     */
+    private final DartSchemaPreprocessor schemaPreprocessor;
+
+    /**
      * Dart reserved keywords that require escaping.
      * These cannot be used as identifiers in Dart code.
      */
@@ -136,6 +141,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         // Initialize configuration manager and register CLI options
         config = new DartGeneratorConfig(nameSanitizer);
         cliOptions.addAll(config.registerCliOptions());
+
+        // Initialize schema preprocessor with its dependencies
+        schemaPreprocessor = new DartSchemaPreprocessor(schemaRegistry, allOfFlattener, circularReferenceDetector);
 
         // Basic configuration
         outputFolder = "generated-code/dart-acdc";
@@ -446,62 +454,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     @Override
     public void preprocessOpenAPI(io.swagger.v3.oas.models.OpenAPI openAPI) {
         super.preprocessOpenAPI(openAPI);
-
-        LOGGER.info("Preprocessing OpenAPI spec for allOf composition");
-
-        Map<String, Schema> schemas = extractSchemas(openAPI);
-        if (schemas == null) {
-            LOGGER.info("No schemas to preprocess");
-            return;
-        }
-
-        LOGGER.info("Found {} schemas to process", schemas.size());
-
-        // First pass: flatten allOf compositions
-        flattenAllOfCompositions(schemas);
-
-        // Second pass: detect and mark circular references
-        detectAllCircularReferences(schemas);
-
-        // Store processed schemas in registry for test data generation
-        schemaRegistry.updateSchemas(schemas);
-    }
-
-    /**
-     * Safely extracts schemas from the OpenAPI specification.
-     * Delegates to the schema registry.
-     *
-     * @param openAPI the OpenAPI specification
-     * @return the schemas map, or null if not available
-     */
-    @SuppressWarnings("rawtypes")
-    private Map<String, Schema> extractSchemas(io.swagger.v3.oas.models.OpenAPI openAPI) {
-        // Register schemas in the registry and return them
-        schemaRegistry.registerSchemas(openAPI);
-        Map<String, Schema> schemas = schemaRegistry.getAllSchemas();
-        return schemas.isEmpty() ? null : schemas;
-    }
-
-    /**
-     * Flattens all allOf compositions in the schema map.
-     * Delegates to DartAllOfFlattener.
-     *
-     * @param schemas the schemas to process (modified in place)
-     */
-    @SuppressWarnings("rawtypes")
-    private void flattenAllOfCompositions(Map<String, Schema> schemas) {
-        allOfFlattener.flattenAllOf(schemas);
-    }
-
-    /**
-     * Detects circular references in all schemas and marks affected properties as nullable.
-     * Delegates to DartCircularReferenceDetector.
-     *
-     * @param schemas all schemas to check for circular references
-     */
-    @SuppressWarnings("rawtypes")
-    private void detectAllCircularReferences(Map<String, Schema> schemas) {
-        circularReferenceDetector.detectAll(schemas);
+        schemaPreprocessor.preprocess(openAPI);
     }
 
 
