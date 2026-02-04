@@ -109,6 +109,12 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     private final DartModelFactory modelFactory;
 
     /**
+     * Processor for oneOf composition handling.
+     * Initialized lazily after testDataGenerator is available.
+     */
+    private DartOneOfProcessor oneOfProcessor;
+
+    /**
      * Dart reserved keywords that require escaping.
      * These cannot be used as identifiers in Dart code.
      */
@@ -533,6 +539,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     /**
      * Processes a oneOf composition schema and adds metadata to the CodegenModel.
+     * Delegates to DartOneOfProcessor.
      *
      * @param name   the schema name
      * @param schema the schema with oneOf
@@ -540,7 +547,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      */
     @SuppressWarnings({ "rawtypes", "unchecked" })
     private void processOneOfComposition(String name, Schema schema, CodegenModel model) {
-        processComposition(name, schema, model, "oneOf");
+        getOneOfProcessor().processOneOf(name, schema, model);
     }
 
     /**
@@ -1239,6 +1246,19 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             enumHandler = new DartEnumHandler(reservedWords);
         }
         return enumHandler;
+    }
+
+    /**
+     * Gets or initializes the oneOf processor.
+     * Lazily creates the processor with required dependencies.
+     *
+     * @return the oneOf processor instance
+     */
+    private DartOneOfProcessor getOneOfProcessor() {
+        if (oneOfProcessor == null) {
+            oneOfProcessor = new DartOneOfProcessor(this, getTestDataGenerator(), sealedClassExtensions);
+        }
+        return oneOfProcessor;
     }
 
     /**
