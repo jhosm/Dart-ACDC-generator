@@ -94,6 +94,11 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     private final DartAllOfFlattener allOfFlattener = new DartAllOfFlattener();
 
     /**
+     * Helper for circular reference detection.
+     */
+    private final DartCircularReferenceDetector circularReferenceDetector = new DartCircularReferenceDetector();
+
+    /**
      * Dart reserved keywords that require escaping.
      * These cannot be used as identifiers in Dart code.
      */
@@ -489,82 +494,14 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
-     * Detects circular references in all schemas and marks affected properties as
-     * nullable.
+     * Detects circular references in all schemas and marks affected properties as nullable.
+     * Delegates to DartCircularReferenceDetector.
      *
      * @param schemas all schemas to check for circular references
      */
     @SuppressWarnings("rawtypes")
     private void detectAllCircularReferences(Map<String, Schema> schemas) {
-        LOGGER.info("Detecting circular references");
-        for (Map.Entry<String, Schema> entry : schemas.entrySet()) {
-            String schemaName = entry.getKey();
-            Schema schema = entry.getValue();
-            detectCircularReferences(schemaName, schema, schemas, new HashSet<>());
-        }
-    }
-
-    /**
-     * Detects circular references in a schema by traversing the property graph.
-     * Marks properties involved in circular references as nullable.
-     *
-     * @param schemaName  the current schema name
-     * @param schema      the current schema
-     * @param allSchemas  all available schemas for reference resolution
-     * @param visitedPath set of schema names in the current path (for cycle
-     *                    detection)
-     */
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-    private void detectCircularReferences(String schemaName, Schema schema, Map<String, Schema> allSchemas,
-            Set<String> visitedPath) {
-        if (schema == null || schema.getProperties() == null) {
-            return;
-        }
-
-        // Add current schema to path
-        visitedPath.add(schemaName);
-
-        Map<String, Schema> properties = (Map<String, Schema>) schema.getProperties();
-
-        for (Map.Entry<String, Schema> propEntry : properties.entrySet()) {
-            String propName = propEntry.getKey();
-            Schema propSchema = propEntry.getValue();
-
-            // Check if this property references another schema
-            String referencedSchemaName = null;
-
-            if (propSchema.get$ref() != null) {
-                // Direct reference
-                String ref = propSchema.get$ref();
-                referencedSchemaName = extractSchemaNameFromRef(ref);
-            } else if ("array".equals(propSchema.getType()) && propSchema.getItems() != null
-                    && propSchema.getItems().get$ref() != null) {
-                // Array of references
-                String ref = propSchema.getItems().get$ref();
-                referencedSchemaName = extractSchemaNameFromRef(ref);
-            }
-
-            if (referencedSchemaName != null) {
-                // Check if this creates a cycle
-                if (visitedPath.contains(referencedSchemaName)) {
-                    // Circular reference detected!
-                    LOGGER.info("Circular reference detected: {} -> {} (in property '{}')", schemaName,
-                            referencedSchemaName, propName);
-
-                    // Mark property as nullable
-                    propSchema.setNullable(true);
-                    LOGGER.info("Marked property '{}' in schema '{}' as nullable", propName, schemaName);
-                } else {
-                    // Continue traversal
-                    Schema referencedSchema = allSchemas.get(referencedSchemaName);
-                    if (referencedSchema != null) {
-                        // Create a new visited set for this branch (copy current path)
-                        Set<String> newPath = new HashSet<>(visitedPath);
-                        detectCircularReferences(referencedSchemaName, referencedSchema, allSchemas, newPath);
-                    }
-                }
-            }
-        }
+        circularReferenceDetector.detectAll(schemas);
     }
 
 
