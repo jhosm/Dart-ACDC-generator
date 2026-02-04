@@ -89,6 +89,11 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     private final DartGeneratorConfig config;
 
     /**
+     * Helper for allOf composition flattening.
+     */
+    private final DartAllOfFlattener allOfFlattener = new DartAllOfFlattener();
+
+    /**
      * Dart reserved keywords that require escaping.
      * These cannot be used as identifiers in Dart code.
      */
@@ -474,22 +479,13 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     /**
      * Flattens all allOf compositions in the schema map.
+     * Delegates to DartAllOfFlattener.
      *
      * @param schemas the schemas to process (modified in place)
      */
     @SuppressWarnings("rawtypes")
     private void flattenAllOfCompositions(Map<String, Schema> schemas) {
-        for (Map.Entry<String, Schema> entry : schemas.entrySet()) {
-            String schemaName = entry.getKey();
-            Schema schema = entry.getValue();
-
-            if (schema.getAllOf() != null && !schema.getAllOf().isEmpty()) {
-                LOGGER.info("Processing allOf for schema: {}", schemaName);
-                Schema flattenedSchema = composeAllOfSchemaPreprocess(schemaName, schema, schemas);
-                schemas.put(schemaName, flattenedSchema);
-                LOGGER.info("Replaced schema {} with flattened version", schemaName);
-            }
-        }
+        allOfFlattener.flattenAllOf(schemas);
     }
 
     /**
@@ -571,206 +567,6 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         }
     }
 
-    /**
-     * Composes an allOf schema during preprocessing by merging all properties.
-     * Handles nested composition (allOf containing oneOf/anyOf references).
-     *
-     * @param name       the schema name
-     * @param schema     the schema with allOf
-     * @param allSchemas all available schemas for $ref resolution
-     * @return a new flattened schema
-     */
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-    private Schema composeAllOfSchemaPreprocess(String name, Schema schema, Map<String, Schema> allSchemas) {
-        if (schema.getAllOf() == null || schema.getAllOf().isEmpty()) {
-            return schema;
-        }
-
-        LOGGER.info("Composing allOf schema for: {}", name);
-
-        Map<String, Schema> mergedProperties = new LinkedHashMap<>();
-        Set<String> mergedRequired = new LinkedHashSet<>();
-
-        // Process each schema in the allOf array
-        List<Schema> allOfSchemas = (List<Schema>) schema.getAllOf();
-        LOGGER.info("allOf has {} schemas to merge", allOfSchemas.size());
-
-        for (Schema allOfSchema : allOfSchemas) {
-            processAllOfElement(name, allOfSchema, allSchemas, mergedProperties, mergedRequired);
-        }
-
-        // Create and configure the composed schema
-        Schema composedSchema = createComposedSchema(schema, mergedProperties, mergedRequired);
-
-        LOGGER.info("Composed allOf schema for '{}': {} properties, {} required",
-                name, mergedProperties.size(), mergedRequired.size());
-
-        return composedSchema;
-    }
-
-    /**
-     * Processes a single element from an allOf array, merging properties or
-     * handling nested composition.
-     *
-     * @param parentName       the parent schema name
-     * @param allOfSchema      the allOf element schema
-     * @param allSchemas       all available schemas for $ref resolution
-     * @param mergedProperties accumulator for merged properties
-     * @param mergedRequired   accumulator for merged required properties
-     */
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-    private void processAllOfElement(String parentName, Schema allOfSchema, Map<String, Schema> allSchemas,
-            Map<String, Schema> mergedProperties, Set<String> mergedRequired) {
-        Schema resolvedSchema = allOfSchema;
-        String referencedSchemaName = null;
-
-        // Resolve $ref if present
-        if (allOfSchema.get$ref() != null) {
-            String ref = allOfSchema.get$ref();
-            referencedSchemaName = extractSchemaNameFromRef(ref);
-            resolvedSchema = allSchemas.get(referencedSchemaName);
-
-            if (resolvedSchema == null) {
-                LOGGER.warn("Unable to resolve $ref: {} in allOf for schema: {}", ref, parentName);
-                return;
-            }
-        }
-
-        // Handle nested composition (allOf containing oneOf/anyOf)
-        if (isCompositionSchema(resolvedSchema) && referencedSchemaName != null) {
-            handleNestedComposition(referencedSchemaName, mergedProperties, mergedRequired);
-            return;
-        }
-
-        // Regular object schema: Merge properties
-        mergeSchemaProperties(parentName, resolvedSchema, mergedProperties);
-
-        // Merge required arrays
-        if (resolvedSchema.getRequired() != null) {
-            mergedRequired.addAll(resolvedSchema.getRequired());
-        }
-    }
-
-    /**
-     * Checks if a schema is a composition schema (oneOf or anyOf).
-     *
-     * @param schema the schema to check
-     * @return true if the schema has oneOf or anyOf
-     */
-    @SuppressWarnings("rawtypes")
-    private boolean isCompositionSchema(Schema schema) {
-        return (schema.getOneOf() != null && !schema.getOneOf().isEmpty()) ||
-                (schema.getAnyOf() != null && !schema.getAnyOf().isEmpty());
-    }
-
-    /**
-     * Handles nested composition by creating a property typed as the composition
-     * schema.
-     *
-     * @param referencedSchemaName the name of the composition schema
-     * @param mergedProperties     accumulator for merged properties
-     * @param mergedRequired       accumulator for merged required properties
-     */
-    @SuppressWarnings("rawtypes")
-    private void handleNestedComposition(String referencedSchemaName, Map<String, Schema> mergedProperties,
-            Set<String> mergedRequired) {
-        LOGGER.info("Detected nested composition: allOf contains oneOf/anyOf reference to '{}'", referencedSchemaName);
-
-        // Create a property with type = the referenced schema name
-        Schema propertySchema = new Schema();
-        propertySchema.set$ref("#/components/schemas/" + referencedSchemaName);
-
-        // Use camelCase schema name as property name
-        String propertyName = toCamelCase(referencedSchemaName);
-        mergedProperties.put(propertyName, propertySchema);
-        mergedRequired.add(propertyName);
-
-        LOGGER.info("Created property '{}' typed as '{}'", propertyName, referencedSchemaName);
-    }
-
-    /**
-     * Merges properties from a resolved schema into the merged properties map.
-     *
-     * @param parentName       the parent schema name (for logging)
-     * @param resolvedSchema   the schema to merge from
-     * @param mergedProperties accumulator for merged properties
-     */
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-    private void mergeSchemaProperties(String parentName, Schema resolvedSchema, Map<String, Schema> mergedProperties) {
-        if (resolvedSchema.getProperties() == null) {
-            return;
-        }
-
-        Map<String, Schema> properties = (Map<String, Schema>) resolvedSchema.getProperties();
-        for (Map.Entry<String, Schema> propEntry : properties.entrySet()) {
-            String propName = propEntry.getKey();
-            Schema propSchema = propEntry.getValue();
-
-            // Check for property conflict
-            if (mergedProperties.containsKey(propName)) {
-                logPropertyConflict(parentName, propName, mergedProperties.get(propName), propSchema);
-            }
-
-            // Last definition wins
-            mergedProperties.put(propName, propSchema);
-        }
-    }
-
-    /**
-     * Logs a warning when a property conflict is detected during allOf merging.
-     *
-     * @param schemaName     the schema name
-     * @param propertyName   the conflicting property name
-     * @param existingSchema the existing property schema
-     * @param newSchema      the new property schema
-     */
-    @SuppressWarnings("rawtypes")
-    private void logPropertyConflict(String schemaName, String propertyName, Schema existingSchema, Schema newSchema) {
-        String existingType = existingSchema.getType();
-        String newType = newSchema.getType();
-
-        if (!Objects.equals(existingType, newType)) {
-            LOGGER.warn("Property conflict in allOf for schema '{}': property '{}' " +
-                    "has different types ({} vs {}). Using last definition.",
-                    schemaName, propertyName, existingType, newType);
-        }
-    }
-
-    /**
-     * Creates the final composed schema from merged data.
-     *
-     * @param originalSchema   the original schema with allOf
-     * @param mergedProperties the merged properties
-     * @param mergedRequired   the merged required properties
-     * @return the composed schema
-     */
-    @SuppressWarnings("rawtypes")
-    private Schema createComposedSchema(Schema originalSchema, Map<String, Schema> mergedProperties,
-            Set<String> mergedRequired) {
-        Schema composedSchema = new Schema();
-
-        // Apply merged properties and required
-        if (!mergedProperties.isEmpty()) {
-            composedSchema.setProperties(mergedProperties);
-        }
-
-        if (!mergedRequired.isEmpty()) {
-            composedSchema.setRequired(new ArrayList<>(mergedRequired));
-        }
-
-        // Copy other relevant attributes from the original schema
-        composedSchema.setType(originalSchema.getType() != null ? originalSchema.getType() : "object");
-
-        if (originalSchema.getDescription() != null) {
-            composedSchema.setDescription(originalSchema.getDescription());
-        }
-
-        if (originalSchema.getTitle() != null) {
-            composedSchema.setTitle(originalSchema.getTitle());
-        }
-
-        return composedSchema;
-    }
 
     /**
      * Overrides fromModel to properly handle standalone enum schemas and
