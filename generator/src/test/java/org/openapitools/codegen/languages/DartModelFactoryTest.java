@@ -21,14 +21,14 @@ import static org.junit.jupiter.api.Assertions.*;
 class DartModelFactoryTest {
 
     private DartAcdcGenerator generator;
-    private Map<String, String> sealedClassExtensions;
+    private DartDiscriminatorProcessor discriminatorProcessor;
     private DartModelFactory factory;
 
     @BeforeEach
     void setUp() {
         generator = new DartAcdcGenerator();
-        sealedClassExtensions = new HashMap<>();
-        factory = new DartModelFactory(generator, sealedClassExtensions);
+        discriminatorProcessor = new DartDiscriminatorProcessor(generator, new DartTestDataGenerator(new HashMap<>(), Set.of("String", "int", "double", "bool")));
+        factory = new DartModelFactory(generator, discriminatorProcessor);
     }
 
     @Test
@@ -145,6 +145,7 @@ class DartModelFactoryTest {
 
     @Test
     @DisplayName("createModel should apply sealed class extension relationships")
+    @SuppressWarnings({"rawtypes", "unchecked"})
     void testCreateModelAppliesSealedClassExtension() {
         // Arrange
         String modelName = "Dog";
@@ -152,8 +153,12 @@ class DartModelFactoryTest {
         Schema<?> schema = new StringSchema();
         schema.setType("object");
 
-        // Register sealed class relationship
-        sealedClassExtensions.put("Dog", parentClass);
+        // Register sealed class relationship by simulating a oneOf schema processing
+        Schema dogRef = new Schema();
+        dogRef.set$ref("#/components/schemas/Dog");
+        List<Schema> oneOfSchemas = new ArrayList<>();
+        oneOfSchemas.add(dogRef);
+        discriminatorProcessor.registerSealedClassExtensions(parentClass, oneOfSchemas);
 
         // Act
         CodegenModel result = factory.createModel(modelName, schema);
@@ -198,8 +203,12 @@ class DartModelFactoryTest {
 
         schema.setOneOf(oneOfSchemas);
 
-        // Register sealed class relationship
-        sealedClassExtensions.put("Shape", "Geometry");
+        // Register sealed class relationship by simulating parent oneOf schema
+        Schema shapeRef = new Schema();
+        shapeRef.set$ref("#/components/schemas/Shape");
+        List<Schema> geometryOneOf = new ArrayList<>();
+        geometryOneOf.add(shapeRef);
+        discriminatorProcessor.registerSealedClassExtensions("Geometry", geometryOneOf);
 
         // Act
         CodegenModel result = factory.createModel(modelName, schema);

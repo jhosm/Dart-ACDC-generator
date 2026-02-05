@@ -12,9 +12,8 @@ import java.util.*;
  *
  * Handles oneOf schema composition by:
  * - Processing oneOf alternatives (references, primitives, inline schemas)
- * - Processing discriminator information for type resolution
+ * - Delegating discriminator processing to DartDiscriminatorProcessor
  * - Generating metadata for sealed class patterns
- * - Registering sealed class extensions
  *
  * OneOf schemas are generated as sealed classes in Dart, with each alternative
  * being either a subclass or a wrapper class (for primitives).
@@ -23,29 +22,23 @@ public class DartOneOfProcessor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DartOneOfProcessor.class);
 
-    /**
-     * OpenAPI primitive types that can appear in oneOf alternatives.
-     */
-    private static final Set<String> OPENAPI_PRIMITIVE_TYPES = Set.of(
-            "string", "integer", "number", "boolean");
-
     private final DartAcdcGenerator generator;
     private final DartTestDataGenerator testDataGenerator;
-    private final Map<String, String> sealedClassExtensions;
+    private final DartDiscriminatorProcessor discriminatorProcessor;
 
     /**
      * Constructs a DartOneOfProcessor.
      *
-     * @param generator             the parent generator for accessing utility methods
-     * @param testDataGenerator     helper for generating test data
-     * @param sealedClassExtensions map tracking which models extend sealed classes
+     * @param generator               the parent generator for accessing utility methods
+     * @param testDataGenerator       helper for generating test data
+     * @param discriminatorProcessor  processor for discriminator and sealed class handling
      */
     public DartOneOfProcessor(DartAcdcGenerator generator,
                               DartTestDataGenerator testDataGenerator,
-                              Map<String, String> sealedClassExtensions) {
+                              DartDiscriminatorProcessor discriminatorProcessor) {
         this.generator = generator;
         this.testDataGenerator = testDataGenerator;
-        this.sealedClassExtensions = sealedClassExtensions;
+        this.discriminatorProcessor = discriminatorProcessor;
     }
 
     /**
@@ -62,8 +55,8 @@ public class DartOneOfProcessor {
         // Mark this model as a oneOf composition
         model.vendorExtensions.put("x-is-one-of", true);
 
-        // Process discriminator if present
-        processDiscriminator(name, schema, model);
+        // Delegate discriminator processing to DartDiscriminatorProcessor
+        discriminatorProcessor.processDiscriminator(name, schema, model);
 
         // Get oneOf alternatives
         List<Schema> oneOfSchemas = (List<Schema>) schema.getOneOf();
@@ -71,8 +64,8 @@ public class DartOneOfProcessor {
         // Process alternatives
         List<Map<String, Object>> alternatives = processCompositionAlternatives(name, oneOfSchemas, "oneOf");
 
-        // Track which schemas should extend this sealed class
-        registerSealedClassExtensions(name, oneOfSchemas);
+        // Delegate sealed class registration to DartDiscriminatorProcessor
+        discriminatorProcessor.registerSealedClassExtensions(name, oneOfSchemas);
 
         // Store alternatives
         model.vendorExtensions.put("x-one-of-alternatives", alternatives);
@@ -80,61 +73,6 @@ public class DartOneOfProcessor {
         LOGGER.info("Processed oneOf for '{}': {} alternatives", name, alternatives.size());
     }
 
-    /**
-     * Processes discriminator information for oneOf schemas.
-     * Extracts discriminator property name and mapping metadata.
-     *
-     * @param name   the schema name
-     * @param schema the schema (may have discriminator)
-     * @param model  the codegen model to update
-     */
-    @SuppressWarnings("rawtypes")
-    private void processDiscriminator(String name, Schema schema, CodegenModel model) {
-        if (schema.getDiscriminator() == null) {
-            model.vendorExtensions.put("x-has-discriminator", false);
-            return;
-        }
-
-        String discriminatorPropertyName = schema.getDiscriminator().getPropertyName();
-
-        // Validate discriminator property name
-        if (discriminatorPropertyName == null || discriminatorPropertyName.isEmpty()) {
-            LOGGER.warn("Discriminator property name is null or empty for schema: {}", name);
-            model.vendorExtensions.put("x-has-discriminator", false);
-            return;
-        }
-
-        model.vendorExtensions.put("x-has-discriminator", true);
-        model.vendorExtensions.put("x-discriminator-name", discriminatorPropertyName);
-
-        // Process discriminator mapping
-        if (schema.getDiscriminator().getMapping() != null) {
-            List<Map<String, Object>> discriminatorMapping = new ArrayList<>();
-            Map<String, String> mapping = schema.getDiscriminator().getMapping();
-
-            for (Map.Entry<String, String> entry : mapping.entrySet()) {
-                String mappingKey = entry.getKey();
-                String schemaRef = entry.getValue();
-
-                // Extract schema name from $ref (e.g., "#/components/schemas/Dog" -> "Dog")
-                String schemaName = extractSchemaNameFromRef(schemaRef);
-                // Use the actual schema name as the subclass name (e.g., "Dog", not "AnimalDog")
-                String subclassName = generator.toModelName(schemaName);
-
-                // Generate test JSON for this discriminator alternative
-                String testJson = testDataGenerator.generateTestJsonForModel(schemaName);
-
-                Map<String, Object> mappingEntry = Map.of(
-                        "mappingKey", mappingKey,
-                        "schemaName", schemaName,
-                        "subclassName", subclassName,
-                        "testJson", testJson);
-                discriminatorMapping.add(mappingEntry);
-            }
-
-            model.vendorExtensions.put("x-discriminator-mapping", discriminatorMapping);
-        }
-    }
 
     /**
      * Processes composition alternatives (oneOf) into a list of metadata maps.
@@ -180,7 +118,7 @@ public class DartOneOfProcessor {
         if (schema.get$ref() != null) {
             // Reference to another schema
             String ref = schema.get$ref();
-            String schemaName = extractSchemaNameFromRef(ref);
+            String schemaName = discriminatorProcessor.extractSchemaNameFromRef(ref);
             // Use the actual schema name as the subclass name (e.g., "Dog", not "AnimalDog")
             String subclassName = generator.toModelName(schemaName);
 
@@ -198,7 +136,7 @@ public class DartOneOfProcessor {
         } else if (schema.getType() != null) {
             // Inline schema (primitive or object)
             String type = schema.getType();
-            boolean isPrimitive = isPrimitiveType(type);
+            boolean isPrimitive = discriminatorProcessor.isPrimitiveType(type);
 
             if (isPrimitive) {
                 // Wrapper class for primitive
@@ -234,58 +172,6 @@ public class DartOneOfProcessor {
         }
     }
 
-    /**
-     * Registers schemas referenced in oneOf to extend the parent sealed class.
-     *
-     * @param parentName the parent sealed class name
-     * @param schemas    the list of referenced schemas
-     */
-    @SuppressWarnings("rawtypes")
-    private void registerSealedClassExtensions(String parentName, List<Schema> schemas) {
-        for (Schema schema : schemas) {
-            if (schema.get$ref() != null) {
-                // Only register for references (not inline primitives or objects)
-                String ref = schema.get$ref();
-                String childSchemaName = extractSchemaNameFromRef(ref);
-                String childModelName = generator.toModelName(childSchemaName);
-                sealedClassExtensions.put(childModelName, parentName);
-                LOGGER.info("Registered {} to extend sealed class {}", childModelName, parentName);
-            }
-        }
-    }
-
-    /**
-     * Checks if an OpenAPI type is a primitive type (string, integer, number, boolean).
-     * Arrays and objects are not considered primitive.
-     *
-     * @param type the OpenAPI type to check
-     * @return true if the type is primitive (string/integer/number/boolean), false otherwise
-     */
-    private boolean isPrimitiveType(String type) {
-        return type != null && OPENAPI_PRIMITIVE_TYPES.contains(type);
-    }
-
-    /**
-     * Safely extracts the schema name from a $ref string.
-     * Handles refs without '/' gracefully and validates input.
-     *
-     * @param ref the $ref string (e.g., "#/components/schemas/Pet")
-     * @return the schema name (e.g., "Pet"), or "UnknownSchema" if extraction fails
-     */
-    private String extractSchemaNameFromRef(String ref) {
-        if (ref == null || ref.isEmpty()) {
-            LOGGER.warn("Received null or empty $ref");
-            return "UnknownSchema";
-        }
-
-        int lastSlashIndex = ref.lastIndexOf('/');
-        if (lastSlashIndex == -1) {
-            LOGGER.warn("Malformed $ref without '/': {}", ref);
-            return ref; // Return the whole string as fallback
-        }
-
-        return ref.substring(lastSlashIndex + 1);
-    }
 
     /**
      * Capitalizes the first letter of a string.

@@ -50,13 +50,6 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     private static final String RESERVED_WORD_MODEL_SUFFIX = "Model";
 
     /**
-     * Map to track which schemas should extend sealed classes.
-     * Key: schema name (e.g., "Dog"), Value: parent sealed class name (e.g.,
-     * "Animal")
-     */
-    private final Map<String, String> sealedClassExtensions = new HashMap<>();
-
-    /**
      * Central registry for schema storage and lookup.
      */
     private final DartSchemaRegistry schemaRegistry = new DartSchemaRegistry();
@@ -105,8 +98,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     /**
      * Factory for creating and configuring CodegenModel instances.
+     * Initialized lazily after discriminatorProcessor is available.
      */
-    private final DartModelFactory modelFactory;
+    private DartModelFactory modelFactory;
 
     /**
      * Processor for oneOf composition handling.
@@ -119,6 +113,12 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      * Initialized lazily after testDataGenerator is available.
      */
     private DartAnyOfProcessor anyOfProcessor;
+
+    /**
+     * Processor for discriminator and sealed class handling.
+     * Initialized lazily after testDataGenerator is available.
+     */
+    private DartDiscriminatorProcessor discriminatorProcessor;
 
     /**
      * Dart reserved keywords that require escaping.
@@ -161,9 +161,6 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
         // Initialize schema preprocessor with its dependencies
         schemaPreprocessor = new DartSchemaPreprocessor(schemaRegistry, allOfFlattener, circularReferenceDetector);
-
-        // Initialize model factory
-        modelFactory = new DartModelFactory(this, sealedClassExtensions);
 
         // Basic configuration
         outputFolder = "generated-code/dart-acdc";
@@ -501,7 +498,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      */
     @Override
     public CodegenModel fromModel(String name, Schema schema) {
-        return modelFactory.createModel(name, schema);
+        return getModelFactory().createModel(name, schema);
     }
 
     /**
@@ -958,7 +955,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             String refName = property.dataType;
             if (refName != null) {
                 // Check if this type is a sealed class parent (oneOf/anyOf schema)
-                boolean isCompositionType = sealedClassExtensions.containsValue(refName);
+                boolean isCompositionType = getDiscriminatorProcessor().getSealedClassExtensions().containsValue(refName);
                 if (isCompositionType) {
                     property.vendorExtensions.put("x-is-composition-property", true);
                 }
@@ -1002,7 +999,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      */
     private DartOneOfProcessor getOneOfProcessor() {
         if (oneOfProcessor == null) {
-            oneOfProcessor = new DartOneOfProcessor(this, getTestDataGenerator(), sealedClassExtensions);
+            oneOfProcessor = new DartOneOfProcessor(this, getTestDataGenerator(), getDiscriminatorProcessor());
         }
         return oneOfProcessor;
     }
@@ -1015,9 +1012,35 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      */
     private DartAnyOfProcessor getAnyOfProcessor() {
         if (anyOfProcessor == null) {
-            anyOfProcessor = new DartAnyOfProcessor(this, getTestDataGenerator(), sealedClassExtensions);
+            anyOfProcessor = new DartAnyOfProcessor(this, getTestDataGenerator(), getDiscriminatorProcessor());
         }
         return anyOfProcessor;
+    }
+
+    /**
+     * Gets or initializes the discriminator processor.
+     * Lazily creates the processor with required dependencies.
+     *
+     * @return the discriminator processor instance
+     */
+    private DartDiscriminatorProcessor getDiscriminatorProcessor() {
+        if (discriminatorProcessor == null) {
+            discriminatorProcessor = new DartDiscriminatorProcessor(this, getTestDataGenerator());
+        }
+        return discriminatorProcessor;
+    }
+
+    /**
+     * Gets or initializes the model factory.
+     * Lazily creates the factory with required dependencies.
+     *
+     * @return the model factory instance
+     */
+    private DartModelFactory getModelFactory() {
+        if (modelFactory == null) {
+            modelFactory = new DartModelFactory(this, getDiscriminatorProcessor());
+        }
+        return modelFactory;
     }
 
     /**
