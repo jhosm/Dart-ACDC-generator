@@ -151,6 +151,12 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     private DartPropertyFactory propertyFactory;
 
     /**
+     * Resolver for type declarations with context awareness.
+     * Initialized eagerly.
+     */
+    private DartTypeResolver typeResolver;
+
+    /**
      * Dart reserved keywords that require escaping.
      * These cannot be used as identifiers in Dart code.
      */
@@ -191,6 +197,9 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
         // Initialize schema preprocessor with its dependencies
         schemaPreprocessor = new DartSchemaPreprocessor(schemaRegistry, allOfFlattener, circularReferenceDetector);
+
+        // Initialize type resolver
+        typeResolver = new DartTypeResolver(typeMapper);
 
         // Basic configuration
         outputFolder = "generated-code/dart-acdc";
@@ -711,7 +720,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     /**
      * Overrides type declaration to provide context-aware mapping for file/binary
-     * types. Delegates to DartTypeMapper.
+     * types. Delegates binary type checking to DartTypeResolver.
      *
      * In multipart/form-data context: binary/file → MultipartFile
      * In non-multipart context: binary/file → List&lt;int&gt;
@@ -725,12 +734,10 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             return super.getTypeDeclaration(schema);
         }
 
-        // Check if this is a binary/file type
-        if (typeMapper.isBinaryType(schema)) {
-            // Get context-aware type from DartTypeMapper
-            // For binary types, we use the default mapping (List<int>) here
-            // The multipart-specific mapping will be handled in fromProperty
-            return DART_TYPE_LIST_INT;
+        // Delegate binary type resolution to DartTypeResolver
+        String binaryType = typeResolver.resolveBinaryType(schema);
+        if (binaryType != null) {
+            return binaryType;
         }
 
         return super.getTypeDeclaration(schema);
