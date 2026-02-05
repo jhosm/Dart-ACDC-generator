@@ -103,14 +103,32 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     private DartModelFactory modelFactory;
 
     /**
+     * Enricher for composition alternative metadata.
+     * Initialized lazily after discriminatorProcessor and testDataGenerator are available.
+     */
+    private DartModelEnricher modelEnricher;
+
+    /**
+     * Processor for model post-processing (imports, enums, cleanup).
+     * Initialized lazily after enumHandler is available.
+     */
+    private DartModelPostProcessor modelPostProcessor;
+
+    /**
+     * Resolver for final import resolution and deduplication.
+     * Initialized lazily.
+     */
+    private DartModelImportResolver modelImportResolver;
+
+    /**
      * Processor for oneOf composition handling.
-     * Initialized lazily after testDataGenerator is available.
+     * Initialized lazily after modelEnricher is available.
      */
     private DartOneOfProcessor oneOfProcessor;
 
     /**
      * Processor for anyOf composition handling.
-     * Initialized lazily after testDataGenerator is available.
+     * Initialized lazily after modelEnricher is available.
      */
     private DartAnyOfProcessor anyOfProcessor;
 
@@ -568,12 +586,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
 
     /**
-     * Post-processes models to ensure enum data is properly structured for
-     * templates.
-     * Also ensures that properties requiring special imports (like MultipartFile)
-     * have
-     * their imports properly tracked.
-     * This runs after all model processing and right before template rendering.
+     * Post-processes models to ensure enum data is properly structured for templates.
+     * Delegates to DartModelPostProcessor for actual processing.
      *
      * @param objs the models map containing all model data
      * @return the processed models map
@@ -581,148 +595,24 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     @Override
     public ModelsMap postProcessModels(ModelsMap objs) {
         ModelsMap result = super.postProcessModels(objs);
-
-        // Process each model to add enum variables with collision-resistant naming
-        for (ModelMap modelMap : result.getModels()) {
-            CodegenModel model = modelMap.getModel();
-
-            // Fix model imports: convert from simple model names to proper import paths
-            if (model.imports != null && !model.imports.isEmpty()) {
-                Set<String> fixedImports = new HashSet<>();
-                for (Object importObj : model.imports) {
-                    if (importObj instanceof String) {
-                        String importStr = (String) importObj;
-                        // Check if this is already a full path (starts with package:)
-                        if (importStr.startsWith("package:")) {
-                            fixedImports.add(importStr);
-                        } else {
-                            // Convert model name to import path
-                            String importPath = toModelImport(importStr);
-                            if (importPath != null && !importPath.isEmpty()) {
-                                fixedImports.add(importPath);
-                            }
-                        }
-                    } else if (importObj instanceof Map) {
-                        // Similar to operations fix - extract import path from map
-                        Map<?, ?> importMap = (Map<?, ?>) importObj;
-                        Object importPath = importMap.get("import");
-                        if (importPath != null) {
-                            fixedImports.add(importPath.toString());
-                        }
-                    }
-                }
-                model.imports.clear();
-                model.imports.addAll(fixedImports);
-            }
-
-            if (model.isEnum && model.allowableValues != null) {
-                @SuppressWarnings("unchecked")
-                List<Object> values = (List<Object>) model.allowableValues.get("values");
-
-                if (values != null && !values.isEmpty()) {
-                    // Determine datatype from model
-                    String datatype = model.dataType != null ? model.dataType : "string";
-
-                    // Create enumVars with collision-resistant naming
-                    List<Map<String, Object>> enumVars = createEnumVars(values, datatype);
-                    model.allowableValues.put("enumVars", enumVars);
-                }
-            }
-
-            // Scan model properties for any that require special imports (e.g.,
-            // MultipartFile)
-            if (model.vars != null) {
-                for (CodegenProperty prop : model.vars) {
-                    if (prop.vendorExtensions.containsKey(VENDOR_EXTENSION_DART_IMPORT)) {
-                        String dartImport = (String) prop.vendorExtensions.get(VENDOR_EXTENSION_DART_IMPORT);
-                        if (dartImport != null && !dartImport.isEmpty()) {
-                            model.imports.add(dartImport);
-                        }
-                    }
-
-                    // Add imports for oneOf/anyOf composition properties
-                    if (prop.vendorExtensions.containsKey("x-is-composition-property") ||
-                        prop.vendorExtensions.containsKey("x-is-one-of-property") ||
-                        prop.vendorExtensions.containsKey("x-is-any-of-property")) {
-                        // Mark model as having composition properties (for test generation)
-                        model.vendorExtensions.put("x-has-composition-property", true);
-                        
-                        // The property's complexType contains the model name that needs to be imported
-                        String importPath = toModelImport(prop.complexType);
-                        if (importPath != null && !importPath.isEmpty()) {
-                            model.imports.add(importPath);
-                        }
-                    }
-                }
-            }
-
-            // Add imports for oneOf/anyOf sealed class alternatives
-            if (model.vendorExtensions.containsKey("x-is-one-of")) {
-                addAlternativeImports(model, "x-one-of-alternatives");
-            }
-            if (model.vendorExtensions.containsKey("x-is-any-of")) {
-                addAlternativeImports(model, "x-any-of-alternatives");
-            }
-
-            // Clean up imports: keep only valid package imports
-            // Note: Final cleanup happens in postProcessAllModels() after base class adds
-            // more imports
-            if (model.imports != null && !model.imports.isEmpty()) {
-                Set<String> validImports = new HashSet<>();
-                for (Object importObj : model.imports) {
-                    String importStr = importObj.toString();
-                    // Only keep imports that start with "package:" and don't reference primitive
-                    // types
-                    if (importStr.startsWith("package:") && !isPrimitiveTypeImport(importStr)) {
-                        validImports.add(importStr);
-                    }
-                }
-                model.imports = new TreeSet<>(validImports);
-            }
-        }
-
-        return result;
+        return getModelPostProcessor().postProcess(result);
     }
 
     /**
      * Post-processes all models after individual model processing.
+     * Delegates to DartModelImportResolver for final import cleanup.
      *
      * This is the final cleanup stage before template rendering. The base class
      * (DefaultCodegen.postProcessAllModels) adds simple-name imports based on
-     * model references, which we need to convert to proper package imports.
+     * model references, which need to be filtered out.
      *
      * @param objs the map of all models
-     * @return the processed models map
+     * @return the processed models map with cleaned imports
      */
     @Override
     public Map<String, ModelsMap> postProcessAllModels(Map<String, ModelsMap> objs) {
         Map<String, ModelsMap> result = super.postProcessAllModels(objs);
-
-        // Final cleanup: Remove simple-name imports added by base class
-        // The base class adds imports like "Cat", "Dog" based on model references.
-        // We need to ensure only valid package imports (package:xxx/models/yyy.dart)
-        // remain.
-        for (Map.Entry<String, ModelsMap> entry : result.entrySet()) {
-            ModelsMap modelsMap = entry.getValue();
-            for (ModelMap modelMap : modelsMap.getModels()) {
-                CodegenModel model = modelMap.getModel();
-
-                if (model.imports != null && !model.imports.isEmpty()) {
-                    Set<String> validImports = new TreeSet<>();
-                    for (Object importObj : model.imports) {
-                        String importStr = importObj.toString();
-                        // Only keep imports that start with "package:" and don't reference primitive
-                        // types
-                        if (importStr.startsWith("package:") && !isPrimitiveTypeImport(importStr)) {
-                            validImports.add(importStr);
-                        }
-                    }
-                    model.imports = new TreeSet<>(validImports);
-                }
-            }
-        }
-
-        return result;
+        return getModelImportResolver().resolveAllImports(result);
     }
 
     /**
@@ -734,16 +624,14 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     /**
      * Primitive type file names that should never be imported.
-     * These are used to filter out invalid imports to non-existent primitive type
-     * files.
-     * Includes both OpenAPI types and Dart-specific type names.
      */
     private static final Set<String> PRIMITIVE_TYPES = Set.of(
             "string", "integer", "number", "boolean", "int", "double", "num", "array", "object",
             "list", "map", "set", "dynamic", "datetime", "date_time");
 
     /**
-     * Checks if an import path references a primitive type file that doesn't exist.
+     * Checks if an import path references a primitive type file.
+     * Used by operation processing to filter imports.
      *
      * @param importPath the import path to check
      * @return true if this is an invalid primitive type import
@@ -753,15 +641,12 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             return false;
         }
 
-        // Extract the filename (e.g., "string.dart" from
-        // "package:foo/models/string.dart")
         int lastSlash = importPath.lastIndexOf('/');
         if (lastSlash == -1) {
             return false;
         }
 
         String filename = importPath.substring(lastSlash + 1);
-        // Remove .dart extension
         if (filename.endsWith(".dart")) {
             filename = filename.substring(0, filename.length() - 5);
         }
@@ -769,51 +654,6 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         return PRIMITIVE_TYPES.contains(filename);
     }
 
-    /**
-     * Adds imports for oneOf/anyOf sealed class alternatives.
-     * Extracts import paths from alternative metadata and adds them to
-     * model.imports.
-     *
-     * @param model           the codegen model
-     * @param alternativesKey the vendor extension key containing alternatives
-     *                        ("x-one-of-alternatives" or "x-any-of-alternatives")
-     */
-    @SuppressWarnings("unchecked")
-    private void addAlternativeImports(CodegenModel model, String alternativesKey) {
-        Object alternativesObj = model.vendorExtensions.get(alternativesKey);
-        if (!(alternativesObj instanceof List)) {
-            return;
-        }
-
-        List<Map<String, Object>> alternatives = (List<Map<String, Object>>) alternativesObj;
-        for (Map<String, Object> alternative : alternatives) {
-            // Only add imports for reference types (not primitives or inline schemas)
-            Object isRef = alternative.get("isRef");
-            if (Boolean.TRUE.equals(isRef)) {
-                Object importPathObj = alternative.get("importPath");
-                if (importPathObj instanceof String) {
-                    String importPath = (String) importPathObj;
-                    if (!importPath.isEmpty()) {
-                        model.imports.add(importPath);
-                        LOGGER.info("Added import for sealed class alternative: {}", importPath);
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Creates enumVars list with collision-resistant naming.
-     * Handles collisions by appending numeric suffixes (e.g., value, value2,
-     * value3).
-     *
-     * @param values   the enum values from the schema
-     * @param datatype the datatype for toEnumVarName processing
-     * @return list of enumVar maps with 'name' and 'value' keys
-     */
-    private List<Map<String, Object>> createEnumVars(List<Object> values, String datatype) {
-        return getEnumHandler().createEnumVars(values, datatype);
-    }
 
     /**
      * Detects if the given content map contains multipart/form-data media type.
@@ -992,6 +832,45 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
+     * Gets or initializes the model enricher.
+     * Lazily creates the enricher with required dependencies.
+     *
+     * @return the model enricher instance
+     */
+    private DartModelEnricher getModelEnricher() {
+        if (modelEnricher == null) {
+            modelEnricher = new DartModelEnricher(this, getTestDataGenerator(), getDiscriminatorProcessor());
+        }
+        return modelEnricher;
+    }
+
+    /**
+     * Gets or initializes the model post-processor.
+     * Lazily creates the processor with required dependencies.
+     *
+     * @return the model post-processor instance
+     */
+    private DartModelPostProcessor getModelPostProcessor() {
+        if (modelPostProcessor == null) {
+            modelPostProcessor = new DartModelPostProcessor(this, getEnumHandler());
+        }
+        return modelPostProcessor;
+    }
+
+    /**
+     * Gets or initializes the model import resolver.
+     * Lazily creates the resolver instance.
+     *
+     * @return the model import resolver instance
+     */
+    private DartModelImportResolver getModelImportResolver() {
+        if (modelImportResolver == null) {
+            modelImportResolver = new DartModelImportResolver();
+        }
+        return modelImportResolver;
+    }
+
+    /**
      * Gets or initializes the oneOf processor.
      * Lazily creates the processor with required dependencies.
      *
@@ -999,7 +878,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      */
     private DartOneOfProcessor getOneOfProcessor() {
         if (oneOfProcessor == null) {
-            oneOfProcessor = new DartOneOfProcessor(this, getTestDataGenerator(), getDiscriminatorProcessor());
+            oneOfProcessor = new DartOneOfProcessor(getDiscriminatorProcessor(), getModelEnricher());
         }
         return oneOfProcessor;
     }
@@ -1012,7 +891,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      */
     private DartAnyOfProcessor getAnyOfProcessor() {
         if (anyOfProcessor == null) {
-            anyOfProcessor = new DartAnyOfProcessor(this, getTestDataGenerator(), getDiscriminatorProcessor());
+            anyOfProcessor = new DartAnyOfProcessor(getDiscriminatorProcessor(), getModelEnricher());
         }
         return anyOfProcessor;
     }
