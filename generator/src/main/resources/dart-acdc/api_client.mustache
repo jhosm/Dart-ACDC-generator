@@ -33,35 +33,44 @@ class ApiClient {
     // Conditionally add features based on config
     if (config.auth != null) {
       if (config.auth!.customTokenProvider != null) {
-        builder = builder.withCustomTokenProvider(config.auth!.customTokenProvider!);
-      } else {
-        builder = builder.withAuthentication(
-          tokenRefreshUrl: config.auth!.tokenRefreshUrl,
-          clientId: config.auth!.clientId,
-          clientSecret: config.auth!.clientSecret,
-          refreshThreshold: Duration(seconds: config.auth!.refreshThreshold),
+        builder = builder.withTokenProvider(config.auth!.customTokenProvider!);
+      } else if (config.auth!.clientId != null) {
+        builder = builder.withTokenRefreshEndpoint(
+          url: config.auth!.tokenRefreshUrl,
+          clientId: config.auth!.clientId!,
         );
+
+        if (config.auth!.refreshThreshold > 0) {
+          builder = builder.withTokenRefreshThreshold(
+            Duration(seconds: config.auth!.refreshThreshold),
+          );
+        }
       }
     }
 
     if (config.cache != null) {
       builder = builder.withCache(
-        ttl: config.cache!.ttl,
-        maxDiskSize: config.cache!.maxDiskCacheSizeMB * 1024 * 1024,
-        maxMemorySize: config.cache!.maxMemoryCacheSizeMB * 1024 * 1024,
-        encrypt: config.cache!.encryptCache,
-        cacheAuthenticatedRequests: true,
+        acdc.CacheConfig(
+          ttl: config.cache!.ttl,
+          maxSize: config.cache!.maxDiskCacheSizeMB * 1024 * 1024,
+          inMemoryMaxSize: config.cache!.maxMemoryCacheSizeMB * 1024 * 1024,
+          cacheAuthenticatedRequests: true,
+        ),
       );
     }
 
     if (config.log != null) {
-      builder = builder.withLogging(
-        level: config.log!.level,
-        sensitiveFields: config.log!.redactSensitiveData
-            ? const ['password', 'token', 'secret', 'authorization']
-            : null,
-        delegate: config.log!.customLogger,
-      );
+      builder = builder.withLogLevel(config.log!.level);
+
+      if (config.log!.redactSensitiveData) {
+        builder = builder.withSensitiveFields(
+          const ['password', 'token', 'secret', 'authorization'],
+        );
+      }
+
+      if (config.log!.customLogger != null) {
+        builder = builder.withLogDelegate(config.log!.customLogger!);
+      }
     }
 
     if (config.offline != null) {
@@ -73,14 +82,14 @@ class ApiClient {
     if (config.security != null && config.security!.certificateFingerprints.isNotEmpty) {
       final domain = Uri.parse(config.baseUrl).host;
       final pinningConfig = acdc.CertificatePinningConfig(
-        pins: {
+        allowedPins: {
           domain: config.security!.certificateFingerprints
-            .map((fp) => fp.startsWith('sha256/') ? fp : 'sha256/$fp')
+            .map((fp) => fp.startsWith('SHA256:') ? fp : 'SHA256:$fp')
             .toList(),
         },
-        enforced: !config.security!.reportOnlyMode,
+        reportOnly: config.security!.reportOnlyMode,
       );
-      builder = builder.withCertificatePinning(config: pinningConfig);
+      builder = builder.withCertificatePinning(pinningConfig);
     }
 
     return await builder.build();
