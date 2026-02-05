@@ -5,18 +5,12 @@ import org.openapitools.codegen.model.ModelsMap;
 import org.openapitools.codegen.model.ModelMap;
 import org.openapitools.codegen.model.OperationsMap;
 import org.openapitools.codegen.model.OperationMap;
-import org.openapitools.codegen.utils.ModelUtils;
 import io.swagger.v3.oas.models.media.Schema;
-import io.swagger.v3.oas.models.media.Content;
-import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.parameters.RequestBody;
-import io.swagger.v3.oas.models.parameters.Parameter;
-import io.swagger.v3.oas.models.Operation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.regex.Pattern;
 
 /**
  * Dart-ACDC OpenAPI Generator
@@ -30,20 +24,8 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DartAcdcGenerator.class);
 
-    // Constants for content types and media
-    private static final String CONTENT_TYPE_MULTIPART_FORM_DATA = "multipart/form-data";
-    private static final String MEDIA_TYPE_KEY = "mediaType";
-
-    // Constants for vendor extensions
-    private static final String VENDOR_EXTENSION_IS_MULTIPART = "x-is-multipart";
-    private static final String VENDOR_EXTENSION_IS_MULTIPART_CONTEXT = "x-is-multipart-context";
-    private static final String VENDOR_EXTENSION_IS_MULTIPART_FILE = "x-is-multipart-file";
-    private static final String VENDOR_EXTENSION_DART_IMPORT = "x-dart-import";
-
-    // Constants for Dart types and imports
-    private static final String DART_TYPE_MULTIPART_FILE = "MultipartFile";
+    // Constants for Dart types (used in constructor type mappings)
     private static final String DART_TYPE_LIST_INT = "List<int>";
-    private static final String DART_IMPORT_DIO = "package:dio/dio.dart";
 
     // Constants for default values
     private static final String DEFAULT_PACKAGE_NAME = "openapi_client";
@@ -492,19 +474,6 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
-     * Converts a string to camelCase by lowercasing the first letter.
-     *
-     * @param str the string to convert
-     * @return camelCase version
-     */
-    private String toCamelCase(String str) {
-        if (str == null || str.isEmpty()) {
-            return str;
-        }
-        return str.substring(0, 1).toLowerCase() + str.substring(1);
-    }
-
-    /**
      * Preprocesses the OpenAPI specification to flatten allOf compositions and
      * detect circular references.
      * This runs before model generation to optimize the schema structure for code
@@ -640,13 +609,6 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         Map<String, ModelsMap> result = super.postProcessAllModels(objs);
         return getModelImportResolver().resolveAllImports(result);
     }
-
-    /**
-     * OpenAPI primitive types (used for oneOf/anyOf composition logic).
-     * These are the standard OpenAPI primitive types that can appear in schemas.
-     */
-    private static final Set<String> OPENAPI_PRIMITIVE_TYPES = Set.of(
-            "string", "integer", "number", "boolean");
 
     /**
      * Overrides the base implementation to detect multipart/form-data context
