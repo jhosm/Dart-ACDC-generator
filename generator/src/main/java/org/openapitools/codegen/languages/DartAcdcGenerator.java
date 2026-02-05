@@ -163,6 +163,12 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     private DartOperationImportResolver operationImportResolver;
 
     /**
+     * Enricher for adding test metadata to operations.
+     * Initialized lazily after testDataGenerator is available.
+     */
+    private DartOperationEnricher operationEnricher;
+
+    /**
      * Dart reserved keywords that require escaping.
      * These cannot be used as identifiers in Dart code.
      */
@@ -477,19 +483,6 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     private String underscore(String name) {
         // Delegate to DartNameSanitizer
         return nameSanitizer.toSnakeCase(name);
-    }
-
-    /**
-     * Capitalizes the first letter of a string.
-     *
-     * @param str the string to capitalize
-     * @return the capitalized string
-     */
-    private String capitalize(String str) {
-        if (str == null || str.isEmpty()) {
-            return str;
-        }
-        return str.substring(0, 1).toUpperCase() + str.substring(1);
     }
 
     /**
@@ -899,98 +892,16 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
-     * Generates valid test JSON for a model type with required fields populated.
-     * Delegates to DartTestDataGenerator.
+     * Gets or initializes the operation enricher.
+     * Lazily creates the enricher with required dependencies.
      *
-     * @param modelName the model name (e.g., "Pet", "NewPet")
-     * @return a JSON string with required fields populated, or empty JSON if no
-     *         required fields
+     * @return the operation enricher instance
      */
-    @SuppressWarnings("rawtypes")
-    private String generateTestJsonForModel(String modelName) {
-        return getTestDataGenerator().generateTestJsonForModel(modelName);
-    }
-
-    /**
-     * Generates a test value for a given Dart data type.
-     * Delegates to DartTestDataGenerator.
-     *
-     * @param dataType the Dart data type (e.g., "int", "String", "Pet")
-     * @return a Dart code string representing a test value
-     */
-    private String getTestValueForType(String dataType) {
-        return getTestDataGenerator().getTestValueForType(dataType);
-    }
-
-    /**
-     * Generates a raw (unquoted) test value for URL path embedding.
-     * Delegates to DartTestDataGenerator.
-     *
-     * @param dataType the Dart data type
-     * @return a raw string suitable for URL embedding
-     */
-    private String getTestValueRawForType(String dataType) {
-        return getTestDataGenerator().getTestValueRawForType(dataType);
-    }
-
-    /**
-     * Adds testValue and testValueRaw vendor extensions to a list of parameters.
-     *
-     * @param params the parameter list (may be null)
-     */
-    private void addTestValuesToParams(List<CodegenParameter> params) {
-        if (params == null) {
-            return;
+    private DartOperationEnricher getOperationEnricher() {
+        if (operationEnricher == null) {
+            operationEnricher = new DartOperationEnricher(getTestDataGenerator(), languageSpecificPrimitives);
         }
-        for (CodegenParameter param : params) {
-            String testValue = getTestValueForType(param.dataType);
-            param.vendorExtensions.put("testValue", testValue);
-            String testValueRaw = getTestValueRawForType(param.dataType);
-            param.vendorExtensions.put("testValueRaw", testValueRaw);
-        }
-    }
-
-    /**
-     * Generates sample JSON response data for a given return type.
-     * Used by test templates to mock API responses.
-     *
-     * @param returnType     the return type (e.g., "Pet", "List<Pet>")
-     * @param returnBaseType the base type for arrays (e.g., "Pet" for "List<Pet>")
-     * @param isArray        whether the return type is an array
-     * @return a Dart code string representing sample response JSON
-     */
-    private String getSampleResponseJson(String returnType, String returnBaseType, boolean isArray) {
-        // Handle null, empty, or void return types
-        if (returnType == null || returnType.isEmpty() || returnType.trim().isEmpty() || returnType.equals("void")) {
-            return "null";
-        }
-
-        // Trim whitespace
-        returnType = returnType.trim();
-
-        // Determine the model name to use for generating sample data
-        String modelName = (returnBaseType != null && !returnBaseType.isEmpty()) ? returnBaseType : returnType;
-
-        // Handle array responses FIRST (before primitive check, since "List" is a primitive)
-        if (isArray) {
-            // Try to generate proper sample data for the array element type
-            String elementJson = generateTestJsonForModel(modelName);
-            return "[" + elementJson + "]";
-        }
-
-        // Handle primitive return types using enhanced switch expression
-        if (languageSpecificPrimitives.contains(returnType)) {
-            return switch (returnType) {
-                case "int", "double", "num" -> "42";
-                case "bool" -> "true";
-                case "String" -> "'test_response'";
-                case "DateTime" -> "'2024-01-01T00:00:00.000Z'";
-                default -> "<String, dynamic>{}";
-            };
-        }
-
-        // Handle object responses (model types) - use generateTestJsonForModel for proper sample data
-        return generateTestJsonForModel(modelName);
+        return operationEnricher;
     }
 
     /**
@@ -1026,24 +937,15 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         // Resolve and filter imports to only include models used in operation signatures
         getOperationImportResolver().resolveImports(result, ops);
 
-        // Process operations for multipart and other special handling
+        // Process operations for type fixing, multipart handling, and HTTP method normalization
         for (CodegenOperation operation : ops) {
-            // Convert HTTP method to lowercase for Dio method calls (GET -> get, POST ->
-            // post, etc.)
+            // Convert HTTP method to lowercase for Dio method calls (GET -> get, POST -> post)
             if (operation.httpMethod != null) {
-                // Store PascalCase version for test templates (Get, Post, Delete)
-                // This is used for method names like onGetJson, onPostJson, etc.
-                String httpMethodLower = operation.httpMethod.toLowerCase();
-                String httpMethodPascal = capitalize(httpMethodLower);
-                operation.vendorExtensions.put("httpMethodCapitalized", httpMethodPascal);
-
-                // Convert to lowercase for Dio method calls
-                operation.httpMethod = httpMethodLower;
+                operation.httpMethod = operation.httpMethod.toLowerCase();
             }
 
             // Fix returnType and returnBaseType to use proper Dart PascalCase class names.
-            // OpenAPI Generator may set these to raw schema names (e.g.,
-            // "ping_200_response")
+            // OpenAPI Generator may set these to raw schema names (e.g., "ping_200_response")
             // but Dart classes are generated with PascalCase (e.g., "Ping200Response").
             if (operation.returnType != null && !operation.returnType.isEmpty()) {
                 if (!languageSpecificPrimitives.contains(operation.returnType) &&
@@ -1071,20 +973,6 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                     }
                 }
             }
-
-            // Add test metadata for test templates
-            String sampleResponseJson = getSampleResponseJson(
-                    operation.returnType,
-                    operation.returnBaseType,
-                    operation.isArray);
-            // Ensure sampleResponseJson is never empty - use fallback if needed
-            if (sampleResponseJson == null || sampleResponseJson.trim().isEmpty()) {
-                // Use appropriate fallback based on whether it's an array
-                sampleResponseJson = operation.isArray ? "[<String, dynamic>{}]" : "<String, dynamic>{}";
-                LOGGER.warn("sampleResponseJson was empty for operation {}, using fallback",
-                        operation.operationId);
-            }
-            operation.vendorExtensions.put("sampleResponseJson", sampleResponseJson);
 
             // Check if this operation has multipart/form-data content
             boolean isMultipartOperation = operation.hasConsumes && operation.consumes != null &&
@@ -1140,20 +1028,11 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
                 // Ensure isListContainer is set for template
                 operation.vendorExtensions.put("isListContainer", true);
             }
-
-            // Add test values to all parameter lists AFTER type conversions
-            // This ensures test values match the final parameter types (e.g., MultipartFile
-            // instead of List<int>)
-            // OpenAPI Generator creates separate instances for allParams, pathParams,
-            // queryParams, etc.
-            // We must set vendor extensions on ALL lists for template access
-            addTestValuesToParams(operation.allParams);
-            addTestValuesToParams(operation.pathParams);
-            addTestValuesToParams(operation.queryParams);
-            addTestValuesToParams(operation.bodyParams);
-            addTestValuesToParams(operation.headerParams);
-            addTestValuesToParams(operation.formParams);
         }
+
+        // Enrich operations with test metadata AFTER all type conversions are complete
+        // This ensures test values match final parameter types (e.g., MultipartFile not List<int>)
+        getOperationEnricher().enrichOperations(ops);
 
         return result;
     }
