@@ -28,7 +28,7 @@ class AuthConfig {
     required this.tokenRefreshUrl,
     this.clientId,
     this.clientSecret,
-    this.refreshThreshold = 300,
+    this.refreshThreshold = 5 * 60, // Convert minutes to seconds
     this.useSecureStorage = true,
     this.customTokenProvider,
   });
