@@ -139,6 +139,12 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     private DartDiscriminatorProcessor discriminatorProcessor;
 
     /**
+     * Factory for creating request body parameters.
+     * Initialized lazily.
+     */
+    private DartRequestBodyFactory requestBodyFactory;
+
+    /**
      * Dart reserved keywords that require escaping.
      * These cannot be used as identifiers in Dart code.
      */
@@ -656,21 +662,10 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
 
     /**
-     * Detects if the given content map contains multipart/form-data media type.
-     * Delegates to DartTypeMapper.
-     *
-     * @param content the content map from a request body
-     * @return true if multipart/form-data is present, false otherwise
-     */
-    private boolean isMultipartContent(Content content) {
-        return typeMapper.isMultipartContent(content);
-    }
-
-    /**
      * Overrides the base implementation to detect multipart/form-data context
      * and set ThreadLocal context for property processing.
+     * Delegates to DartRequestBodyFactory.
      *
-     * @param name              the parameter name
      * @param requestBody       the request body specification
      * @param imports           the imports set
      * @param bodyParameterName the body parameter name
@@ -678,39 +673,20 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
      */
     @Override
     public CodegenParameter fromRequestBody(RequestBody requestBody, Set<String> imports, String bodyParameterName) {
-        try {
-            // Detect if this is a multipart/form-data request BEFORE calling super
-            if (requestBody != null) {
-                Content content = requestBody.getContent();
-                boolean isMultipart = isMultipartContent(content);
+        return getRequestBodyFactory().createFromRequestBody(requestBody, imports, bodyParameterName);
+    }
 
-                if (isMultipart) {
-                    // Set multipart context for property processing
-                    typeMapper.enterMultipartContext();
-                }
-            }
-
-            CodegenParameter parameter = super.fromRequestBody(requestBody, imports, bodyParameterName);
-
-            if (parameter == null) {
-                return parameter;
-            }
-
-            // Mark the parameter with multipart context information
-            if (typeMapper.isInMultipartContext()) {
-                parameter.vendorExtensions.put(VENDOR_EXTENSION_IS_MULTIPART_CONTEXT, true);
-
-                // If this parameter itself is a file/binary type, mark it specifically
-                if (parameter.isBinary || "file".equals(parameter.baseType)) {
-                    parameter.vendorExtensions.put(VENDOR_EXTENSION_IS_MULTIPART_FILE, true);
-                }
-            }
-
-            return parameter;
-        } finally {
-            // Always clear context after processing to avoid memory leaks
-            typeMapper.exitMultipartContext();
-        }
+    /**
+     * Delegation point for DartRequestBodyFactory to access parent's fromRequestBody.
+     * Package-private for use by DartRequestBodyFactory only.
+     *
+     * @param requestBody       the request body specification
+     * @param imports           the imports set
+     * @param bodyParameterName the body parameter name
+     * @return the CodegenParameter from parent generator
+     */
+    CodegenParameter superFromRequestBody(RequestBody requestBody, Set<String> imports, String bodyParameterName) {
+        return super.fromRequestBody(requestBody, imports, bodyParameterName);
     }
 
     /**
@@ -920,6 +896,19 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             modelFactory = new DartModelFactory(this, getDiscriminatorProcessor());
         }
         return modelFactory;
+    }
+
+    /**
+     * Gets or initializes the request body factory.
+     * Lazily creates the factory with required dependencies.
+     *
+     * @return the request body factory instance
+     */
+    private DartRequestBodyFactory getRequestBodyFactory() {
+        if (requestBodyFactory == null) {
+            requestBodyFactory = new DartRequestBodyFactory(this, typeMapper);
+        }
+        return requestBodyFactory;
     }
 
     /**
