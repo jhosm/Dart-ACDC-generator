@@ -145,6 +145,12 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     private DartRequestBodyFactory requestBodyFactory;
 
     /**
+     * Factory for creating properties from schemas.
+     * Initialized lazily.
+     */
+    private DartPropertyFactory propertyFactory;
+
+    /**
      * Dart reserved keywords that require escaping.
      * These cannot be used as identifiers in Dart code.
      */
@@ -690,6 +696,20 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
+     * Delegation point for DartPropertyFactory to access parent's fromProperty.
+     * Package-private for use by DartPropertyFactory only.
+     *
+     * @param name                             the property name
+     * @param schema                           the property schema
+     * @param required                         whether the property is required
+     * @param schemaIsFromAdditionalProperties whether this schema comes from additionalProperties
+     * @return the CodegenProperty from parent generator
+     */
+    CodegenProperty superFromProperty(String name, Schema schema, boolean required, boolean schemaIsFromAdditionalProperties) {
+        return super.fromProperty(name, schema, required, schemaIsFromAdditionalProperties);
+    }
+
+    /**
      * Overrides type declaration to provide context-aware mapping for file/binary
      * types. Delegates to DartTypeMapper.
      *
@@ -718,13 +738,16 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
 
     /**
      * Overrides fromProperty to apply context-aware type mapping for binary/file
-     * properties.
+     * properties. Delegates to DartPropertyFactory.
      *
      * Checks the ThreadLocal context to determine if we're in a multipart/form-data
      * request,
      * and maps binary/file types accordingly:
      * - Multipart context: type=string,format=binary → MultipartFile
      * - Non-multipart context: type=string,format=binary → List<int>
+     *
+     * Also detects composition schemas (oneOf/anyOf) and marks them for custom JSON
+     * converter generation.
      *
      * @param name                             the property name
      * @param schema                           the property schema
@@ -736,49 +759,7 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     @Override
     public CodegenProperty fromProperty(String name, Schema schema, boolean required,
             boolean schemaIsFromAdditionalProperties) {
-        CodegenProperty property = super.fromProperty(name, schema, required, schemaIsFromAdditionalProperties);
-
-        if (property == null || schema == null) {
-            return property;
-        }
-
-        // Check if this is a binary type (type=string, format=binary)
-        boolean isBinary = typeMapper.isBinaryType(schema);
-
-        if (isBinary && typeMapper.isInMultipartContext()) {
-            // We're in multipart/form-data context - use MultipartFile
-            String multipartType = typeMapper.getMultipartFileType();
-            property.dataType = multipartType;
-            property.datatypeWithEnum = multipartType;
-            property.baseType = multipartType;
-            property.isBinary = true;
-
-            // Mark for template usage
-            property.vendorExtensions.put(VENDOR_EXTENSION_IS_MULTIPART_FILE, true);
-            property.vendorExtensions.put(VENDOR_EXTENSION_DART_IMPORT, DART_IMPORT_DIO);
-        }
-        // else: non-multipart context - keep the default List<int> from typeMapping
-
-        // Check if this property references a oneOf/anyOf/allOf composition
-        // These need custom JSON converters since they're abstract/sealed classes
-        if (schema.getOneOf() != null && !schema.getOneOf().isEmpty()) {
-            property.vendorExtensions.put("x-is-one-of-property", true);
-        } else if (schema.getAnyOf() != null && !schema.getAnyOf().isEmpty()) {
-            property.vendorExtensions.put("x-is-any-of-property", true);
-        } else if (schema.get$ref() != null) {
-            // Check if this $ref points to a oneOf/anyOf schema by checking the dataType
-            // against our tracking maps
-            String refName = property.dataType;
-            if (refName != null) {
-                // Check if this type is a sealed class parent (oneOf/anyOf schema)
-                boolean isCompositionType = getDiscriminatorProcessor().getSealedClassExtensions().containsValue(refName);
-                if (isCompositionType) {
-                    property.vendorExtensions.put("x-is-composition-property", true);
-                }
-            }
-        }
-
-        return property;
+        return getPropertyFactory().createFromProperty(name, schema, required, schemaIsFromAdditionalProperties);
     }
 
     /**
@@ -909,6 +890,19 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
             requestBodyFactory = new DartRequestBodyFactory(this, typeMapper);
         }
         return requestBodyFactory;
+    }
+
+    /**
+     * Gets or initializes the property factory.
+     * Lazily creates the factory with required dependencies.
+     *
+     * @return the property factory instance
+     */
+    private DartPropertyFactory getPropertyFactory() {
+        if (propertyFactory == null) {
+            propertyFactory = new DartPropertyFactory(this, typeMapper, getDiscriminatorProcessor());
+        }
+        return propertyFactory;
     }
 
     /**

@@ -25,7 +25,7 @@ class CacheConfig {
     this.enableDiskCache = true,
     this.encryptCache = true,
     this.maxMemoryCacheSizeMB = 10,
-    this.maxDiskCacheSizeMB = 50,
+    this.maxDiskCacheSizeMB = 20,
     this.userIsolation = true,
   });
 }

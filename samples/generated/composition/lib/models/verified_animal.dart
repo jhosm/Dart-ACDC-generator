@@ -9,27 +9,30 @@ part 'verified_animal.g.dart';
 /// Generated from OpenAPI schema.
 @JsonSerializable()
 class VerifiedAnimal {
-  @JsonKey(name: 'animal', fromJson: _animalFromJson, toJson: _animalToJson)
-  final Animal animal;
+  @JsonKey(name: 'animalType')
+  final String animalType;
+  @JsonKey(name: 'breed')
+  final String breed;
+  @JsonKey(name: 'barkVolume')
+  final int? barkVolume;
+  @JsonKey(name: 'color')
+  final String color;
+  @JsonKey(name: 'clawSharpness')
+  final int? clawSharpness;
   @JsonKey(name: 'verified')
   final bool? verified;
   @JsonKey(name: 'verifiedAt')
   final DateTime? verifiedAt;
 
   VerifiedAnimal({
-    required this.animal,
+    required this.animalType,
+    required this.breed,
+    this.barkVolume,
+    required this.color,
+    this.clawSharpness,
     this.verified,
     this.verifiedAt,
   });
-
-  /// Custom JSON converter for oneOf/anyOf property: animal
-  static Animal _animalFromJson(Map<String, dynamic> json) {
-    return Animal.fromJson(json);
-  }
-
-  static Map<String, dynamic> _animalToJson(Animal value) {
-    return value.toJson();
-  }
 
   factory VerifiedAnimal.fromJson(Map<String, dynamic> json) => _$VerifiedAnimalFromJson(json);
 
