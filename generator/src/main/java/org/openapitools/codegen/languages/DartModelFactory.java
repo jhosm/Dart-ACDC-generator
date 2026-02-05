@@ -29,20 +29,19 @@ public class DartModelFactory {
     private final DartAcdcGenerator generator;
 
     /**
-     * Map tracking which schemas should extend sealed classes.
-     * Key: schema name (e.g., "Dog"), Value: parent sealed class name (e.g., "Animal")
+     * Processor for discriminator and sealed class handling.
      */
-    private final Map<String, String> sealedClassExtensions;
+    private final DartDiscriminatorProcessor discriminatorProcessor;
 
     /**
      * Creates a new DartModelFactory.
      *
-     * @param generator             the main generator instance for delegation
-     * @param sealedClassExtensions map tracking sealed class relationships
+     * @param generator               the main generator instance for delegation
+     * @param discriminatorProcessor  processor for discriminator and sealed class handling
      */
-    public DartModelFactory(DartAcdcGenerator generator, Map<String, String> sealedClassExtensions) {
+    public DartModelFactory(DartAcdcGenerator generator, DartDiscriminatorProcessor discriminatorProcessor) {
         this.generator = generator;
-        this.sealedClassExtensions = sealedClassExtensions;
+        this.discriminatorProcessor = discriminatorProcessor;
     }
 
     /**
@@ -89,7 +88,7 @@ public class DartModelFactory {
         }
 
         // Step 4: Check if this model should extend a sealed class
-        String parentSealedClass = sealedClassExtensions.get(model.classname);
+        String parentSealedClass = discriminatorProcessor.getSealedClassExtensions().get(model.classname);
         if (parentSealedClass != null) {
             model.parent = parentSealedClass;
             model.vendorExtensions.put("x-extends-sealed-class", true);
