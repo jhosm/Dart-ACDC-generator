@@ -169,6 +169,12 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     private DartOperationEnricher operationEnricher;
 
     /**
+     * Post-processor for operation type fixing and multipart handling.
+     * Initialized lazily after languageSpecificPrimitives are populated.
+     */
+    private DartOperationPostProcessor operationPostProcessor;
+
+    /**
      * Dart reserved keywords that require escaping.
      * These cannot be used as identifiers in Dart code.
      */
@@ -905,22 +911,28 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     }
 
     /**
-     * Post-processes operations to apply context-aware type mapping for file
-     * parameters.
-     * Also ensures that parameters requiring special imports (like MultipartFile)
-     * have
-     * their imports properly tracked.
+     * Gets or initializes the operation post-processor.
+     * Lazily creates the post-processor with required dependencies.
      *
-     * For operations with multipart/form-data request bodies, this method changes
-     * binary parameters from List<int> to MultipartFile and adds the necessary
-     * imports.
+     * @return the operation post-processor instance
+     */
+    private DartOperationPostProcessor getOperationPostProcessor() {
+        if (operationPostProcessor == null) {
+            operationPostProcessor = new DartOperationPostProcessor(this, languageSpecificPrimitives);
+        }
+        return operationPostProcessor;
+    }
+
+    /**
+     * Post-processes operations to apply Dart-specific type mapping, multipart handling,
+     * import resolution, and test metadata enrichment.
      *
-     * This method also filters imports to only include models actually used in
-     * operation
-     * signatures (parameters, return types) to avoid unused imports.
-     *
-     * Additionally, adds test metadata to operations and parameters for test
-     * template generation.
+     * <p>Delegates to specialized Layer 5 processors in order:</p>
+     * <ol>
+     *   <li>{@link DartOperationImportResolver} - Filter imports to only used models</li>
+     *   <li>{@link DartOperationPostProcessor} - Fix types, handle multipart, normalize methods</li>
+     *   <li>{@link DartOperationEnricher} - Add test metadata (must be last, after type fixes)</li>
+     * </ol>
      *
      * @param objs      the operations map
      * @param allModels all models for cross-referencing
@@ -930,143 +942,19 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
     public OperationsMap postProcessOperationsWithModels(OperationsMap objs, List<ModelMap> allModels) {
         OperationsMap result = super.postProcessOperationsWithModels(objs, allModels);
 
-        // Get the operations list to track which models are actually used
         OperationMap operations = result.getOperations();
         List<CodegenOperation> ops = operations.getOperation();
 
-        // Resolve and filter imports to only include models used in operation signatures
+        // Layer 5.1: Resolve and filter imports to only include models used in operation signatures
         getOperationImportResolver().resolveImports(result, ops);
 
-        // Process operations for type fixing, multipart handling, and HTTP method normalization
-        for (CodegenOperation operation : ops) {
-            // Convert HTTP method to lowercase for Dio method calls (GET -> get, POST -> post)
-            if (operation.httpMethod != null) {
-                operation.httpMethod = operation.httpMethod.toLowerCase();
-            }
+        // Layer 5.2: Post-process operations (type fixing, multipart handling, HTTP method normalization)
+        getOperationPostProcessor().postProcessOperations(ops);
 
-            // Fix returnType and returnBaseType to use proper Dart PascalCase class names.
-            // OpenAPI Generator may set these to raw schema names (e.g., "ping_200_response")
-            // but Dart classes are generated with PascalCase (e.g., "Ping200Response").
-            if (operation.returnType != null && !operation.returnType.isEmpty()) {
-                if (!languageSpecificPrimitives.contains(operation.returnType) &&
-                        !operation.returnType.equals("void") &&
-                        !operation.returnType.contains("<") &&
-                        !operation.returnType.contains(">")) {
-                    String fixedReturnType = toModelName(operation.returnType);
-                    if (!fixedReturnType.equals(operation.returnType)) {
-                        LOGGER.info("Fixed returnType from '{}' to '{}' for operation {}",
-                                operation.returnType, fixedReturnType, operation.operationId);
-                        operation.returnType = fixedReturnType;
-                    }
-                }
-            }
-            if (operation.returnBaseType != null && !operation.returnBaseType.isEmpty()) {
-                if (!languageSpecificPrimitives.contains(operation.returnBaseType) &&
-                        !operation.returnBaseType.equals("void") &&
-                        !operation.returnBaseType.contains("<") &&
-                        !operation.returnBaseType.contains(">")) {
-                    String fixedBaseType = toModelName(operation.returnBaseType);
-                    if (!fixedBaseType.equals(operation.returnBaseType)) {
-                        LOGGER.info("Fixed returnBaseType from '{}' to '{}' for operation {}",
-                                operation.returnBaseType, fixedBaseType, operation.operationId);
-                        operation.returnBaseType = fixedBaseType;
-                    }
-                }
-            }
-
-            // Check if this operation has multipart/form-data content
-            boolean isMultipartOperation = operation.hasConsumes && operation.consumes != null &&
-                    operation.consumes.stream().anyMatch(consume -> {
-                        Object mediaType = consume.get(MEDIA_TYPE_KEY);
-                        return mediaType instanceof String && CONTENT_TYPE_MULTIPART_FORM_DATA.equals(mediaType);
-                    });
-
-            if (isMultipartOperation) {
-                // Mark the operation
-                operation.vendorExtensions.put(VENDOR_EXTENSION_IS_MULTIPART, true);
-
-                // Add MultipartFile import for this operation
-                operation.imports.add(DART_IMPORT_DIO);
-
-                // Process all parameters to change binary types to MultipartFile
-                if (operation.allParams != null) {
-                    for (CodegenParameter param : operation.allParams) {
-                        // Check if this is a binary parameter (List<int> indicates binary)
-                        if (param.isBinary || DART_TYPE_LIST_INT.equals(param.dataType)) {
-                            // Change to MultipartFile for multipart context
-                            param.dataType = DART_TYPE_MULTIPART_FILE;
-                            param.datatypeWithEnum = DART_TYPE_MULTIPART_FILE;
-                            param.baseType = DART_TYPE_MULTIPART_FILE;
-                            param.vendorExtensions.put(VENDOR_EXTENSION_IS_MULTIPART_FILE, true);
-                            param.vendorExtensions.put(VENDOR_EXTENSION_DART_IMPORT, DART_IMPORT_DIO);
-
-                            // Update in all parameter lists
-                            updateParameterInLists(operation, param);
-                        }
-                    }
-                }
-            }
-
-            // Scan all parameters for any that require special imports
-            if (operation.allParams != null) {
-                for (CodegenParameter param : operation.allParams) {
-                    if (param.vendorExtensions.containsKey(VENDOR_EXTENSION_DART_IMPORT)) {
-                        String dartImport = (String) param.vendorExtensions.get(VENDOR_EXTENSION_DART_IMPORT);
-                        if (dartImport != null && !dartImport.isEmpty()) {
-                            operation.imports.add(dartImport);
-                        }
-                    }
-                }
-            }
-
-            // Fix array return types: Ensure List<T> has generic parameter
-            if (operation.returnType != null && operation.isArray && operation.returnBaseType != null) {
-                // Only fix if returnType is missing the generic parameter
-                if ("List".equals(operation.returnType)) {
-                    operation.returnType = "List<" + operation.returnBaseType + ">";
-                }
-                // Ensure isListContainer is set for template
-                operation.vendorExtensions.put("isListContainer", true);
-            }
-        }
-
-        // Enrich operations with test metadata AFTER all type conversions are complete
-        // This ensures test values match final parameter types (e.g., MultipartFile not List<int>)
+        // Layer 5.3: Enrich operations with test metadata AFTER all type conversions are complete
         getOperationEnricher().enrichOperations(ops);
 
         return result;
-    }
-
-    /**
-     * Synchronizes parameter type information across all parameter lists
-     * (allParams, bodyParams, formParams).
-     * Required because OpenAPI Generator creates separate instances for each list.
-     *
-     * @param operation the operation containing the parameter lists
-     * @param param     the parameter with updated type information to propagate
-     */
-    private void updateParameterInLists(CodegenOperation operation, CodegenParameter param) {
-        // Update in bodyParams if present
-        if (operation.bodyParams != null) {
-            for (CodegenParameter p : operation.bodyParams) {
-                if (p.paramName.equals(param.paramName)) {
-                    p.dataType = param.dataType;
-                    p.datatypeWithEnum = param.datatypeWithEnum;
-                    p.baseType = param.baseType;
-                }
-            }
-        }
-
-        // Update in formParams if present
-        if (operation.formParams != null) {
-            for (CodegenParameter p : operation.formParams) {
-                if (p.paramName.equals(param.paramName)) {
-                    p.dataType = param.dataType;
-                    p.datatypeWithEnum = param.datatypeWithEnum;
-                    p.baseType = param.baseType;
-                }
-            }
-        }
     }
 
 }
