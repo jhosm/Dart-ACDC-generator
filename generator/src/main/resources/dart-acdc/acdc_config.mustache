@@ -1,39 +1,71 @@
 // AUTO-GENERATED FILE - DO NOT EDIT
+{{#enableAuthentication}}
 import 'auth_config.dart';
+{{/enableAuthentication}}
+{{#enableCaching}}
 import 'cache_config.dart';
+{{/enableCaching}}
+{{#enableLogging}}
 import 'log_config.dart';
+{{/enableLogging}}
+{{#enableOfflineSupport}}
 import 'offline_config.dart';
+{{/enableOfflineSupport}}
+{{#enableCertificatePinning}}
 import 'security_config.dart';
+{{/enableCertificatePinning}}
 
 /// Main ACDC configuration class
 ///
 /// Controls all aspects of the generated API client.
+{{#enableAuthentication}}
 /// Set feature configs to null to disable that feature.
+{{/enableAuthentication}}
 class AcdcConfig {
   /// Base URL for the API (required)
   final String baseUrl;
 
+  {{#enableAuthentication}}
   /// Authentication configuration (optional, null = disabled)
   final AuthConfig? auth;
 
+  {{/enableAuthentication}}
+  {{#enableCaching}}
   /// Caching configuration (optional, null = disabled)
   final CacheConfig? cache;
 
+  {{/enableCaching}}
+  {{#enableLogging}}
   /// Logging configuration (optional, null = disabled)
   final LogConfig? log;
 
+  {{/enableLogging}}
+  {{#enableOfflineSupport}}
   /// Offline support configuration (optional, null = disabled)
   final OfflineConfig? offline;
 
+  {{/enableOfflineSupport}}
+  {{#enableCertificatePinning}}
   /// Security configuration for certificate pinning (optional, null = disabled)
   final SecurityConfig? security;
 
+  {{/enableCertificatePinning}}
   AcdcConfig({
     required this.baseUrl,
+    {{#enableAuthentication}}
     this.auth,
+    {{/enableAuthentication}}
+    {{#enableCaching}}
     this.cache,
+    {{/enableCaching}}
+    {{#enableLogging}}
     this.log,
+    {{/enableLogging}}
+    {{#enableOfflineSupport}}
     this.offline,
+    {{/enableOfflineSupport}}
+    {{#enableCertificatePinning}}
     this.security,
+    {{/enableCertificatePinning}}
   });
 }

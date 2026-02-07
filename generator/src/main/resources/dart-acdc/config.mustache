@@ -3,8 +3,18 @@
 // Barrel export file for all configuration classes
 
 export 'acdc_config.dart';
+{{#enableAuthentication}}
 export 'auth_config.dart';
+{{/enableAuthentication}}
+{{#enableCaching}}
 export 'cache_config.dart';
+{{/enableCaching}}
+{{#enableLogging}}
 export 'log_config.dart';
+{{/enableLogging}}
+{{#enableOfflineSupport}}
 export 'offline_config.dart';
+{{/enableOfflineSupport}}
+{{#enableCertificatePinning}}
 export 'security_config.dart';
+{{/enableCertificatePinning}}

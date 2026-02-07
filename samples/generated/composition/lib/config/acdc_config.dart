@@ -3,7 +3,6 @@ import 'auth_config.dart';
 import 'cache_config.dart';
 import 'log_config.dart';
 import 'offline_config.dart';
-import 'security_config.dart';
 
 /// Main ACDC configuration class
 ///
@@ -25,15 +24,11 @@ class AcdcConfig {
   /// Offline support configuration (optional, null = disabled)
   final OfflineConfig? offline;
 
-  /// Security configuration for certificate pinning (optional, null = disabled)
-  final SecurityConfig? security;
-
   AcdcConfig({
     required this.baseUrl,
     this.auth,
     this.cache,
     this.log,
     this.offline,
-    this.security,
   });
 }

@@ -48,6 +48,13 @@ public class DartGeneratorConfig {
     private String defaultLogLevel = "LogLevel.info";
     private boolean redactSensitiveData = true;
 
+    // Code generation style options
+    private static final Set<String> VALID_SERIALIZATION_LIBRARIES = Set.of("json_serializable", "freezed");
+    private String serializationLibrary = "json_serializable";
+    private boolean generateInterfaces = true;
+    private String dataSourceSuffix = "RemoteDataSource";
+    private boolean generateBarrelExports = true;
+
     private final DartNameSanitizer nameSanitizer;
 
     /**
@@ -139,6 +146,26 @@ public class DartGeneratorConfig {
                 "Enable automatic redaction of sensitive data in logs")
                 .defaultValue("true"));
 
+        // Code generation style options
+        CliOption serializationOption = CliOption.newString("serializationLibrary",
+                "Serialization library for model classes (json_serializable or freezed)")
+                .defaultValue("json_serializable");
+        serializationOption.setEnum(Map.of(
+                "json_serializable", "Use json_serializable with json_annotation (default)",
+                "freezed", "Use freezed for immutable models (template support not yet implemented)"
+        ));
+        options.add(serializationOption);
+
+        options.add(CliOption.newBoolean("generateInterfaces",
+                "Generate abstract interface classes for remote data sources",
+                true));
+        options.add(CliOption.newString("dataSourceSuffix",
+                "Suffix for generated API class names (e.g., 'RemoteDataSource' produces UserRemoteDataSource)")
+                .defaultValue("RemoteDataSource"));
+        options.add(CliOption.newBoolean("generateBarrelExports",
+                "Generate barrel export files (models.dart, remote_data_sources.dart, config.dart)",
+                true));
+
         return options;
     }
 
@@ -163,6 +190,9 @@ public class DartGeneratorConfig {
         processAuthenticationDefaults(additionalProperties);
         processCacheDefaults(additionalProperties);
         processLoggingDefaults(additionalProperties);
+
+        // Process code generation style options
+        processCodeStyleOptions(additionalProperties);
     }
 
     /**
@@ -199,6 +229,12 @@ public class DartGeneratorConfig {
         // Logging defaults
         additionalProperties.put("defaultLogLevel", defaultLogLevel);
         additionalProperties.put("redactSensitiveData", redactSensitiveData);
+
+        // Code generation style
+        additionalProperties.put("serializationLibrary", serializationLibrary);
+        additionalProperties.put("generateInterfaces", generateInterfaces);
+        additionalProperties.put("dataSourceSuffix", dataSourceSuffix);
+        additionalProperties.put("generateBarrelExports", generateBarrelExports);
     }
 
     // Processing methods for each option group
@@ -274,6 +310,45 @@ public class DartGeneratorConfig {
     private void processLoggingDefaults(Map<String, Object> additionalProperties) {
         this.defaultLogLevel = processLogLevelOption(additionalProperties);
         this.redactSensitiveData = processBooleanOption(additionalProperties, "redactSensitiveData", true);
+    }
+
+    private void processCodeStyleOptions(Map<String, Object> additionalProperties) {
+        this.serializationLibrary = processSerializationLibrary(additionalProperties);
+        this.generateInterfaces = processBooleanOption(additionalProperties, "generateInterfaces", true);
+        this.dataSourceSuffix = processStringOption(additionalProperties, "dataSourceSuffix", "RemoteDataSource");
+        this.generateBarrelExports = processBooleanOption(additionalProperties, "generateBarrelExports", true);
+    }
+
+    private String processSerializationLibrary(Map<String, Object> additionalProperties) {
+        final String optionName = "serializationLibrary";
+        final String defaultValue = "json_serializable";
+
+        String value = defaultValue;
+        if (additionalProperties.containsKey(optionName)) {
+            Object optionValue = additionalProperties.get(optionName);
+            if (optionValue instanceof String) {
+                value = ((String) optionValue).toLowerCase().trim();
+
+                if (!VALID_SERIALIZATION_LIBRARIES.contains(value)) {
+                    throw new IllegalArgumentException(
+                            String.format("Invalid value for option '%s': '%s'. Valid values are: %s",
+                                    optionName, optionValue,
+                                    String.join(", ", VALID_SERIALIZATION_LIBRARIES)));
+                }
+
+                if ("freezed".equals(value)) {
+                    LOGGER.warn("serializationLibrary=freezed is registered but template support is not yet implemented. "
+                            + "Generated code will use json_serializable patterns. Freezed templates will be added in a future release.");
+                }
+            } else {
+                LOGGER.warn("Option '{}' has unexpected type: {}. Using default: {}",
+                        optionName, optionValue.getClass().getName(), defaultValue);
+                value = defaultValue;
+            }
+        }
+
+        LOGGER.info("Processed serialization library option: {}", value);
+        return value;
     }
 
     // Option processing utility methods
@@ -457,5 +532,21 @@ public class DartGeneratorConfig {
 
     public boolean isRedactSensitiveData() {
         return redactSensitiveData;
+    }
+
+    public String getSerializationLibrary() {
+        return serializationLibrary;
+    }
+
+    public boolean isGenerateInterfaces() {
+        return generateInterfaces;
+    }
+
+    public String getDataSourceSuffix() {
+        return dataSourceSuffix;
+    }
+
+    public boolean isGenerateBarrelExports() {
+        return generateBarrelExports;
     }
 }

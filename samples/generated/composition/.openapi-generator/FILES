@@ -9,7 +9,6 @@ lib/config/cache_config.dart
 lib/config/config.dart
 lib/config/log_config.dart
 lib/config/offline_config.dart
-lib/config/security_config.dart
 lib/models/animal.dart
 lib/models/bank_transfer_payment.dart
 lib/models/base_entity.dart

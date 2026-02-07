@@ -5,16 +5,30 @@ import 'package:dart_acdc/dart_acdc.dart';
 import '{{.}}';
 {{/imports}}
 {{#operations}}
-import 'package:{{pubName}}/remote_data_sources/{{classname}}_remote_data_source.dart';
+{{#generateInterfaces}}
+import 'package:{{pubName}}/remote_data_sources/{{classFilename}}{{dataSourceFileSuffix}}.dart';
 
-/// Implementation of [{{classname}}RemoteDataSource] using Dio
-class {{classname}}RemoteDataSourceImpl implements {{classname}}RemoteDataSource {
+/// Implementation of [{{classname}}{{dataSourceSuffix}}] using Dio
+class {{classname}}{{dataSourceSuffix}}Impl implements {{classname}}{{dataSourceSuffix}} {
+{{/generateInterfaces}}
+{{^generateInterfaces}}
+
+/// {{classname}} API implementation using Dio
+class {{classname}}{{dataSourceSuffix}} {
+{{/generateInterfaces}}
   final Dio _dio;
 
-  {{classname}}RemoteDataSourceImpl(this._dio);
+  {{#generateInterfaces}}
+  {{classname}}{{dataSourceSuffix}}Impl(this._dio);
+  {{/generateInterfaces}}
+  {{^generateInterfaces}}
+  {{classname}}{{dataSourceSuffix}}(this._dio);
+  {{/generateInterfaces}}
 
 {{#operation}}
+  {{#generateInterfaces}}
   @override
+  {{/generateInterfaces}}
   Future<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/returnType}}> {{operationId}}({{#allParams}}{{^-first}}, {{/-first}}{{#isPathParam}}{{{dataType}}} {{paramName}}{{/isPathParam}}{{#isBodyParam}}{{{dataType}}} {{paramName}}{{/isBodyParam}}{{#isQueryParam}}{{#required}}{required {{{dataType}}} {{paramName}}}{{/required}}{{^required}}{{{dataType}}}? {{paramName}}{{/required}}{{/isQueryParam}}{{#isHeaderParam}}{{#required}}{required {{{dataType}}} {{paramName}}}{{/required}}{{^required}}{{{dataType}}}? {{paramName}}{{/required}}{{/isHeaderParam}}{{#isFormParam}}{{#required}}{{{dataType}}} {{paramName}}{{/required}}{{^required}}{{{dataType}}}? {{paramName}}{{/required}}{{/isFormParam}}{{/allParams}}) async {
 {{#hasQueryParams}}
     // Build query parameters, filtering out nulls

@@ -477,6 +477,142 @@ class DartAcdcGeneratorTest {
     }
 
     // ========================================
+    // Feature Toggle Supporting File Removal Tests
+    // ========================================
+
+    @Test
+    @DisplayName("processOpts: should remove auth_config when authentication disabled")
+    void testProcessOpts_DisableAuth_RemovesAuthConfig() {
+        generator.additionalProperties().put("enableAuthentication", false);
+        generator.processOpts();
+
+        boolean hasAuthConfig = generator.supportingFiles().stream()
+                .anyMatch(f -> "auth_config.mustache".equals(f.getTemplateFile()));
+        assertFalse(hasAuthConfig, "auth_config.mustache should be removed when authentication is disabled");
+    }
+
+    @Test
+    @DisplayName("processOpts: should remove cache_config when caching disabled")
+    void testProcessOpts_DisableCaching_RemovesCacheConfig() {
+        generator.additionalProperties().put("enableCaching", false);
+        generator.processOpts();
+
+        boolean hasCacheConfig = generator.supportingFiles().stream()
+                .anyMatch(f -> "cache_config.mustache".equals(f.getTemplateFile()));
+        assertFalse(hasCacheConfig, "cache_config.mustache should be removed when caching is disabled");
+    }
+
+    @Test
+    @DisplayName("processOpts: should remove log_config when logging disabled")
+    void testProcessOpts_DisableLogging_RemovesLogConfig() {
+        generator.additionalProperties().put("enableLogging", false);
+        generator.processOpts();
+
+        boolean hasLogConfig = generator.supportingFiles().stream()
+                .anyMatch(f -> "log_config.mustache".equals(f.getTemplateFile()));
+        assertFalse(hasLogConfig, "log_config.mustache should be removed when logging is disabled");
+    }
+
+    @Test
+    @DisplayName("processOpts: should remove offline_config when offline support disabled")
+    void testProcessOpts_DisableOffline_RemovesOfflineConfig() {
+        generator.additionalProperties().put("enableOfflineSupport", false);
+        generator.processOpts();
+
+        boolean hasOfflineConfig = generator.supportingFiles().stream()
+                .anyMatch(f -> "offline_config.mustache".equals(f.getTemplateFile()));
+        assertFalse(hasOfflineConfig, "offline_config.mustache should be removed when offline support is disabled");
+    }
+
+    @Test
+    @DisplayName("processOpts: should remove security_config when certificate pinning disabled (default)")
+    void testProcessOpts_DefaultCertPinning_RemovesSecurityConfig() {
+        generator.processOpts();
+
+        boolean hasSecurityConfig = generator.supportingFiles().stream()
+                .anyMatch(f -> "security_config.mustache".equals(f.getTemplateFile()));
+        assertFalse(hasSecurityConfig,
+                "security_config.mustache should be removed when certificate pinning is disabled (default)");
+    }
+
+    @Test
+    @DisplayName("processOpts: should keep security_config when certificate pinning enabled")
+    void testProcessOpts_EnableCertPinning_KeepsSecurityConfig() {
+        generator.additionalProperties().put("enableCertificatePinning", true);
+        generator.processOpts();
+
+        boolean hasSecurityConfig = generator.supportingFiles().stream()
+                .anyMatch(f -> "security_config.mustache".equals(f.getTemplateFile()));
+        assertTrue(hasSecurityConfig,
+                "security_config.mustache should be kept when certificate pinning is enabled");
+    }
+
+    @Test
+    @DisplayName("processOpts: should remove all feature configs when all features disabled")
+    void testProcessOpts_AllFeaturesDisabled_RemovesAllFeatureConfigs() {
+        generator.additionalProperties().put("enableAuthentication", false);
+        generator.additionalProperties().put("enableCaching", false);
+        generator.additionalProperties().put("enableLogging", false);
+        generator.additionalProperties().put("enableOfflineSupport", false);
+        generator.additionalProperties().put("enableCertificatePinning", false);
+        generator.processOpts();
+
+        List<String> featureConfigTemplates = List.of(
+                "auth_config.mustache", "cache_config.mustache", "log_config.mustache",
+                "offline_config.mustache", "security_config.mustache");
+
+        List<String> remainingFeatureConfigs = generator.supportingFiles().stream()
+                .map(org.openapitools.codegen.SupportingFile::getTemplateFile)
+                .filter(featureConfigTemplates::contains)
+                .toList();
+
+        assertTrue(remainingFeatureConfigs.isEmpty(),
+                "No feature config files should remain, but found: " + remainingFeatureConfigs);
+    }
+
+    @Test
+    @DisplayName("processOpts: should keep core files when all features disabled")
+    void testProcessOpts_AllFeaturesDisabled_KeepsCoreFiles() {
+        generator.additionalProperties().put("enableAuthentication", false);
+        generator.additionalProperties().put("enableCaching", false);
+        generator.additionalProperties().put("enableLogging", false);
+        generator.additionalProperties().put("enableOfflineSupport", false);
+        generator.additionalProperties().put("enableCertificatePinning", false);
+        generator.processOpts();
+
+        List<String> coreTemplates = List.of(
+                "pubspec.mustache", "api_client.mustache", "config.mustache",
+                "acdc_config.mustache", "library.mustache");
+
+        for (String coreTemplate : coreTemplates) {
+            boolean hasTemplate = generator.supportingFiles().stream()
+                    .anyMatch(f -> coreTemplate.equals(f.getTemplateFile()));
+            assertTrue(hasTemplate, "Core file " + coreTemplate + " should be kept when features are disabled");
+        }
+    }
+
+    @Test
+    @DisplayName("processOpts: should keep all feature configs when all features enabled")
+    void testProcessOpts_AllFeaturesEnabled_KeepsAllFeatureConfigs() {
+        generator.additionalProperties().put("enableAuthentication", true);
+        generator.additionalProperties().put("enableCaching", true);
+        generator.additionalProperties().put("enableLogging", true);
+        generator.additionalProperties().put("enableOfflineSupport", true);
+        generator.additionalProperties().put("enableCertificatePinning", true);
+        generator.processOpts();
+
+        List<String> featureConfigTemplates = List.of(
+                "auth_config.mustache", "cache_config.mustache", "log_config.mustache",
+                "offline_config.mustache", "security_config.mustache");
+
+        for (String template : featureConfigTemplates) {
+            boolean hasTemplate = generator.supportingFiles().stream()
+                    .anyMatch(f -> template.equals(f.getTemplateFile()));
+            assertTrue(hasTemplate, "Feature config " + template + " should be kept when all features are enabled");
+        }
+    }
+
+    // ========================================
     // Enum Variable Name Tests
     // ========================================
 
@@ -1487,5 +1623,233 @@ class DartAcdcGeneratorTest {
                 "defaultCacheTtlHours should be Integer");
         assertInstanceOf(Integer.class, generator.additionalProperties().get("cacheDiskSizeMb"),
                 "cacheDiskSizeMb should be Integer");
+    }
+
+    // ========================================
+    // Code Generation Style CLI Option Tests
+    // ========================================
+
+    @Test
+    @DisplayName("CLI options: should register all 4 code generation style options")
+    void testCliOptions_AllCodeStyleOptions() {
+        List<String> expectedOptions = List.of(
+                "serializationLibrary",
+                "generateInterfaces",
+                "dataSourceSuffix",
+                "generateBarrelExports"
+        );
+        List<String> actualOptions = generator.cliOptions().stream()
+                .map(org.openapitools.codegen.CliOption::getOpt)
+                .filter(expectedOptions::contains)
+                .toList();
+        assertEquals(4, actualOptions.size(), "All 4 code style options should be registered");
+    }
+
+    @Test
+    @DisplayName("CLI options: serializationLibrary should have default json_serializable")
+    void testCliOptions_SerializationLibrary() {
+        Optional<org.openapitools.codegen.CliOption> option = generator.cliOptions().stream()
+                .filter(opt -> "serializationLibrary".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(option.isPresent(), "serializationLibrary CLI option should be registered");
+        assertEquals("json_serializable", option.get().getDefault());
+    }
+
+    @Test
+    @DisplayName("CLI options: serializationLibrary should have enum values")
+    void testCliOptions_SerializationLibraryEnum() {
+        Optional<org.openapitools.codegen.CliOption> option = generator.cliOptions().stream()
+                .filter(opt -> "serializationLibrary".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(option.isPresent());
+        assertNotNull(option.get().getEnum(), "serializationLibrary should have enum values");
+        assertEquals(2, option.get().getEnum().size(), "Should have 2 enum values");
+        assertTrue(option.get().getEnum().containsKey("json_serializable"));
+        assertTrue(option.get().getEnum().containsKey("freezed"));
+    }
+
+    @Test
+    @DisplayName("CLI options: generateInterfaces should have default true")
+    void testCliOptions_GenerateInterfaces() {
+        Optional<org.openapitools.codegen.CliOption> option = generator.cliOptions().stream()
+                .filter(opt -> "generateInterfaces".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(option.isPresent(), "generateInterfaces CLI option should be registered");
+        assertEquals("true", option.get().getDefault());
+    }
+
+    @Test
+    @DisplayName("CLI options: dataSourceSuffix should have default RemoteDataSource")
+    void testCliOptions_DataSourceSuffix() {
+        Optional<org.openapitools.codegen.CliOption> option = generator.cliOptions().stream()
+                .filter(opt -> "dataSourceSuffix".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(option.isPresent(), "dataSourceSuffix CLI option should be registered");
+        assertEquals("RemoteDataSource", option.get().getDefault());
+    }
+
+    @Test
+    @DisplayName("CLI options: generateBarrelExports should have default true")
+    void testCliOptions_GenerateBarrelExports() {
+        Optional<org.openapitools.codegen.CliOption> option = generator.cliOptions().stream()
+                .filter(opt -> "generateBarrelExports".equals(opt.getOpt()))
+                .findFirst();
+        assertTrue(option.isPresent(), "generateBarrelExports CLI option should be registered");
+        assertEquals("true", option.get().getDefault());
+    }
+
+    @Test
+    @DisplayName("processOpts: should use default values for code style options")
+    void testProcessOpts_CodeStyleDefaults() {
+        generator.processOpts();
+
+        assertEquals("json_serializable", generator.additionalProperties().get("serializationLibrary"));
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("generateInterfaces"));
+        assertEquals("RemoteDataSource", generator.additionalProperties().get("dataSourceSuffix"));
+        assertEquals(Boolean.TRUE, generator.additionalProperties().get("generateBarrelExports"));
+    }
+
+    @Test
+    @DisplayName("processOpts: should accept custom code style options")
+    void testProcessOpts_CustomCodeStyleOptions() {
+        generator.additionalProperties().put("serializationLibrary", "freezed");
+        generator.additionalProperties().put("generateInterfaces", false);
+        generator.additionalProperties().put("dataSourceSuffix", "Api");
+        generator.additionalProperties().put("generateBarrelExports", false);
+
+        generator.processOpts();
+
+        assertEquals("freezed", generator.additionalProperties().get("serializationLibrary"));
+        assertEquals(Boolean.FALSE, generator.additionalProperties().get("generateInterfaces"));
+        assertEquals("Api", generator.additionalProperties().get("dataSourceSuffix"));
+        assertEquals(Boolean.FALSE, generator.additionalProperties().get("generateBarrelExports"));
+    }
+
+    @Test
+    @DisplayName("processOpts: should reject invalid serializationLibrary")
+    void testProcessOpts_InvalidSerializationLibrary() {
+        generator.additionalProperties().put("serializationLibrary", "protobuf");
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            generator.processOpts();
+        });
+        assertTrue(exception.getMessage().contains("serializationLibrary"));
+        assertTrue(exception.getMessage().contains("Valid values are"));
+    }
+
+    @Test
+    @DisplayName("processOpts: should store code style boolean options as Boolean objects")
+    void testProcessOpts_CodeStyleBooleanTypes() {
+        generator.processOpts();
+
+        assertInstanceOf(Boolean.class, generator.additionalProperties().get("generateInterfaces"));
+        assertInstanceOf(Boolean.class, generator.additionalProperties().get("generateBarrelExports"));
+    }
+
+    // ========================================
+    // Code Style Template Conditional Tests
+    // ========================================
+
+    @Test
+    @DisplayName("processOpts: should compute dataSourceFileSuffix from dataSourceSuffix")
+    void testProcessOpts_DataSourceFileSuffix_Default() {
+        generator.processOpts();
+
+        assertEquals("_remote_data_source", generator.additionalProperties().get("dataSourceFileSuffix"),
+                "Default dataSourceFileSuffix should be _remote_data_source");
+    }
+
+    @Test
+    @DisplayName("processOpts: should compute custom dataSourceFileSuffix")
+    void testProcessOpts_DataSourceFileSuffix_Custom() {
+        generator.additionalProperties().put("dataSourceSuffix", "Api");
+        generator.processOpts();
+
+        assertEquals("_api", generator.additionalProperties().get("dataSourceFileSuffix"),
+                "Custom dataSourceFileSuffix should be computed from dataSourceSuffix");
+    }
+
+    @Test
+    @DisplayName("processOpts: should remove interface template when generateInterfaces is false")
+    void testProcessOpts_DisableInterfaces_RemovesTemplate() {
+        generator.additionalProperties().put("generateInterfaces", false);
+        generator.processOpts();
+
+        boolean hasInterfaceTemplate = generator.apiTemplateFiles().containsKey("remote_data_source.mustache");
+        assertFalse(hasInterfaceTemplate,
+                "remote_data_source.mustache should be removed when generateInterfaces is false");
+
+        boolean hasImplTemplate = generator.apiTemplateFiles().containsKey("remote_data_source_impl.mustache");
+        assertTrue(hasImplTemplate,
+                "remote_data_source_impl.mustache should always be present");
+    }
+
+    @Test
+    @DisplayName("processOpts: should keep interface template when generateInterfaces is true")
+    void testProcessOpts_EnableInterfaces_KeepsTemplate() {
+        generator.processOpts();
+
+        boolean hasInterfaceTemplate = generator.apiTemplateFiles().containsKey("remote_data_source.mustache");
+        assertTrue(hasInterfaceTemplate,
+                "remote_data_source.mustache should be present when generateInterfaces is true (default)");
+    }
+
+    @Test
+    @DisplayName("processOpts: should update apiTemplateFiles suffix with custom dataSourceSuffix")
+    void testProcessOpts_CustomSuffix_UpdatesApiTemplateFiles() {
+        generator.additionalProperties().put("dataSourceSuffix", "Service");
+        generator.processOpts();
+
+        assertTrue(generator.apiTemplateFiles().containsValue("_service.dart"),
+                "Interface template should have _service.dart suffix");
+        assertTrue(generator.apiTemplateFiles().containsValue("_service_impl.dart"),
+                "Impl template should have _service_impl.dart suffix");
+    }
+
+    @Test
+    @DisplayName("processOpts: should remove barrel files when generateBarrelExports is false")
+    void testProcessOpts_DisableBarrelExports_RemovesBarrelFiles() {
+        generator.additionalProperties().put("generateBarrelExports", false);
+        generator.processOpts();
+
+        List<String> barrelTemplates = List.of("models.mustache", "remote_data_sources.mustache", "library.mustache");
+
+        List<String> remainingBarrels = generator.supportingFiles().stream()
+                .map(org.openapitools.codegen.SupportingFile::getTemplateFile)
+                .filter(barrelTemplates::contains)
+                .toList();
+
+        assertTrue(remainingBarrels.isEmpty(),
+                "Barrel files should be removed when generateBarrelExports is false, found: " + remainingBarrels);
+    }
+
+    @Test
+    @DisplayName("processOpts: should keep non-barrel supporting files when generateBarrelExports is false")
+    void testProcessOpts_DisableBarrelExports_KeepsNonBarrelFiles() {
+        generator.additionalProperties().put("generateBarrelExports", false);
+        generator.processOpts();
+
+        List<String> requiredFiles = List.of("pubspec.mustache", "api_client.mustache",
+                "acdc_config.mustache", "config.mustache");
+
+        for (String template : requiredFiles) {
+            boolean found = generator.supportingFiles().stream()
+                    .anyMatch(f -> template.equals(f.getTemplateFile()));
+            assertTrue(found, "Required file " + template + " should be kept even when barrel exports are disabled");
+        }
+    }
+
+    @Test
+    @DisplayName("processOpts: should keep barrel files when generateBarrelExports is true (default)")
+    void testProcessOpts_EnableBarrelExports_KeepsBarrelFiles() {
+        generator.processOpts();
+
+        List<String> barrelTemplates = List.of("models.mustache", "remote_data_sources.mustache", "library.mustache");
+
+        for (String template : barrelTemplates) {
+            boolean found = generator.supportingFiles().stream()
+                    .anyMatch(f -> template.equals(f.getTemplateFile()));
+            assertTrue(found, "Barrel file " + template + " should be kept when generateBarrelExports is true");
+        }
     }
 }

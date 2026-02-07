@@ -19,7 +19,7 @@ import '{{.}}';
 /// - [AcdcServerException] - Server errors (5xx responses)
 /// - [AcdcClientException] - Client errors (4xx responses)
 /// - [AcdcSecurityException] - Certificate pinning or security violations
-abstract class {{classname}}RemoteDataSource {
+abstract class {{classname}}{{dataSourceSuffix}} {
 {{#operation}}
 {{#summary}}
   /// {{{summary}}}

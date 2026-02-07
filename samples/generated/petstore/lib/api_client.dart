@@ -14,7 +14,6 @@ class ApiClient {
   /// - Caching: enabled if config.cache is not null
   /// - Logging: enabled if config.log is not null
   /// - Offline detection: enabled if config.offline is not null
-  /// - Certificate pinning: enabled if config.security is not null
   ///
   /// Example:
   /// ```dart
@@ -30,7 +29,7 @@ class ApiClient {
     var builder = acdc.AcdcClientBuilder()
       .withBaseUrl(config.baseUrl);
 
-    // Conditionally add features based on config
+    // Conditionally add authentication based on config
     if (config.auth != null) {
       if (config.auth!.customTokenProvider != null) {
         builder = builder.withTokenProvider(config.auth!.customTokenProvider!);
@@ -77,19 +76,6 @@ class ApiClient {
       builder = builder.withOfflineDetection(
         failFast: config.offline!.failFast,
       );
-    }
-
-    if (config.security != null && config.security!.certificateFingerprints.isNotEmpty) {
-      final domain = Uri.parse(config.baseUrl).host;
-      final pinningConfig = acdc.CertificatePinningConfig(
-        allowedPins: {
-          domain: config.security!.certificateFingerprints
-            .map((fp) => fp.startsWith('SHA256:') ? fp : 'SHA256:$fp')
-            .toList(),
-        },
-        reportOnly: config.security!.reportOnlyMode,
-      );
-      builder = builder.withCertificatePinning(pinningConfig);
     }
 
     return await builder.build();
