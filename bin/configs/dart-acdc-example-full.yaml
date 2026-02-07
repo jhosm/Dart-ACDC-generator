@@ -1,0 +1,48 @@
+# Full Dart-ACDC Generator Configuration
+#
+# Every available option is explicitly set. Use this as a reference for all
+# configurable values supported by the dart-acdc generator.
+#
+# Usage:
+#   openapi-generator-cli generate -c bin/configs/dart-acdc-example-full.yaml
+
+generatorName: dart-acdc
+inputSpec: openapi.yaml
+outputDir: generated/my_api_client
+additionalProperties:
+  # ── Package Metadata ────────────────────────────────────────────────
+  pubName: my_api_client
+  pubVersion: 2.0.0
+  pubDescription: "Full-featured API client with all ACDC capabilities"
+  pubAuthor: My Team
+  pubHomepage: "https://github.com/my-org/my-api-client"
+
+  # ── Feature Toggles ────────────────────────────────────────────────
+  enableAuthentication: true      # OAuth 2.1 with automatic token refresh
+  enableCaching: true             # Two-tier caching (Memory + Disk)
+  enableLogging: true             # Configurable logging with redaction
+  enableOfflineSupport: true      # Offline detection and fail-fast
+  enableCertificatePinning: true  # SHA-256 certificate pinning
+
+  # ── Authentication Defaults ─────────────────────────────────────────
+  defaultTokenRefreshUrl: "https://api.example.com/auth/refresh"
+  useSecureTokenStorage: true     # Platform-specific secure storage
+  refreshThresholdMinutes: 10     # Refresh 10 min before expiry (range: 1-60)
+
+  # ── Caching Defaults ────────────────────────────────────────────────
+  defaultCacheTtlHours: 2         # 2-hour TTL (range: 1-720)
+  cacheDiskSizeMb: 50             # 50 MB disk cache (range: 1-1024)
+  encryptCache: true              # AES-256 cache encryption
+  enableUserCacheIsolation: true  # Isolate cache per authenticated user
+
+  # ── Logging Defaults ────────────────────────────────────────────────
+  # Valid levels: none, error, warning, info, debug, verbose
+  defaultLogLevel: debug
+  redactSensitiveData: true       # Redact passwords, tokens, keys in logs
+
+  # ── Code Generation Style ──────────────────────────────────────────
+  # Serialization: json_serializable (default) or freezed (templates pending)
+  serializationLibrary: json_serializable
+  generateInterfaces: true        # Generate abstract API interface classes
+  dataSourceSuffix: RemoteDataSource  # API class suffix (e.g., UserRemoteDataSource)
+  generateBarrelExports: true     # Generate barrel export files

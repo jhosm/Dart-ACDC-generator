@@ -1,0 +1,13 @@
+# Minimal Dart-ACDC Generator Configuration
+#
+# Generates a Dart API client with all ACDC features enabled at their defaults.
+# Only the required options are specified; everything else uses smart defaults.
+#
+# Usage:
+#   openapi-generator-cli generate -c bin/configs/dart-acdc-example-minimal.yaml
+
+generatorName: dart-acdc
+inputSpec: openapi.yaml
+outputDir: generated/my_api_client
+additionalProperties:
+  pubName: my_api_client

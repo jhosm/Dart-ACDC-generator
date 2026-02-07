@@ -800,11 +800,29 @@ class DartAcdcGeneratorTest {
     }
 
     @Test
-    @DisplayName("getHelp: should return help text")
+    @DisplayName("getHelp: should return comprehensive help text with all option categories")
     void testGetHelp() {
         String help = generator.getHelp();
         assertNotNull(help);
-        assertTrue(help.contains("Dart-ACDC"));
+        assertTrue(help.contains("Dart-ACDC"), "Should mention Dart-ACDC");
+
+        // Verify all option categories are documented
+        assertTrue(help.contains("Package Metadata:"), "Should document package metadata options");
+        assertTrue(help.contains("Feature Toggles:"), "Should document feature toggle options");
+        assertTrue(help.contains("Authentication Defaults:"), "Should document auth default options");
+        assertTrue(help.contains("Caching Defaults:"), "Should document cache default options");
+        assertTrue(help.contains("Logging Defaults:"), "Should document logging default options");
+        assertTrue(help.contains("Code Style:"), "Should document code style options");
+
+        // Verify key options are listed
+        assertTrue(help.contains("pubName"), "Should list pubName option");
+        assertTrue(help.contains("enableAuthentication"), "Should list enableAuthentication option");
+        assertTrue(help.contains("defaultLogLevel"), "Should list defaultLogLevel option");
+        assertTrue(help.contains("serializationLibrary"), "Should list serializationLibrary option");
+        assertTrue(help.contains("dataSourceSuffix"), "Should list dataSourceSuffix option");
+
+        // Verify example YAML config is included
+        assertTrue(help.contains("generatorName: dart-acdc"), "Should include example YAML config");
     }
 
     // ========================================

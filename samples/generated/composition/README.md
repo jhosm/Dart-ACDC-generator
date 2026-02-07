@@ -103,15 +103,38 @@ final config = AcdcConfig(
   offline: OfflineConfig(
     failFast: true,               // Throw immediately when offline (default)
   ),
-
-  // Certificate pinning
-  security: SecurityConfig(
-    certificateFingerprints: [
-      'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', // sha256/ prefix added automatically
-    ],
-    reportOnlyMode: false,        // Enforce pinning (default)
-  ),
 );
+```
+
+## Generator Options
+
+This client was generated with the following configuration:
+
+| Option | Value |
+|--------|-------|
+| `pubName` | `composition_client` |
+| `pubVersion` | `1.0.0` |
+| `enableAuthentication` | `true` |
+| `enableCaching` | `true` |
+| `enableLogging` | `true` |
+| `enableOfflineSupport` | `true` |
+| `enableCertificatePinning` | `false` |
+| `serializationLibrary` | `json_serializable` |
+| `generateInterfaces` | `true` |
+| `dataSourceSuffix` | `RemoteDataSource` |
+| `generateBarrelExports` | `true` |
+
+To regenerate with different options, use:
+
+```bash
+openapi-generator-cli generate -g dart-acdc -i openapi.yaml -o . \
+  --additional-properties=pubName=composition_client,enableAuthentication=true
+```
+
+For a full list of options, run:
+
+```bash
+openapi-generator-cli config-help -g dart-acdc
 ```
 
 ## Authentication
@@ -285,46 +308,6 @@ try {
   await localQueue.add(PendingOperation.createUser(newUser));
   showMessage('Saved offline. Will sync when connected.');
 }
-```
-
-## Certificate Pinning
-
-Validate server certificates against known SHA-256 fingerprints to prevent MITM attacks:
-
-```dart
-final config = AcdcConfig(
-  baseUrl: 'https://api.example.com',
-  security: SecurityConfig(
-    certificateFingerprints: [
-      'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
-      'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=', // Backup pin
-    ],
-    reportOnlyMode: false, // true = log failures but don't block
-  ),
-);
-```
-
-### Obtaining Pin Hashes
-
-```bash
-# From a running server
-echo | openssl s_client -servername api.example.com \
-  -connect api.example.com:443 2>/dev/null | \
-  openssl x509 -pubkey -noout | \
-  openssl pkey -pubin -outform der | \
-  openssl dgst -sha256 -binary | \
-  openssl enc -base64
-```
-
-### Report-Only Mode
-
-Use `reportOnlyMode: true` for gradual rollout. Mismatches are logged but connections proceed, allowing you to monitor before enforcing:
-
-```dart
-security: SecurityConfig(
-  certificateFingerprints: ['...'],
-  reportOnlyMode: true, // Monitor only, don't block
-),
 ```
 
 ## Request Deduplication

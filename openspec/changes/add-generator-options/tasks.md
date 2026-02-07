@@ -18,28 +18,28 @@
 
 ## 3. Authentication Options
 
-- [ ] 3.1 Add `defaultTokenRefreshUrl` option (string)
-- [ ] 3.2 Add `useSecureTokenStorage` option (boolean, default: true)
-- [ ] 3.3 Add `refreshThresholdMinutes` option (integer, default: 5)
+- [x] 3.1 Add `defaultTokenRefreshUrl` option (string)
+- [x] 3.2 Add `useSecureTokenStorage` option (boolean, default: true)
+- [x] 3.3 Add `refreshThresholdMinutes` option (integer, default: 5)
 
 ## 4. Caching Options
 
-- [ ] 4.1 Add `defaultCacheTtlHours` option (integer, default: 1)
-- [ ] 4.2 Add `cacheDiskSizeMb` option (integer, default: 20)
-- [ ] 4.3 Add `encryptCache` option (boolean, default: true)
-- [ ] 4.4 Add `enableUserCacheIsolation` option (boolean, default: true)
+- [x] 4.1 Add `defaultCacheTtlHours` option (integer, default: 1)
+- [x] 4.2 Add `cacheDiskSizeMb` option (integer, default: 20)
+- [x] 4.3 Add `encryptCache` option (boolean, default: true)
+- [x] 4.4 Add `enableUserCacheIsolation` option (boolean, default: true)
 
 ## 5. Logging Options
 
-- [ ] 5.1 Add `defaultLogLevel` option (enum: none/error/warning/info/debug/verbose, default: info)
-- [ ] 5.2 Add `redactSensitiveData` option (boolean, default: true)
+- [x] 5.1 Add `defaultLogLevel` option (enum: none/error/warning/info/debug/verbose, default: info)
+- [x] 5.2 Add `redactSensitiveData` option (boolean, default: true)
 
 ## 6. Code Generation Options
 
-- [ ] 6.1 Add `serializationLibrary` option (enum: json_serializable/freezed, default: json_serializable)
-- [ ] 6.2 Add `generateInterfaces` option (boolean, default: true)
-- [ ] 6.3 Add `dataSourceSuffix` option (string, default: "RemoteDataSource")
-- [ ] 6.4 Add `generateBarrelExports` option (boolean, default: true)
+- [x] 6.1 Add `serializationLibrary` option (enum: json_serializable/freezed, default: json_serializable)
+- [x] 6.2 Add `generateInterfaces` option (boolean, default: true)
+- [x] 6.3 Add `dataSourceSuffix` option (string, default: "RemoteDataSource")
+- [x] 6.4 Add `generateBarrelExports` option (boolean, default: true)
 
 ## 7. Codegen Class Implementation
 
@@ -50,33 +50,33 @@
 
 ## 8. Template Updates
 
-- [ ] 8.1 Add conditional blocks for `enableAuthentication`
-- [ ] 8.2 Add conditional blocks for `enableCaching`
-- [ ] 8.3 Add conditional blocks for `enableLogging`
-- [ ] 8.4 Add conditional blocks for `enableOfflineSupport`
-- [ ] 8.5 Add conditional blocks for `enableCertificatePinning`
-- [ ] 8.6 Add conditional for interface generation
-- [ ] 8.7 Use `dataSourceSuffix` in naming
+- [x] 8.1 Add conditional blocks for `enableAuthentication`
+- [x] 8.2 Add conditional blocks for `enableCaching`
+- [x] 8.3 Add conditional blocks for `enableLogging`
+- [x] 8.4 Add conditional blocks for `enableOfflineSupport`
+- [x] 8.5 Add conditional blocks for `enableCertificatePinning`
+- [x] 8.6 Add conditional for interface generation
+- [x] 8.7 Use `dataSourceSuffix` in naming
 
 ## 9. Configuration File Support
 
-- [ ] 9.1 Create example YAML config file
-- [ ] 9.2 Document all options in config file format
-- [ ] 9.3 Create config file for minimal setup
-- [ ] 9.4 Create config file for full ACDC setup
+- [x] 9.1 Create example YAML config file
+- [x] 9.2 Document all options in config file format
+- [x] 9.3 Create config file for minimal setup
+- [x] 9.4 Create config file for full ACDC setup
 
 ## 10. Documentation
 
-- [ ] 10.1 Document all options in generator README
-- [ ] 10.2 Add option descriptions in `getHelp()` output
-- [ ] 10.3 Create usage examples for common configurations
-- [ ] 10.4 Document default values for all options
+- [x] 10.1 Document all options in generator README
+- [x] 10.2 Add option descriptions in `getHelp()` output
+- [x] 10.3 Create usage examples for common configurations
+- [x] 10.4 Document default values for all options
 
 ## 11. Verification
 
-- [ ] 11.1 Generate with minimal options (just pubName)
-- [ ] 11.2 Generate with all ACDC features disabled
-- [ ] 11.3 Generate with all ACDC features enabled (defaults)
-- [ ] 11.4 Generate with custom log level and cache TTL
-- [ ] 11.5 Verify option validation error messages
-- [ ] 11.6 Test with YAML config file
+- [x] 11.1 Generate with minimal options (just pubName)
+- [x] 11.2 Generate with all ACDC features disabled
+- [x] 11.3 Generate with all ACDC features enabled (defaults)
+- [x] 11.4 Generate with custom log level and cache TTL
+- [x] 11.5 Verify option validation error messages
+- [x] 11.6 Test with YAML config file
