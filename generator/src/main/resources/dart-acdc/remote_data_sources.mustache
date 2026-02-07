@@ -5,8 +5,10 @@
 {{#apiInfo}}
 {{#apis}}
 {{#operations}}
-export '{{classFilename}}_remote_data_source.dart';
-export '{{classFilename}}_remote_data_source_impl.dart';
+{{#generateInterfaces}}
+export '{{classFilename}}{{dataSourceFileSuffix}}.dart';
+{{/generateInterfaces}}
+export '{{classFilename}}{{dataSourceFileSuffix}}_impl.dart';
 {{/operations}}
 {{/apis}}
 {{/apiInfo}}

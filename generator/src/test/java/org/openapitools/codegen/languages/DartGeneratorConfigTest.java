@@ -36,8 +36,8 @@ class DartGeneratorConfigTest {
     void testRegisterCliOptions() {
         List<CliOption> options = config.registerCliOptions();
 
-        // Should have at least 18 options (5 package + 5 features + 8 defaults)
-        assertTrue(options.size() >= 18, "Should register at least 18 CLI options");
+        // Should have at least 22 options (5 package + 5 features + 8 defaults + 4 code style)
+        assertTrue(options.size() >= 22, "Should register at least 22 CLI options");
 
         // Verify key options exist
         assertTrue(options.stream().anyMatch(o -> o.getOpt().equals("pubName")));
@@ -434,5 +434,122 @@ class DartGeneratorConfigTest {
 
         assertThrows(IllegalArgumentException.class,
                 () -> config.processOptions(additionalProperties, null));
+    }
+
+    // ========================================
+    // Code Generation Style Option Tests
+    // ========================================
+
+    @Test
+    @DisplayName("processOptions: should use default serializationLibrary")
+    void testProcessOptions_DefaultSerializationLibrary() {
+        config.processOptions(additionalProperties, null);
+
+        assertEquals("json_serializable", config.getSerializationLibrary());
+    }
+
+    @Test
+    @DisplayName("processOptions: should accept json_serializable")
+    void testProcessOptions_JsonSerializable() {
+        additionalProperties.put("serializationLibrary", "json_serializable");
+        config.processOptions(additionalProperties, null);
+
+        assertEquals("json_serializable", config.getSerializationLibrary());
+    }
+
+    @Test
+    @DisplayName("processOptions: should accept freezed")
+    void testProcessOptions_Freezed() {
+        additionalProperties.put("serializationLibrary", "freezed");
+        config.processOptions(additionalProperties, null);
+
+        assertEquals("freezed", config.getSerializationLibrary());
+    }
+
+    @Test
+    @DisplayName("processOptions: should reject invalid serializationLibrary")
+    void testProcessOptions_InvalidSerializationLibrary() {
+        additionalProperties.put("serializationLibrary", "protobuf");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> config.processOptions(additionalProperties, null));
+    }
+
+    @Test
+    @DisplayName("processOptions: should handle case-insensitive serializationLibrary")
+    void testProcessOptions_CaseInsensitiveSerializationLibrary() {
+        additionalProperties.put("serializationLibrary", "JSON_SERIALIZABLE");
+        config.processOptions(additionalProperties, null);
+
+        assertEquals("json_serializable", config.getSerializationLibrary());
+    }
+
+    @Test
+    @DisplayName("processOptions: should use default generateInterfaces")
+    void testProcessOptions_DefaultGenerateInterfaces() {
+        config.processOptions(additionalProperties, null);
+
+        assertTrue(config.isGenerateInterfaces());
+    }
+
+    @Test
+    @DisplayName("processOptions: should disable generateInterfaces")
+    void testProcessOptions_DisableGenerateInterfaces() {
+        additionalProperties.put("generateInterfaces", "false");
+        config.processOptions(additionalProperties, null);
+
+        assertFalse(config.isGenerateInterfaces());
+    }
+
+    @Test
+    @DisplayName("processOptions: should use default dataSourceSuffix")
+    void testProcessOptions_DefaultDataSourceSuffix() {
+        config.processOptions(additionalProperties, null);
+
+        assertEquals("RemoteDataSource", config.getDataSourceSuffix());
+    }
+
+    @Test
+    @DisplayName("processOptions: should accept custom dataSourceSuffix")
+    void testProcessOptions_CustomDataSourceSuffix() {
+        additionalProperties.put("dataSourceSuffix", "Api");
+        config.processOptions(additionalProperties, null);
+
+        assertEquals("Api", config.getDataSourceSuffix());
+    }
+
+    @Test
+    @DisplayName("processOptions: should use default generateBarrelExports")
+    void testProcessOptions_DefaultGenerateBarrelExports() {
+        config.processOptions(additionalProperties, null);
+
+        assertTrue(config.isGenerateBarrelExports());
+    }
+
+    @Test
+    @DisplayName("processOptions: should disable generateBarrelExports")
+    void testProcessOptions_DisableGenerateBarrelExports() {
+        additionalProperties.put("generateBarrelExports", false);
+        config.processOptions(additionalProperties, null);
+
+        assertFalse(config.isGenerateBarrelExports());
+    }
+
+    @Test
+    @DisplayName("applyToAdditionalProperties: should apply code style options")
+    void testApplyToAdditionalProperties_CodeStyleOptions() {
+        additionalProperties.put("serializationLibrary", "freezed");
+        additionalProperties.put("generateInterfaces", false);
+        additionalProperties.put("dataSourceSuffix", "Api");
+        additionalProperties.put("generateBarrelExports", false);
+        config.processOptions(additionalProperties, null);
+
+        Map<String, Object> newProps = new HashMap<>();
+        config.applyToAdditionalProperties(newProps);
+
+        assertEquals("freezed", newProps.get("serializationLibrary"));
+        assertEquals(Boolean.FALSE, newProps.get("generateInterfaces"));
+        assertEquals("Api", newProps.get("dataSourceSuffix"));
+        assertEquals(Boolean.FALSE, newProps.get("generateBarrelExports"));
     }
 }

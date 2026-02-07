@@ -8,7 +8,6 @@ lib/config/cache_config.dart
 lib/config/config.dart
 lib/config/log_config.dart
 lib/config/offline_config.dart
-lib/config/security_config.dart
 lib/minimal_client.dart
 lib/models/models.dart
 lib/models/ping200_response.dart

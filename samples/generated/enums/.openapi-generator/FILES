@@ -8,7 +8,6 @@ lib/config/cache_config.dart
 lib/config/config.dart
 lib/config/log_config.dart
 lib/config/offline_config.dart
-lib/config/security_config.dart
 lib/enums_client.dart
 lib/models/color.dart
 lib/models/enum_test_model.dart

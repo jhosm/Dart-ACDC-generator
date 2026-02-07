@@ -440,6 +440,60 @@ public class DartAcdcGenerator extends DefaultCodegen implements CodegenConfig {
         // Register the main barrel export file now that pubName is resolved
         String sanitizedPubName = config.getPubName();
         supportingFiles.add(new SupportingFile("library.mustache", "lib", sanitizedPubName + ".dart"));
+
+        // Remove feature-specific config files when their feature toggle is disabled
+        removeDisabledFeatureFiles();
+
+        // Apply code generation style options
+        applyCodeStyleOptions();
+    }
+
+    /**
+     * Applies code generation style options to apiTemplateFiles and supportingFiles.
+     * Handles dataSourceSuffix (class/file naming), generateInterfaces, and generateBarrelExports.
+     */
+    private void applyCodeStyleOptions() {
+        // Compute snake_case file suffix from dataSourceSuffix
+        String suffix = config.getDataSourceSuffix();
+        String suffixSnakeCase = nameSanitizer.toSnakeCase(suffix);
+        String fileSuffix = "_" + suffixSnakeCase;
+        additionalProperties.put("dataSourceFileSuffix", fileSuffix);
+
+        // Update apiTemplateFiles with the configured suffix
+        apiTemplateFiles.clear();
+        if (config.isGenerateInterfaces()) {
+            apiTemplateFiles.put("remote_data_source.mustache", fileSuffix + ".dart");
+        }
+        apiTemplateFiles.put("remote_data_source_impl.mustache", fileSuffix + "_impl.dart");
+
+        // Remove barrel export files when generateBarrelExports is disabled
+        if (!config.isGenerateBarrelExports()) {
+            supportingFiles.removeIf(f -> "models.mustache".equals(f.getTemplateFile()));
+            supportingFiles.removeIf(f -> "remote_data_sources.mustache".equals(f.getTemplateFile()));
+            supportingFiles.removeIf(f -> "library.mustache".equals(f.getTemplateFile()));
+        }
+    }
+
+    /**
+     * Removes supporting files for disabled ACDC features.
+     * When a feature toggle is false, its config file is excluded from generation.
+     */
+    private void removeDisabledFeatureFiles() {
+        if (!config.isEnableAuthentication()) {
+            supportingFiles.removeIf(f -> "auth_config.mustache".equals(f.getTemplateFile()));
+        }
+        if (!config.isEnableCaching()) {
+            supportingFiles.removeIf(f -> "cache_config.mustache".equals(f.getTemplateFile()));
+        }
+        if (!config.isEnableLogging()) {
+            supportingFiles.removeIf(f -> "log_config.mustache".equals(f.getTemplateFile()));
+        }
+        if (!config.isEnableOfflineSupport()) {
+            supportingFiles.removeIf(f -> "offline_config.mustache".equals(f.getTemplateFile()));
+        }
+        if (!config.isEnableCertificatePinning()) {
+            supportingFiles.removeIf(f -> "security_config.mustache".equals(f.getTemplateFile()));
+        }
     }
 
 

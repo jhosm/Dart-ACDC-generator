@@ -10,19 +10,35 @@ class ApiClient {
   /// Creates a Dio instance configured with ACDC features based on the provided config.
   ///
   /// Features are enabled/disabled based on the presence of their config objects:
+  {{#enableAuthentication}}
   /// - Authentication: enabled if config.auth is not null
+  {{/enableAuthentication}}
+  {{#enableCaching}}
   /// - Caching: enabled if config.cache is not null
+  {{/enableCaching}}
+  {{#enableLogging}}
   /// - Logging: enabled if config.log is not null
+  {{/enableLogging}}
+  {{#enableOfflineSupport}}
   /// - Offline detection: enabled if config.offline is not null
+  {{/enableOfflineSupport}}
+  {{#enableCertificatePinning}}
   /// - Certificate pinning: enabled if config.security is not null
+  {{/enableCertificatePinning}}
   ///
   /// Example:
   /// ```dart
   /// final config = AcdcConfig(
   ///   baseUrl: 'https://api.example.com',
+  {{#enableAuthentication}}
   ///   auth: AuthConfig(tokenRefreshUrl: 'https://api.example.com/auth/refresh'),
+  {{/enableAuthentication}}
+  {{#enableCaching}}
   ///   cache: CacheConfig(ttl: Duration(hours: 1)),
+  {{/enableCaching}}
+  {{#enableLogging}}
   ///   log: LogConfig(level: LogLevel.info),
+  {{/enableLogging}}
   /// );
   /// final dio = await ApiClient.createDio(config);
   /// ```
@@ -30,7 +46,8 @@ class ApiClient {
     var builder = acdc.AcdcClientBuilder()
       .withBaseUrl(config.baseUrl);
 
-    // Conditionally add features based on config
+    {{#enableAuthentication}}
+    // Conditionally add authentication based on config
     if (config.auth != null) {
       if (config.auth!.customTokenProvider != null) {
         builder = builder.withTokenProvider(config.auth!.customTokenProvider!);
@@ -48,6 +65,8 @@ class ApiClient {
       }
     }
 
+    {{/enableAuthentication}}
+    {{#enableCaching}}
     if (config.cache != null) {
       builder = builder.withCache(
         acdc.CacheConfig(
@@ -59,6 +78,8 @@ class ApiClient {
       );
     }
 
+    {{/enableCaching}}
+    {{#enableLogging}}
     if (config.log != null) {
       builder = builder.withLogLevel(config.log!.level);
 
@@ -73,12 +94,16 @@ class ApiClient {
       }
     }
 
+    {{/enableLogging}}
+    {{#enableOfflineSupport}}
     if (config.offline != null) {
       builder = builder.withOfflineDetection(
         failFast: config.offline!.failFast,
       );
     }
 
+    {{/enableOfflineSupport}}
+    {{#enableCertificatePinning}}
     if (config.security != null && config.security!.certificateFingerprints.isNotEmpty) {
       final domain = Uri.parse(config.baseUrl).host;
       final pinningConfig = acdc.CertificatePinningConfig(
@@ -92,6 +117,7 @@ class ApiClient {
       builder = builder.withCertificatePinning(pinningConfig);
     }
 
+    {{/enableCertificatePinning}}
     return await builder.build();
   }
 }

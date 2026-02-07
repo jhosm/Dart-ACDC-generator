@@ -23,128 +23,189 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Dart-ACDC-generator Generator** is a custom OpenAPI Generator that automatically generates Dart API clients fully integrated with the Dart-ACDC library, eliminating manual integration work.
+**Dart-ACDC Generator** is a custom OpenAPI Generator that produces Dart API clients fully integrated with the Dart-ACDC library, eliminating manual integration work.
 
-### Problem & Solution
-
-**The Gap**: OpenAPI Generator creates basic API clients, but production Flutter apps need authentication, caching, offline support, and logging—features provided by Dart-ACDC but requiring manual integration.
-
-**The Solution**: A custom OpenAPI Generator that produces production-ready Dart clients with Dart-ACDC fully integrated out of the box.
+**The Gap**: OpenAPI Generator creates basic API clients, but production Flutter apps need authentication, caching, offline support, and logging — features provided by Dart-ACDC but requiring manual integration.
 
 ### Key Technologies
 
-- **Language**: Java (for generator), Dart (for generated code)
-- **Base Generator**: Extends/inspired by OpenAPI Generator's dart-dio generator
+- **Language**: Java 21 (generator), Dart (generated code)
+- **Build**: Maven, OpenAPI Generator 7.10.0
 - **Templating**: Mustache
 - **HTTP Client**: Dio (via Dart-ACDC)
 - **Target**: Flutter (mobile, desktop, web)
 
-## Architecture & Big Picture
-
 ### The Four Pillars of Dart-ACDC (ACDC)
 
-The generator will integrate the four core features of Dart-ACDC:
+1. **Authentication (A)**: OAuth 2.1, automatic token refresh, secure token storage
+2. **Caching (C)**: Two-tier (Memory + Disk), user isolation, AES-256 encryption
+3. **Debugging (D)**: Configurable log levels, automatic sensitive data redaction
+4. **Client (C)**: Request deduplication, certificate pinning, type-safe errors, offline support
 
-1. **Authentication (A)**: OAuth 2.1 with automatic token refresh, secure token storage
-2. **Caching (C)**: Two-tier caching (Memory + Disk), user isolation, AES-256 encryption
-3. **Debugging (D)**: Configurable logging levels, automatic sensitive data redaction
-4. **Client (C)**: Request deduplication, certificate pinning, type-safe error handling, offline support
+## Directory Structure
 
-### Development Roadmap (5 Phases)
-
-1. ✅ **Study & Research** - Completed
-   - OpenAPI Generator architecture studied
-   - Dart-ACDC library fully documented
-   - dart-dio generator analyzed
-   - Project vision defined
-
-2. ✅ **Generator Development** - Completed
-   - Bootstrapped generator structure
-   - Implemented DartAcdcGenerator Java class with helper classes
-   - Created Mustache templates for API classes, models, configuration
-   - Registered generator in OpenAPI Generator's SPI system
-   - Tested with multiple OpenAPI specs (Petstore, composition, enums, file uploads)
-
-3. 🔄 **Refinement & ACDC Integration** - In Progress
-   - Adding ACDC features (authentication, caching, offline support, security)
-   - Improving template quality and edge case handling
-   - Adding comprehensive unit and integration tests
-   - Refining error handling and exception mapping
-
-4. **Documentation** - Next
-   - Usage guide and API reference
-   - Developer guide for template customization
-   - Migration guides from other generators
-
-5. **Distribution**
-   - Contribute to OpenAPI Generator repository or maintain fork
-   - Package as standalone JAR, Docker image, or NPM package
-   - Publish documentation and examples
-
-## Research Documentation
-
-All research findings are located in `/research/`:
-
-- **[project-vision.md](./research/project-vision.md)** - Strategic vision, goals, and features
-- **[creating-generators.md](./research/creating-generators.md)** - Deep dive on OpenAPI Generator architecture and custom generator development
-- **[dart-generator-quick-reference.md](./research/dart-generator-quick-reference.md)** - Quick-start guide with code examples
-- **[dart-acdc-library.md](./research/dart-acdc-library.md)** - Complete Dart-ACDC reference
-- **[openapi-generator.md](./research/openapi-generator.md)** - OpenAPI Generator overview
-
-**Start here**: For implementation, read [project-vision.md](./research/project-vision.md) for the full vision, then [dart-generator-quick-reference.md](./research/dart-generator-quick-reference.md) for practical steps.
-
-## Key Technical Concepts
-
-### Generator Architecture (Java)
-
-The generator consists of:
-
-1. **DartAcdcGenerator** (Main Codegen Class) - Extends `DefaultCodegen`
-   - Location: `generator/src/main/java/org/openapitools/codegen/languages/DartAcdcGenerator.java`
-   - Configures type mappings (OpenAPI → Dart types)
-   - Defines custom generator options (authentication, caching, logging preferences)
-   - Overrides code generation behavior for Dart/ACDC specifics
-   - Delegates specialized tasks to helper classes
-
-2. **Helper Classes** (Refactored for maintainability)
-   - **DartNameSanitizer** - Name and identifier sanitization
-     - Package name sanitization following Dart pub conventions
-     - Reserved word escaping for variables and models
-     - Case conversion (camelCase ↔ snake_case)
-   
-   - **DartTypeMapper** - OpenAPI to Dart type conversions
-     - Context-aware type mapping (multipart vs non-multipart)
-     - Binary/file type detection and mapping
-     - Handles MultipartFile vs List<int> for binary data
-   
-   - **DartTestDataGenerator** - Test value generation
-     - Generates test values for primitive and complex Dart types
-     - Creates test JSON for models with required fields
-     - Handles MultipartFile test data
-   
-   - **DartEnumHandler** - Enum-specific generation
-     - Enum variable name generation from values
-     - Collision resolution with numeric suffixes
-     - Reserved word handling for enum values
-     - Numeric value prefixing
-
-3. **Mustache Templates** - Generates Dart source files
-   - `remote_data_source.mustache` - API interface classes
-   - `remote_data_source_impl.mustache` - API implementation classes with exception handling
-   - `model.mustache` - Data model classes with json_serializable
-   - `api_client.mustache` - Main configuration and AcdcClientBuilder setup
-   - `pubspec.mustache` - Package configuration with dependencies
-   - Config files: `acdc_config.mustache`, `auth_config.mustache`, `cache_config.mustache`, etc.
-   - Supporting files: README, analysis_options.yaml, .gitignore
-
-4. **SPI Registration**
-   - Registered in `META-INF/services/org.openapitools.codegen.CodegenConfig`
-
-### Generator Options (Configuration)
-
-The generator will support these configurable properties:
-
+```text
+Dart-ACDC-generator/
+├── generator/                          # Java Maven project
+│   ├── pom.xml
+│   └── src/
+│       ├── main/
+│       │   ├── java/.../languages/     # 23 Java classes (see Architecture)
+│       │   └── resources/
+│       │       ├── dart-acdc/          # 21 Mustache templates
+│       │       └── META-INF/services/  # SPI registration
+│       └── test/java/.../languages/    # 19 Java test classes
+├── scripts/                            # Build, generate, and test scripts
+├── bin/configs/                        # OpenAPI Generator config YAMLs
+├── samples/                            # OpenAPI spec files + generated output
+│   ├── *.yaml                          # Test specs (petstore, minimal, etc.)
+│   └── generated/                      # Generated Dart packages
+├── research/                           # Architecture research & decisions
+├── docs/                               # HOW-TO and README
+├── openspec/                           # Change proposal specs
+└── openapi-generator-cli.jar           # OpenAPI Generator CLI (not checked in)
 ```
+
+## Common Development Commands
+
+### Building
+
+```bash
+# Build generator JAR (with tests)
+./scripts/build.sh
+
+# Build without tests
+./scripts/build.sh --skip-tests
+```
+
+### Generating Samples
+
+```bash
+# Generate all sample specs (petstore, minimal, composition, file-upload, enums, reserved-words)
+./scripts/generate-samples.sh
+
+# Generate a single spec
+./scripts/generate-samples.sh petstore
+```
+
+### Testing
+
+```bash
+# Java unit tests only (via Maven)
+cd generator && mvn test
+
+# Full pipeline: generate samples + build_runner + Dart tests + coverage
+./scripts/test-samples.sh
+
+# Dart tests only (skip regeneration)
+./scripts/test-samples.sh --skip-generate
+
+# Skip build_runner too (use existing .g.dart files)
+./scripts/test-samples.sh --skip-generate --skip-build
+
+# Verify CLI options affect generated output
+./scripts/verify-cli-options.sh
+```
+
+### Prerequisites
+
+- JDK 21+, Maven 3.8+, Git
+- Dart SDK 3.0+, Flutter 3.10+ (for testing generated code)
+- `openapi-generator-cli.jar` in project root (v7.10.0)
+
+## Generator Architecture (Java)
+
+All Java source lives in `generator/src/main/java/org/openapitools/codegen/languages/`.
+
+The generator uses a **6-layer architecture** where each layer depends only on layers below it:
+
+### Layer 1 — Foundation (no dependencies on other layers)
+
+| Class                              | Responsibility                                                                   |
+| ---------------------------------- | -------------------------------------------------------------------------------- |
+| **DartGeneratorConfig**            | Centralized configuration constants (reserved words, type mappings, CLI options) |
+| **DartNameSanitizer**              | Package name sanitization, reserved word escaping, case conversion               |
+| **DartTypeMapper**                 | OpenAPI to Dart type mapping, context-aware (multipart vs non-multipart)         |
+| **DartEnumHandler**                | Enum variable naming, collision resolution, numeric value prefixing              |
+| **DartTestDataGenerator**          | Test value generation for primitives, complex types, and MultipartFile           |
+
+### Layer 2 — Schema Analysis
+
+| Class                              | Responsibility                                                                |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
+| **DartSchemaRegistry**             | Tracks all schemas seen during generation for cross-reference                 |
+| **DartAllOfFlattener**             | Flattens allOf compositions into single models                                |
+| **DartCircularReferenceDetector**  | Detects and breaks circular `$ref` chains                                     |
+| **DartSchemaPreprocessor**         | Preprocesses OpenAPI schemas before code generation                           |
+
+### Layer 3 — Model Processing
+
+| Class                              | Responsibility                                                                |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
+| **DartModelFactory**               | Creates CodegenModel objects from OpenAPI schemas                              |
+| **DartOneOfProcessor**             | Handles oneOf union types                                                     |
+| **DartAnyOfProcessor**             | Handles anyOf union types                                                     |
+| **DartDiscriminatorProcessor**     | Handles discriminator-based polymorphism                                      |
+
+### Layer 4 — Property & Type Resolution
+
+| Class                              | Responsibility                                                                |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
+| **DartPropertyFactory**            | Creates CodegenProperty objects                                               |
+| **DartRequestBodyFactory**         | Creates request body parameters                                               |
+| **DartTypeResolver**               | Resolves complex/nested type references                                       |
+
+### Layer 5 — Post-Processing
+
+| Class                              | Responsibility                                                                |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
+| **DartModelEnricher**              | Enriches models with additional metadata after creation                       |
+| **DartModelImportResolver**        | Resolves import statements for model files                                    |
+| **DartModelPostProcessor**         | Final model post-processing pass                                              |
+| **DartOperationEnricher**          | Enriches operations with return types, parameter metadata                     |
+| **DartOperationImportResolver**    | Resolves import statements for operation files                                |
+| **DartOperationPostProcessor**     | Final operation post-processing pass                                          |
+
+### Layer 6 — Orchestrator
+
+| Class                              | Responsibility                                                                |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
+| **DartAcdcGenerator**              | Top-level orchestrator. Extends `DefaultCodegen`, delegates to all layers.    |
+
+### Mustache Templates
+
+Located in `generator/src/main/resources/dart-acdc/`:
+
+**Core templates:**
+
+- `api_client.mustache` — Main AcdcClientBuilder configuration
+- `remote_data_source.mustache` — API interface (abstract class per tag)
+- `remote_data_source_impl.mustache` — API implementation with exception handling
+- `model.mustache` — Single model class with json_serializable
+- `models.mustache` — Barrel file exporting all models
+- `remote_data_sources.mustache` — Barrel file exporting all API classes
+- `library.mustache` — Top-level library barrel file
+- `pubspec.mustache` — Package dependencies
+
+**Config templates:**
+
+- `config.mustache`, `acdc_config.mustache`, `auth_config.mustache`, `cache_config.mustache`, `log_config.mustache`, `offline_config.mustache`, `security_config.mustache`
+
+**Test templates:**
+
+- `test/api_test.mustache`, `test/model_test.mustache`, `test/test_helpers.mustache`
+
+**Supporting:**
+
+- `README.mustache`, `analysis_options.mustache`, `gitignore.mustache`
+
+### SPI Registration
+
+`generator/src/main/resources/META-INF/services/org.openapitools.codegen.CodegenConfig`
+
+### Generator Options
+
+```text
 Package: pubName, pubVersion, pubDescription, pubAuthor
 Features: enableAuthentication, enableCaching, enableOfflineSupport, enableCertificatePinning
 Code: useJsonSerializable, useFreezed, nullSafety
@@ -153,133 +214,39 @@ Cache: defaultCacheTtl, encryptCache
 Logging: defaultLogLevel, redactSensitiveData
 ```
 
-### Generated Code Example
+### Type Mappings (OpenAPI → Dart)
 
-The generator will produce code like this:
-
-```dart
-class UserApi {
-  final Dio _dio;
-
-  UserApi(this._dio);
-
-  /// Get user by ID
-  /// Throws: AcdcAuthException, AcdcNetworkException, AcdcServerException
-  Future<User> getUser(String userId) async {
-    try {
-      final response = await _dio.get('/users/$userId');
-      return User.fromJson(response.data);
-    } on DioException catch (e) {
-      throw AcdcException.fromDioException(e);
-    }
-  }
-}
-
-class ApiClient {
-  static Dio createDio({
-    required String baseUrl,
-    String? tokenRefreshUrl,
-    LogLevel logLevel = LogLevel.info,
-  }) {
-    return AcdcClientBuilder()
-      .withBaseUrl(baseUrl)
-      .withAuthentication(tokenRefreshUrl: tokenRefreshUrl ?? '$baseUrl/auth/refresh')
-      .withCache(ttl: Duration(hours: 1))
-      .withLogging(level: logLevel)
-      .withOfflineDetection(failFast: true)
-      .build();
-  }
-}
-```
-
-### Type Mappings
-
-The generator defines how OpenAPI types map to Dart:
-
-```
-integer/long → int
-float/number → double
-boolean → bool
-string → String
-date/DateTime → DateTime
-array → List
+```text
+integer/long → int       float/number → double     boolean → bool
+string → String          date/DateTime → DateTime   array → List
 object → Map<String, dynamic>
 ```
 
-## Development Prerequisites
+## Development Roadmap
 
-- Java Development Kit (JDK) 21+
-- Maven 3.8+ (for building the generator)
-- Git
-- Dart SDK 3.0+ (for testing generated code)
-- Flutter 3.10+ (for testing generated code)
+1. ✅ **Study & Research** — Completed
+2. ✅ **Generator Development** — Completed (23 Java classes, 21 templates, 19 test classes)
+3. 🔄 **Refinement & ACDC Integration** — In Progress (adding ACDC features, tests, edge cases)
+4. **Documentation** — Next
+5. **Distribution** — Future
 
-## Common Development Commands
+## Research Documentation
 
-### Setting Up
+All research in `/research/`:
 
-When starting generator development:
+- **[project-vision.md](./research/project-vision.md)** — Strategic vision and goals
+- **[creating-generators.md](./research/creating-generators.md)** — OpenAPI Generator architecture deep dive
+- **[dart-generator-quick-reference.md](./research/dart-generator-quick-reference.md)** — Quick-start guide with code examples
+- **[dart-acdc-library.md](./research/dart-acdc-library.md)** — Dart-ACDC library reference
+- **[openapi-generator.md](./research/openapi-generator.md)** — OpenAPI Generator overview
+- **[adr-001-generated-code-architecture.md](./research/adr-001-generated-code-architecture.md)** — Architecture Decision Record
 
-```bash
-# Clone OpenAPI Generator repository
-git clone https://github.com/OpenAPITools/openapi-generator.git
-cd openapi-generator
+## Important Notes
 
-# Bootstrap the dart-acdc-generator generator
-./new.sh -n dart-acdc-generator -c -t
-```
-
-### Building
-
-```bash
-# Build the generator
-mvn clean package -DskipTests
-
-# Build with tests
-mvn clean package
-```
-
-### Testing
-
-```bash
-# Test with Petstore spec (standard OpenAPI testing)
-./bin/generate-samples.sh ./bin/configs/dart-acdc-generator-petstore.yaml
-
-# Verify generated Dart code
-cd samples/client/petstore/dart-acdc-generator
-dart analyze
-dart test
-```
-
-### Key Files to Create/Modify
-
-**Java Codegen Class**:
-```
-modules/openapi-generator/src/main/java/org/openapitools/codegen/languages/DartAcdcGenerator.java
-```
-
-**SPI Registration**:
-```
-modules/openapi-generator/src/main/resources/META-INF/services/org.openapitools.codegen.CodegenConfig
-```
-
-**Mustache Templates**:
-```
-modules/openapi-generator/src/main/resources/dart-acdc-generator/
-├── remote_data_source.mustache
-├── remote_data_source_impl.mustache
-├── model.mustache
-├── api_client.mustache
-├── pubspec.mustache
-├── README.mustache
-├── analysis_options.mustache
-└── gitignore.mustache
-```
-
-**Test Configuration**:
-```
-bin/configs/dart-acdc-generator-petstore.yaml
-```
+1. **Research First**: Read `/research/` docs before implementing architectural changes.
+2. **Template-Driven**: Most complexity is in Mustache templates handling all OpenAPI spec variations.
+3. **Standalone Repo**: This is NOT inside the OpenAPI Generator monorepo. All paths start from `generator/`, not `modules/openapi-generator/`.
+4. **Template directory is `dart-acdc`**, not `dart-acdc-generator`.
 
 ## Project Management & Tracking
 
@@ -288,26 +255,13 @@ This project uses **beads** (bd) for issue tracking and multi-session work persi
 ### Essential Commands
 
 ```bash
-# Find work ready to start (no blockers)
-bd ready
-
-# View issue details
-bd show <id>
-
-# Create a new issue
+bd ready                              # Find work ready to start (no blockers)
+bd show <id>                          # View issue details
 bd create --title="..." --type=task|bug|feature --priority=0-4
-
-# Claim work
-bd update <id> --status=in_progress
-
-# Mark as complete
-bd close <id>
-
-# View all open issues
-bd list --status=open
-
-# Sync with git remote
-bd sync
+bd update <id> --status=in_progress   # Claim work
+bd close <id>                         # Mark as complete
+bd list --status=open                 # View all open issues
+bd sync                               # Sync with git remote
 ```
 
 ### Session Protocol
@@ -315,35 +269,16 @@ bd sync
 When ending a session, run:
 
 ```bash
-git status                                    # Check changes
-git add <files>                              # Stage code changes
-bd sync                                      # Commit beads changes
-git commit -m "..."                          # Commit code
-bd sync                                      # Sync again
-git push                                     # Push to remote
+git status              # Check changes
+git add <files>         # Stage code changes
+bd sync                 # Commit beads changes
+git commit -m "..."     # Commit code
+bd sync                 # Sync again
+git push                # Push to remote
 ```
-
-## Important Notes
-
-1. **Research First**: All architectural decisions and technical approaches are documented in `/research/`. Read these before implementing.
-
-2. **Template-Driven**: This is a template generation project. Most of the complexity is in designing correct Mustache templates that handle all OpenAPI spec variations.
-
-3. **Incremental Development**: Start with a minimal viable generator (basic API and model templates) and add features incrementally:
-   - Phase 1: Basic templates (remote_data_source.mustache, remote_data_source_impl.mustache, model.mustache)
-   - Phase 2: Configuration and pubspec.mustache
-   - Phase 3: Full ACDC integration (authentication, caching, error handling)
-   - Phase 4: Advanced features (offline support, certificate pinning)
-
-4. **Testing Strategy**: Use the Petstore OpenAPI spec (standard in OpenAPI Generator) for testing. Verify generated code with `dart analyze` and `dart test`.
-
-5. **Backward Compatibility**: When contributing back to OpenAPI Generator, maintain compatibility with existing dart generators and avoid breaking changes.
 
 ## References
 
-- **OpenAPI Generator**: https://openapi-generator.tech/
-- **OpenAPI Generator Docs**: https://openapi-generator.tech/docs/
-- **Dart-ACDC GitHub**: https://github.com/jhosm/Dart-ACDC
-- **Dart-ACDC Docs**: https://github.com/jhosm/Dart-ACDC/tree/main/doc
-- **Dio Package**: https://pub.dev/packages/dio
-- **Official Generator Guide**: https://openapi-generator.tech/docs/new-generator/
+- [OpenAPI Generator](https://openapi-generator.tech/) | [Docs](https://openapi-generator.tech/docs/) | [New Generator Guide](https://openapi-generator.tech/docs/new-generator/)
+- [Dart-ACDC GitHub](https://github.com/jhosm/Dart-ACDC) | [Dart-ACDC Docs](https://github.com/jhosm/Dart-ACDC/tree/main/doc)
+- [Dio Package](https://pub.dev/packages/dio)
