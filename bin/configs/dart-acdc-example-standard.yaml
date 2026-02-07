@@ -1,0 +1,39 @@
+# Standard Dart-ACDC Generator Configuration
+#
+# A practical setup with sensible ACDC defaults for most Flutter applications.
+# Enables authentication, caching, and logging with tuned default values.
+# Certificate pinning and offline support are disabled for simplicity.
+#
+# Usage:
+#   openapi-generator-cli generate -c bin/configs/dart-acdc-example-standard.yaml
+
+generatorName: dart-acdc
+inputSpec: openapi.yaml
+outputDir: generated/my_api_client
+additionalProperties:
+  # Package metadata
+  pubName: my_api_client
+  pubVersion: 1.0.0
+  pubDescription: "API client for My Service"
+  pubAuthor: My Team
+
+  # Feature toggles — enable the features most apps need
+  enableAuthentication: true
+  enableCaching: true
+  enableLogging: true
+  enableOfflineSupport: false
+  enableCertificatePinning: false
+
+  # Authentication defaults
+  defaultTokenRefreshUrl: "https://api.example.com/auth/refresh"
+  useSecureTokenStorage: true
+  refreshThresholdMinutes: 5
+
+  # Caching defaults
+  defaultCacheTtlHours: 1
+  cacheDiskSizeMb: 20
+  encryptCache: true
+
+  # Logging defaults
+  defaultLogLevel: info
+  redactSensitiveData: true

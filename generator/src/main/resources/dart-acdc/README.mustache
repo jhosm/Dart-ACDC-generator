@@ -49,7 +49,12 @@ final dio = await ApiClient.createDio(config);
 {{#apiInfo}}
 {{#apis}}
 {{#operations}}
-final {{#lambda.camelcase}}{{classname}}{{/lambda.camelcase}}Api = {{classname}}RemoteDataSourceImpl(dio);
+{{#generateInterfaces}}
+final {{#lambda.camelcase}}{{classname}}{{/lambda.camelcase}}Api = {{classname}}{{dataSourceSuffix}}Impl(dio);
+{{/generateInterfaces}}
+{{^generateInterfaces}}
+final {{#lambda.camelcase}}{{classname}}{{/lambda.camelcase}}Api = {{classname}}{{dataSourceSuffix}}(dio);
+{{/generateInterfaces}}
 {{/operations}}
 {{/apis}}
 {{/apiInfo}}
@@ -62,15 +67,21 @@ final {{#lambda.camelcase}}{{classname}}{{/lambda.camelcase}}Api = {{classname}}
 ```dart
 final config = AcdcConfig(
   baseUrl: '{{#servers}}{{url}}{{/servers}}{{^servers}}https://api.example.com{{/servers}}',
+{{#enableAuthentication}}
   auth: AuthConfig(
     tokenRefreshUrl: '{{#servers}}{{url}}{{/servers}}{{^servers}}https://api.example.com{{/servers}}/auth/refresh',
   ),
+{{/enableAuthentication}}
+{{#enableCaching}}
   cache: CacheConfig(
     ttl: Duration(hours: 1),
   ),
+{{/enableCaching}}
+{{#enableLogging}}
   log: LogConfig(
     level: LogLevel.info,
   ),
+{{/enableLogging}}
 );
 
 final dio = await ApiClient.createDio(config);
@@ -81,6 +92,7 @@ final dio = await ApiClient.createDio(config);
 ```dart
 final config = AcdcConfig(
   baseUrl: 'https://api.example.com',
+{{#enableAuthentication}}
 
   // OAuth 2.1 authentication with automatic token refresh
   auth: AuthConfig(
@@ -89,6 +101,8 @@ final config = AcdcConfig(
     clientSecret: 'your-client-secret',
     refreshThreshold: 300, // Refresh 5 minutes before expiry (seconds)
   ),
+{{/enableAuthentication}}
+{{#enableCaching}}
 
   // Two-tier caching (Memory L1 + Disk L2)
   cache: CacheConfig(
@@ -98,17 +112,23 @@ final config = AcdcConfig(
     maxDiskCacheSizeMB: 50,       // Persistent disk cache limit
     userIsolation: true,          // Isolate cache per user (default)
   ),
+{{/enableCaching}}
+{{#enableLogging}}
 
   // Logging with sensitive data protection
   log: LogConfig(
     level: LogLevel.debug,        // none, error, warning, info, debug, verbose
     redactSensitiveData: true,    // Redact passwords, tokens in logs (default)
   ),
+{{/enableLogging}}
+{{#enableOfflineSupport}}
 
   // Offline detection
   offline: OfflineConfig(
     failFast: true,               // Throw immediately when offline (default)
   ),
+{{/enableOfflineSupport}}
+{{#enableCertificatePinning}}
 
   // Certificate pinning
   security: SecurityConfig(
@@ -117,9 +137,77 @@ final config = AcdcConfig(
     ],
     reportOnlyMode: false,        // Enforce pinning (default)
   ),
+{{/enableCertificatePinning}}
 );
 ```
 
+## Generator Options
+
+This client was generated with the following configuration:
+
+| Option | Value |
+|--------|-------|
+| `pubName` | `{{pubName}}` |
+| `pubVersion` | `{{pubVersion}}` |
+{{#enableAuthentication}}
+| `enableAuthentication` | `true` |
+{{/enableAuthentication}}
+{{^enableAuthentication}}
+| `enableAuthentication` | `false` |
+{{/enableAuthentication}}
+{{#enableCaching}}
+| `enableCaching` | `true` |
+{{/enableCaching}}
+{{^enableCaching}}
+| `enableCaching` | `false` |
+{{/enableCaching}}
+{{#enableLogging}}
+| `enableLogging` | `true` |
+{{/enableLogging}}
+{{^enableLogging}}
+| `enableLogging` | `false` |
+{{/enableLogging}}
+{{#enableOfflineSupport}}
+| `enableOfflineSupport` | `true` |
+{{/enableOfflineSupport}}
+{{^enableOfflineSupport}}
+| `enableOfflineSupport` | `false` |
+{{/enableOfflineSupport}}
+{{#enableCertificatePinning}}
+| `enableCertificatePinning` | `true` |
+{{/enableCertificatePinning}}
+{{^enableCertificatePinning}}
+| `enableCertificatePinning` | `false` |
+{{/enableCertificatePinning}}
+| `serializationLibrary` | `{{serializationLibrary}}` |
+{{#generateInterfaces}}
+| `generateInterfaces` | `true` |
+{{/generateInterfaces}}
+{{^generateInterfaces}}
+| `generateInterfaces` | `false` |
+{{/generateInterfaces}}
+| `dataSourceSuffix` | `{{dataSourceSuffix}}` |
+{{#generateBarrelExports}}
+| `generateBarrelExports` | `true` |
+{{/generateBarrelExports}}
+{{^generateBarrelExports}}
+| `generateBarrelExports` | `false` |
+{{/generateBarrelExports}}
+
+To regenerate with different options, use:
+
+```bash
+openapi-generator-cli generate -g dart-acdc -i openapi.yaml -o . \
+  --additional-properties=pubName={{pubName}},enableAuthentication=true
+```
+
+For a full list of options, run:
+
+```bash
+openapi-generator-cli config-help -g dart-acdc
+```
+
+{{#enableAuthentication}}
 ## Authentication
 
 ### Setting Initial Tokens After Login
@@ -190,6 +278,7 @@ final config = AcdcConfig(
 );
 ```
 
+{{/enableAuthentication}}
 ## Error Handling
 
 All API methods throw typed exceptions from the `AcdcException` hierarchy:
@@ -223,6 +312,7 @@ try {
 }
 ```
 
+{{#enableCaching}}
 ## Caching
 
 ### How It Works
@@ -261,6 +351,8 @@ stream.listen((response) {
 });
 ```
 
+{{/enableCaching}}
+{{#enableOfflineSupport}}
 ## Offline Support
 
 When offline detection is enabled (`OfflineConfig`), the client checks connectivity before requests:
@@ -293,6 +385,8 @@ try {
 }
 ```
 
+{{/enableOfflineSupport}}
+{{#enableCertificatePinning}}
 ## Certificate Pinning
 
 Validate server certificates against known SHA-256 fingerprints to prevent MITM attacks:
@@ -333,6 +427,7 @@ security: SecurityConfig(
 ),
 ```
 
+{{/enableCertificatePinning}}
 ## Request Deduplication
 
 Identical concurrent requests are automatically coalesced by dart_acdc. When multiple callers make the same request at the same time, only one network call is executed and the result is shared. This is enabled by default and requires no configuration.

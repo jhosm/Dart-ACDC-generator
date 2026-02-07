@@ -377,6 +377,348 @@ class DartAcdcGeneratorIntegrationTest {
     }
 
     // ========================================
+    // Generator Options E2E Verification Tests (11.1-11.6)
+    // ========================================
+
+    /**
+     * 11.1: Generate with minimal options (just pubName) → verify structure
+     */
+    @Test
+    @Order(10)
+    @DisplayName("E2E: Generate with minimal options (just pubName)")
+    void testMinimalOptions() throws Exception {
+        String specPath = getResourcePath("/petstore-with-upload.yaml");
+
+        CodegenConfigurator configurator = new CodegenConfigurator()
+            .setGeneratorName("dart-acdc")
+            .setInputSpec(specPath)
+            .setOutputDir(outputDir.toString())
+            .addAdditionalProperty("pubName", "minimal_test");
+
+        ClientOptInput clientOptInput = configurator.toClientOptInput();
+        List<File> files = new DefaultGenerator().opts(clientOptInput).generate();
+
+        assertFalse(files.isEmpty(), "Should generate files with minimal options");
+        assertTrue(Files.exists(outputDir.resolve("pubspec.yaml")), "pubspec.yaml should exist");
+
+        String pubspec = Files.readString(outputDir.resolve("pubspec.yaml"));
+        assertTrue(pubspec.contains("name: minimal_test"), "pubspec should use provided pubName");
+
+        // Default features should be enabled
+        assertTrue(Files.exists(outputDir.resolve("lib/config/auth_config.dart")),
+            "Auth config should exist (enabled by default)");
+        assertTrue(Files.exists(outputDir.resolve("lib/config/cache_config.dart")),
+            "Cache config should exist (enabled by default)");
+        assertTrue(Files.exists(outputDir.resolve("lib/config/log_config.dart")),
+            "Log config should exist (enabled by default)");
+        assertTrue(Files.exists(outputDir.resolve("lib/config/offline_config.dart")),
+            "Offline config should exist (enabled by default)");
+        assertFalse(Files.exists(outputDir.resolve("lib/config/security_config.dart")),
+            "Security config should NOT exist (cert pinning disabled by default)");
+
+        System.out.println("✓ E2E 11.1: Minimal options generate correctly");
+    }
+
+    /**
+     * 11.2: Generate with all ACDC features disabled → no config files
+     */
+    @Test
+    @Order(11)
+    @DisplayName("E2E: Generate with all ACDC features disabled")
+    void testAllFeaturesDisabled() throws Exception {
+        String specPath = getResourcePath("/petstore-with-upload.yaml");
+
+        CodegenConfigurator configurator = new CodegenConfigurator()
+            .setGeneratorName("dart-acdc")
+            .setInputSpec(specPath)
+            .setOutputDir(outputDir.toString())
+            .addAdditionalProperty("pubName", "no_features_test")
+            .addAdditionalProperty("enableAuthentication", false)
+            .addAdditionalProperty("enableCaching", false)
+            .addAdditionalProperty("enableLogging", false)
+            .addAdditionalProperty("enableOfflineSupport", false)
+            .addAdditionalProperty("enableCertificatePinning", false);
+
+        ClientOptInput clientOptInput = configurator.toClientOptInput();
+        List<File> files = new DefaultGenerator().opts(clientOptInput).generate();
+
+        assertFalse(files.isEmpty(), "Should generate files with all features disabled");
+
+        // Core files should still exist
+        assertTrue(Files.exists(outputDir.resolve("pubspec.yaml")), "pubspec.yaml should exist");
+        assertTrue(Files.exists(outputDir.resolve("lib/api_client.dart")), "api_client.dart should exist");
+        assertTrue(Files.exists(outputDir.resolve("lib/config/acdc_config.dart")), "acdc_config.dart should exist");
+        assertTrue(Files.exists(outputDir.resolve("lib/config/config.dart")), "config.dart barrel should exist");
+
+        // Feature config files should NOT exist
+        assertFalse(Files.exists(outputDir.resolve("lib/config/auth_config.dart")),
+            "Auth config should NOT exist when authentication disabled");
+        assertFalse(Files.exists(outputDir.resolve("lib/config/cache_config.dart")),
+            "Cache config should NOT exist when caching disabled");
+        assertFalse(Files.exists(outputDir.resolve("lib/config/log_config.dart")),
+            "Log config should NOT exist when logging disabled");
+        assertFalse(Files.exists(outputDir.resolve("lib/config/offline_config.dart")),
+            "Offline config should NOT exist when offline support disabled");
+        assertFalse(Files.exists(outputDir.resolve("lib/config/security_config.dart")),
+            "Security config should NOT exist when cert pinning disabled");
+
+        // Verify AcdcConfig does not reference disabled features
+        String acdcConfig = Files.readString(outputDir.resolve("lib/config/acdc_config.dart"));
+        assertFalse(acdcConfig.contains("import 'auth_config.dart'"),
+            "AcdcConfig should not import auth_config when disabled");
+        assertFalse(acdcConfig.contains("import 'cache_config.dart'"),
+            "AcdcConfig should not import cache_config when disabled");
+        assertFalse(acdcConfig.contains("import 'log_config.dart'"),
+            "AcdcConfig should not import log_config when disabled");
+
+        // Verify config.dart barrel does not export disabled features
+        String configBarrel = Files.readString(outputDir.resolve("lib/config/config.dart"));
+        assertFalse(configBarrel.contains("export 'auth_config.dart'"),
+            "Config barrel should not export auth_config when disabled");
+        assertFalse(configBarrel.contains("export 'cache_config.dart'"),
+            "Config barrel should not export cache_config when disabled");
+
+        // Verify ApiClient does not reference disabled features
+        String apiClient = Files.readString(outputDir.resolve("lib/api_client.dart"));
+        assertFalse(apiClient.contains("config.auth"),
+            "ApiClient should not reference auth when disabled");
+        assertFalse(apiClient.contains("config.cache"),
+            "ApiClient should not reference cache when disabled");
+
+        System.out.println("✓ E2E 11.2: All features disabled generates clean code without feature files");
+    }
+
+    /**
+     * 11.3: Generate with all features enabled (defaults) → full config
+     * (already covered by testProjectStructure but verified explicitly here)
+     */
+    @Test
+    @Order(12)
+    @DisplayName("E2E: Generate with all ACDC features enabled (defaults)")
+    void testAllFeaturesEnabled() throws Exception {
+        String specPath = getResourcePath("/petstore-with-upload.yaml");
+
+        CodegenConfigurator configurator = new CodegenConfigurator()
+            .setGeneratorName("dart-acdc")
+            .setInputSpec(specPath)
+            .setOutputDir(outputDir.toString())
+            .addAdditionalProperty("pubName", "full_features_test")
+            .addAdditionalProperty("enableCertificatePinning", true);
+
+        ClientOptInput clientOptInput = configurator.toClientOptInput();
+        List<File> files = new DefaultGenerator().opts(clientOptInput).generate();
+
+        assertFalse(files.isEmpty(), "Should generate files with all features enabled");
+
+        // ALL config files should exist including security
+        assertTrue(Files.exists(outputDir.resolve("lib/config/auth_config.dart")),
+            "Auth config should exist");
+        assertTrue(Files.exists(outputDir.resolve("lib/config/cache_config.dart")),
+            "Cache config should exist");
+        assertTrue(Files.exists(outputDir.resolve("lib/config/log_config.dart")),
+            "Log config should exist");
+        assertTrue(Files.exists(outputDir.resolve("lib/config/offline_config.dart")),
+            "Offline config should exist");
+        assertTrue(Files.exists(outputDir.resolve("lib/config/security_config.dart")),
+            "Security config should exist when cert pinning enabled");
+
+        // Verify AcdcConfig references all features
+        String acdcConfig = Files.readString(outputDir.resolve("lib/config/acdc_config.dart"));
+        assertTrue(acdcConfig.contains("import 'auth_config.dart'"), "Should import auth_config");
+        assertTrue(acdcConfig.contains("import 'cache_config.dart'"), "Should import cache_config");
+        assertTrue(acdcConfig.contains("import 'log_config.dart'"), "Should import log_config");
+        assertTrue(acdcConfig.contains("import 'offline_config.dart'"), "Should import offline_config");
+        assertTrue(acdcConfig.contains("import 'security_config.dart'"), "Should import security_config");
+
+        // Verify ApiClient references all features
+        String apiClient = Files.readString(outputDir.resolve("lib/api_client.dart"));
+        assertTrue(apiClient.contains("config.auth"), "ApiClient should reference auth");
+        assertTrue(apiClient.contains("config.cache"), "ApiClient should reference cache");
+        assertTrue(apiClient.contains("config.log"), "ApiClient should reference log");
+        assertTrue(apiClient.contains("config.offline"), "ApiClient should reference offline");
+        assertTrue(apiClient.contains("config.security"), "ApiClient should reference security");
+
+        System.out.println("✓ E2E 11.3: All features enabled generates complete configuration");
+    }
+
+    /**
+     * 11.4: Generate with custom log level and cache TTL → verify values in generated code
+     */
+    @Test
+    @Order(13)
+    @DisplayName("E2E: Generate with custom log level and cache TTL")
+    void testCustomDefaultValues() throws Exception {
+        String specPath = getResourcePath("/petstore-with-upload.yaml");
+
+        CodegenConfigurator configurator = new CodegenConfigurator()
+            .setGeneratorName("dart-acdc")
+            .setInputSpec(specPath)
+            .setOutputDir(outputDir.toString())
+            .addAdditionalProperty("pubName", "custom_values_test")
+            .addAdditionalProperty("defaultLogLevel", "debug")
+            .addAdditionalProperty("defaultCacheTtlHours", 24)
+            .addAdditionalProperty("cacheDiskSizeMb", 50)
+            .addAdditionalProperty("encryptCache", false)
+            .addAdditionalProperty("redactSensitiveData", false)
+            .addAdditionalProperty("refreshThresholdMinutes", 10)
+            .addAdditionalProperty("useSecureTokenStorage", false)
+            .addAdditionalProperty("defaultTokenRefreshUrl", "https://api.example.com/auth/refresh");
+
+        ClientOptInput clientOptInput = configurator.toClientOptInput();
+        List<File> files = new DefaultGenerator().opts(clientOptInput).generate();
+
+        assertFalse(files.isEmpty(), "Should generate files with custom values");
+
+        // Verify log config has custom log level
+        String logConfig = Files.readString(outputDir.resolve("lib/config/log_config.dart"));
+        assertTrue(logConfig.contains("LogLevel.debug"),
+            "Log config should use custom debug level, got:\n" + logConfig);
+
+        // Verify cache config has custom TTL
+        String cacheConfig = Files.readString(outputDir.resolve("lib/config/cache_config.dart"));
+        assertTrue(cacheConfig.contains("Duration(hours: 24)"),
+            "Cache config should use custom 24-hour TTL, got:\n" + cacheConfig);
+        assertTrue(cacheConfig.contains("50"),
+            "Cache config should use custom 50MB disk size");
+
+        // Verify auth config has custom values
+        String authConfig = Files.readString(outputDir.resolve("lib/config/auth_config.dart"));
+        assertTrue(authConfig.contains("10"),
+            "Auth config should reference custom 10-minute threshold");
+        assertTrue(authConfig.contains("https://api.example.com/auth/refresh"),
+            "Auth config should include custom token refresh URL");
+
+        System.out.println("✓ E2E 11.4: Custom default values correctly applied to generated code");
+    }
+
+    /**
+     * 11.5: Verify invalid option values produce clear error messages
+     */
+    @Test
+    @Order(14)
+    @DisplayName("E2E: Invalid option values produce clear error messages")
+    void testInvalidOptionValues() {
+        String specPath = getResourcePath("/petstore-with-upload.yaml");
+
+        // Test invalid log level
+        CodegenConfigurator invalidLogLevel = new CodegenConfigurator()
+            .setGeneratorName("dart-acdc")
+            .setInputSpec(specPath)
+            .setOutputDir(outputDir.toString())
+            .addAdditionalProperty("pubName", "invalid_test")
+            .addAdditionalProperty("defaultLogLevel", "INVALID_LEVEL");
+
+        IllegalArgumentException logException = assertThrows(IllegalArgumentException.class, () -> {
+            ClientOptInput input = invalidLogLevel.toClientOptInput();
+            new DefaultGenerator().opts(input).generate();
+        }, "Invalid log level should throw IllegalArgumentException");
+        assertTrue(logException.getMessage().contains("INVALID_LEVEL"),
+            "Error should mention the invalid value: " + logException.getMessage());
+
+        // Test invalid serialization library
+        CodegenConfigurator invalidSerializer = new CodegenConfigurator()
+            .setGeneratorName("dart-acdc")
+            .setInputSpec(specPath)
+            .setOutputDir(outputDir.toString())
+            .addAdditionalProperty("pubName", "invalid_test")
+            .addAdditionalProperty("serializationLibrary", "protobuf");
+
+        IllegalArgumentException serException = assertThrows(IllegalArgumentException.class, () -> {
+            ClientOptInput input = invalidSerializer.toClientOptInput();
+            new DefaultGenerator().opts(input).generate();
+        }, "Invalid serialization library should throw IllegalArgumentException");
+        assertTrue(serException.getMessage().contains("protobuf"),
+            "Error should mention the invalid value: " + serException.getMessage());
+
+        // Test out-of-range integer option
+        CodegenConfigurator invalidInt = new CodegenConfigurator()
+            .setGeneratorName("dart-acdc")
+            .setInputSpec(specPath)
+            .setOutputDir(outputDir.toString())
+            .addAdditionalProperty("pubName", "invalid_test")
+            .addAdditionalProperty("refreshThresholdMinutes", 999);
+
+        IllegalArgumentException intException = assertThrows(IllegalArgumentException.class, () -> {
+            ClientOptInput input = invalidInt.toClientOptInput();
+            new DefaultGenerator().opts(input).generate();
+        }, "Out-of-range integer should throw IllegalArgumentException");
+        assertTrue(intException.getMessage().contains("999") || intException.getMessage().contains("between"),
+            "Error should mention bounds or invalid value: " + intException.getMessage());
+
+        System.out.println("✓ E2E 11.5: Invalid option values produce clear, actionable error messages");
+    }
+
+    /**
+     * 11.6: Generate using YAML config file equivalent → verify options applied
+     */
+    @Test
+    @Order(15)
+    @DisplayName("E2E: Generate using YAML config equivalent with code style options")
+    void testCodeStyleOptions() throws Exception {
+        String specPath = getResourcePath("/petstore-with-upload.yaml");
+
+        CodegenConfigurator configurator = new CodegenConfigurator()
+            .setGeneratorName("dart-acdc")
+            .setInputSpec(specPath)
+            .setOutputDir(outputDir.toString())
+            .addAdditionalProperty("pubName", "style_test")
+            .addAdditionalProperty("dataSourceSuffix", "Api")
+            .addAdditionalProperty("generateInterfaces", false)
+            .addAdditionalProperty("generateBarrelExports", false);
+
+        ClientOptInput clientOptInput = configurator.toClientOptInput();
+        List<File> files = new DefaultGenerator().opts(clientOptInput).generate();
+
+        assertFalse(files.isEmpty(), "Should generate files with code style options");
+
+        // Verify dataSourceSuffix is applied - files should use _api suffix
+        Path remoteDir = outputDir.resolve("lib/remote_data_sources");
+        assertTrue(Files.exists(remoteDir), "Remote data sources directory should exist");
+
+        List<String> apiFiles;
+        try (Stream<Path> paths = Files.list(remoteDir)) {
+            apiFiles = paths
+                .map(p -> p.getFileName().toString())
+                .sorted()
+                .collect(Collectors.toList());
+        }
+
+        // With generateInterfaces=false, should only have impl files (named *_api.dart, not *_api_impl.dart)
+        // Actually with generateInterfaces=false, the impl template uses the suffix without "Impl"
+        boolean hasApiSuffix = apiFiles.stream().anyMatch(f -> f.contains("_api"));
+        assertTrue(hasApiSuffix, "Files should use '_api' suffix from dataSourceSuffix='Api', got: " + apiFiles);
+
+        // With generateInterfaces=false, should NOT have separate interface files
+        boolean hasInterfaceFile = apiFiles.stream().anyMatch(f ->
+            f.endsWith("_api.dart") && !f.endsWith("_api_impl.dart"));
+        assertFalse(hasInterfaceFile,
+            "Should NOT generate interface files when generateInterfaces=false, got: " + apiFiles);
+
+        // With generateBarrelExports=false, barrel files should NOT exist
+        assertFalse(Files.exists(outputDir.resolve("lib/models/models.dart")),
+            "models.dart barrel should NOT exist when barrel exports disabled");
+        assertFalse(Files.exists(outputDir.resolve("lib/remote_data_sources/remote_data_sources.dart")),
+            "remote_data_sources.dart barrel should NOT exist when barrel exports disabled");
+
+        // Verify the impl class does NOT have @override annotations
+        Path implFile = apiFiles.stream()
+            .filter(f -> f.endsWith("_impl.dart"))
+            .map(remoteDir::resolve)
+            .findFirst()
+            .orElse(null);
+
+        if (implFile != null && Files.exists(implFile)) {
+            String implContent = Files.readString(implFile);
+            assertFalse(implContent.contains("@override"),
+                "Impl class should NOT have @override when interfaces disabled");
+            assertTrue(implContent.contains("Api"),
+                "Class name should use 'Api' suffix");
+        }
+
+        System.out.println("✓ E2E 11.6: Code style options (dataSourceSuffix, generateInterfaces, generateBarrelExports) applied correctly");
+    }
+
+    // ========================================
     // Helper Methods
     // ========================================
 
