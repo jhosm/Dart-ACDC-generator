@@ -1,0 +1,52 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'generator/**'
+      - 'scripts/**'
+      - 'bin/configs/**'
+      - 'samples/*.yaml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'generator/**'
+      - 'scripts/**'
+      - 'bin/configs/**'
+      - 'samples/*.yaml'
+
+jobs:
+  java-tests:
+    name: Java Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ hashFiles('generator/pom.xml') }}
+          restore-keys: maven-
+
+      - name: Run tests with coverage
+        run: cd generator && mvn test jacoco:report
+
+      - name: Check coverage threshold
+        run: cd generator && mvn jacoco:check
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: generator/target/site/jacoco/
+          retention-days: 7
