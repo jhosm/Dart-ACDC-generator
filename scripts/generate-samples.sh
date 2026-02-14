@@ -36,7 +36,7 @@ mkdir -p "$OUTPUT_DIR"
 # Function to generate a single spec
 generate_spec() {
     local spec_name=$1
-    local config_file="$PROJECT_ROOT/bin/configs/dart-acdc-${spec_name}.yaml"
+    local config_file="$PROJECT_ROOT/configs/dart-acdc-${spec_name}.yaml"
 
     if [ ! -f "$config_file" ]; then
         echo "Error: Config file not found: $config_file"

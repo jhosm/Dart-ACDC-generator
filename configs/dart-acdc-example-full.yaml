@@ -4,7 +4,7 @@
 # configurable values supported by the dart-acdc generator.
 #
 # Usage:
-#   openapi-generator-cli generate -c bin/configs/dart-acdc-example-full.yaml
+#   openapi-generator-cli generate -c configs/dart-acdc-example-full.yaml
 
 generatorName: dart-acdc
 inputSpec: openapi.yaml

@@ -1,6 +1,6 @@
 generatorName: dart-acdc
 outputDir: samples/generated/custom-config-test
-inputSpec: samples/petstore.yaml
+inputSpec: samples/specs/petstore.yaml
 additionalProperties:
   pubName: custom_config_test_client
   pubVersion: 1.0.0

@@ -92,7 +92,7 @@ The generator supports these additional properties:
 java -cp "generator/target/dart-acdc-generator-1.0.0-SNAPSHOT.jar:openapi-generator-cli.jar" \
   org.openapitools.codegen.OpenAPIGenerator generate \
   -g dart-acdc \
-  -i samples/petstore.yaml \
+  -i samples/specs/petstore.yaml \
   -o samples/generated/petstore \
   --additional-properties=pubName=petstore_client,pubVersion=1.0.0
 ```
@@ -469,4 +469,4 @@ See the main project documentation for contribution guidelines.
 
 ## License
 
-[Add license information here]
+[Apache License 2.0](../LICENSE)

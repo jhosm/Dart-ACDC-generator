@@ -120,7 +120,7 @@ java -jar openapi-generator-cli.jar meta \
    - Register in `META-INF/services/org.openapitools.codegen.CodegenConfig`
 
 4. **Config Files**
-   - Example configurations in `./bin/configs/`
+   - Example configurations in `./configs/`
 
 ## The Dart-ACDC-generator Generator Vision
 
@@ -470,7 +470,7 @@ try {
 
 5. **Test with Petstore**
    ```bash
-   ./bin/generate-samples.sh ./bin/configs/dart-acdc-generator-petstore.yaml
+   ./scripts/generate-samples.sh petstore
    cd samples/client/petstore/dart-acdc-generator
    dart analyze
    dart test

@@ -1,6 +1,6 @@
 generatorName: dart-acdc
 outputDir: samples/generated/petstore
-inputSpec: samples/petstore.yaml
+inputSpec: samples/specs/petstore.yaml
 additionalProperties:
   pubName: petstore_client
   pubVersion: 1.0.0

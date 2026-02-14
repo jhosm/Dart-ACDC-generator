@@ -95,11 +95,11 @@ The integration tests verify that CLI options correctly propagate from the confi
 
 ### Sample Configs
 
-**Default values:** `bin/configs/dart-acdc-petstore.yaml`
+**Default values:** `configs/dart-acdc-petstore.yaml`
 - Uses all default CLI option values
 - Generated code: `samples/generated/petstore/`
 
-**Custom values:** `bin/configs/dart-acdc-custom-config-test.yaml`
+**Custom values:** `configs/dart-acdc-custom-config-test.yaml`
 - Uses custom CLI option values (different from defaults)
 - Generated code: `samples/generated/custom-config-test/`
 

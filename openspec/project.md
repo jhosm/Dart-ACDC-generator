@@ -103,16 +103,17 @@ A custom OpenAPI Generator that produces production-ready Dart clients with Dart
 
 ## Development Phases
 
-1. ✅ **Study & Research** - Completed (see `/research/`)
-2. 🚧 **Generator Development** - Current phase (proposals created)
-3. ⏳ **Refinement** - Future
-4. ⏳ **Documentation** - Future
-5. ⏳ **Distribution** - Future
+1. ✅ **Study & Research** — Completed (see `/docs/architecture/`)
+2. ✅ **Generator Development** — Completed (23 Java classes, 21 templates, 19 test classes)
+3. 🔄 **Refinement & ACDC Integration** — In Progress
+4. ✅ **MCP Server** — Completed
+5. 🔄 **Documentation** — In Progress
+6. ⏳ **Distribution** — Future
 
 ## Key Documentation
 
 - **[CLAUDE.md](../CLAUDE.md)** - Developer context and commands
-- **[research/project-vision.md](../research/project-vision.md)** - Strategic vision
-- **[research/adr-001-generated-code-architecture.md](../research/adr-001-generated-code-architecture.md)** - Architecture decisions
-- **[research/dart-generator-quick-reference.md](../research/dart-generator-quick-reference.md)** - Implementation guide
-- **[research/dart-acdc-library.md](../research/dart-acdc-library.md)** - Dart-ACDC reference
+- **[docs/architecture/project-vision.md](../docs/architecture/project-vision.md)** - Strategic vision
+- **[docs/architecture/adr-001-generated-code-architecture.md](../docs/architecture/adr-001-generated-code-architecture.md)** - Architecture decisions
+- **[docs/architecture/dart-generator-quick-reference.md](../docs/architecture/dart-generator-quick-reference.md)** - Implementation guide
+- **[docs/architecture/dart-acdc-library.md](../docs/architecture/dart-acdc-library.md)** - Dart-ACDC reference

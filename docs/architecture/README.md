@@ -234,11 +234,12 @@ The strategic vision for the Dart-ACDC-generator Generator project.
 
 ### Development Phases
 
-1. ✅ **Study & Research** (Current)
-2. **Generator Development** (Bootstrap, implement, test)
-3. **Refinement** (Options, templates, tests)
-4. **Documentation** (Usage, developer, migration guides)
-5. **Distribution** (Contribute, package, publish)
+1. ✅ **Study & Research** — Completed
+2. ✅ **Generator Development** — Completed (23 Java classes, 21 templates, 19 test classes)
+3. 🔄 **Refinement & ACDC Integration** — In Progress (adding ACDC features, tests, edge cases)
+4. ✅ **MCP Server** — Completed (TypeScript MCP server with generate, list-options, validate tools)
+5. 🔄 **Documentation** — In Progress
+6. **Distribution** — Future
 
 ---
 
@@ -260,7 +261,7 @@ The strategic vision for the Dart-ACDC-generator Generator project.
 ### Example Generators
 
 - **Dart-Dio Generator**: https://openapi-generator.tech/docs/generators/dart-dio
-- **Source Code**: `modules/openapi-generator/src/main/java/org/openapitools/codegen/languages/DartDioClientCodegen.java`
+- **Source Code**: `generator/src/main/java/org/openapitools/codegen/languages/DartAcdcGenerator.java`
 
 ### Repository
 
@@ -273,28 +274,28 @@ The strategic vision for the Dart-ACDC-generator Generator project.
 
 ### Prerequisites
 
-1. Java Development Kit (JDK) 11+
+1. Java Development Kit (JDK) 21+
 2. Maven 3.8+
 3. Git
 4. Dart SDK 3.0+ (for testing generated code)
 5. Flutter 3.10+ (for testing generated code)
+6. `openapi-generator-cli.jar` in project root (v7.10.0)
 
 ### Development Workflow
 
-1. Clone OpenAPI Generator repo
-2. Run `./new.sh -n dart-acdc-generator -c -t`
-3. Implement Codegen class
-4. Create Mustache templates
-5. Build: `mvn clean package -DskipTests`
-6. Test: `./bin/generate-samples.sh ./bin/configs/dart-acdc-generator-petstore.yaml`
-7. Verify: `cd samples/client/petstore/dart-acdc-generator && dart analyze`
+1. Build the generator JAR: `./scripts/build.sh`
+2. Generate samples: `./scripts/generate-samples.sh`
+3. Run tests: `./scripts/test-samples.sh`
+4. Verify CLI options: `./scripts/verify-cli-options.sh`
 
-### Key Files to Create
+### Key Paths
 
-- `modules/openapi-generator/src/main/java/org/openapitools/codegen/languages/DartAcdcGenerator.java`
-- `modules/openapi-generator/src/main/resources/META-INF/services/org.openapitools.codegen.CodegenConfig`
-- `modules/openapi-generator/src/main/resources/dart-acdc-generator/*.mustache`
-- `bin/configs/dart-acdc-generator-petstore.yaml`
+- Generator source: `generator/src/main/java/org/openapitools/codegen/languages/`
+- Mustache templates: `generator/src/main/resources/dart-acdc/`
+- SPI registration: `generator/src/main/resources/META-INF/services/org.openapitools.codegen.CodegenConfig`
+- Generator configs: `configs/`
+- Sample specs: `samples/specs/`
+- Generated output: `samples/generated/`
 
 ### Testing Strategy
 
@@ -305,22 +306,5 @@ The strategic vision for the Dart-ACDC-generator Generator project.
 
 ---
 
-## Changelog
-
-### 2026-01-18
-- ✅ Researched OpenAPI Generator
-- ✅ Studied dart-dio generator
-- ✅ Researched Dart-ACDC library (all 7 documentation files)
-- ✅ Created comprehensive documentation
-- ✅ Defined project vision and roadmap
-
-### Next Steps
-- [ ] Set up OpenAPI Generator development environment
-- [ ] Bootstrap the generator using `new.sh`
-- [ ] Implement basic Codegen class
-- [ ] Create initial Mustache templates
-- [ ] Test with Petstore spec
-
----
-
-**Ready to build? Start with [dart-generator-quick-reference.md](./dart-generator-quick-reference.md)!**
+> **Note**: This document serves as reference documentation for the project's research phase.
+> Active development status is tracked in the root [CLAUDE.md](../../CLAUDE.md) and in git history.
