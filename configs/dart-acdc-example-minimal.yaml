@@ -4,7 +4,7 @@
 # Only the required options are specified; everything else uses smart defaults.
 #
 # Usage:
-#   openapi-generator-cli generate -c bin/configs/dart-acdc-example-minimal.yaml
+#   openapi-generator-cli generate -c configs/dart-acdc-example-minimal.yaml
 
 generatorName: dart-acdc
 inputSpec: openapi.yaml

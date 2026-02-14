@@ -55,19 +55,22 @@ Dart-ACDC-generator/
 │       │       ├── dart-acdc/          # 21 Mustache templates
 │       │       └── META-INF/services/  # SPI registration
 │       └── test/java/.../languages/    # 19 Java test classes
-├── scripts/                            # Build, generate, and test scripts
-├── bin/configs/                        # OpenAPI Generator config YAMLs
-├── samples/                            # OpenAPI spec files + generated output
-│   ├── *.yaml                          # Test specs (petstore, minimal, etc.)
-│   └── generated/                      # Generated Dart packages
 ├── mcp-server/                         # MCP server for AI tool integration (TypeScript)
 │   ├── src/
 │   │   ├── index.ts                    # Server entry point (stdio transport)
 │   │   ├── tools/                      # generate, list-options, validate tools
 │   │   └── utils/runner.ts             # CLI runner (JAR discovery, auto-build)
 │   └── test/                           # Vitest tests
-├── research/                           # Architecture research & decisions
-├── docs/                               # HOW-TO and README
+├── scripts/                            # Build, generate, and test scripts
+├── configs/                            # OpenAPI Generator config YAMLs
+├── samples/
+│   ├── specs/                          # Test OpenAPI specs (petstore, minimal, etc.)
+│   └── generated/                      # Generated Dart packages
+├── docs/
+│   ├── user-guide.md                   # Step-by-step usage guide
+│   ├── testing.md                      # Testing strategy and commands
+│   ├── contributing.md                 # Developer workflow and contribution guide
+│   └── architecture/                   # Architecture research & decisions
 ├── openspec/                           # Change proposal specs
 └── openapi-generator-cli.jar           # OpenAPI Generator CLI (not checked in)
 ```
@@ -237,20 +240,20 @@ object → Map<String, dynamic>
 5. **Documentation** — Next
 6. **Distribution** — Future
 
-## Research Documentation
+## Architecture Documentation
 
-All research in `/research/`:
+All architecture docs in `/docs/architecture/`:
 
-- **[project-vision.md](./research/project-vision.md)** — Strategic vision and goals
-- **[creating-generators.md](./research/creating-generators.md)** — OpenAPI Generator architecture deep dive
-- **[dart-generator-quick-reference.md](./research/dart-generator-quick-reference.md)** — Quick-start guide with code examples
-- **[dart-acdc-library.md](./research/dart-acdc-library.md)** — Dart-ACDC library reference
-- **[openapi-generator.md](./research/openapi-generator.md)** — OpenAPI Generator overview
-- **[adr-001-generated-code-architecture.md](./research/adr-001-generated-code-architecture.md)** — Architecture Decision Record
+- **[project-vision.md](./docs/architecture/project-vision.md)** — Strategic vision and goals
+- **[creating-generators.md](./docs/architecture/creating-generators.md)** — OpenAPI Generator architecture deep dive
+- **[dart-generator-quick-reference.md](./docs/architecture/dart-generator-quick-reference.md)** — Quick-start guide with code examples
+- **[dart-acdc-library.md](./docs/architecture/dart-acdc-library.md)** — Dart-ACDC library reference
+- **[openapi-generator.md](./docs/architecture/openapi-generator.md)** — OpenAPI Generator overview
+- **[adr-001-generated-code-architecture.md](./docs/architecture/adr-001-generated-code-architecture.md)** — Architecture Decision Record
 
 ## Important Notes
 
-1. **Research First**: Read `/research/` docs before implementing architectural changes.
+1. **Architecture First**: Read `/docs/architecture/` docs before implementing architectural changes.
 2. **Template-Driven**: Most complexity is in Mustache templates handling all OpenAPI spec variations.
 3. **Standalone Repo**: This is NOT inside the OpenAPI Generator monorepo. All paths start from `generator/`, not `modules/openapi-generator/`.
 4. **Template directory is `dart-acdc`**, not `dart-acdc-generator`.

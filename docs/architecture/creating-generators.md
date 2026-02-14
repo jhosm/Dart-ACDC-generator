@@ -129,7 +129,7 @@ Create core templates:
 
 ### 4. Config File
 
-**Location**: `./bin/configs/`
+**Location**: `./configs/`
 
 Add a configuration file providing a "real life" example of generated output.
 
@@ -247,7 +247,7 @@ mvn clean package -DskipTests
 
 ### Generate Samples
 ```bash
-./bin/generate-samples.sh ./bin/configs/my-config.yaml
+./scripts/generate-samples.sh petstore
 ```
 
 ### Verify Before Submitting

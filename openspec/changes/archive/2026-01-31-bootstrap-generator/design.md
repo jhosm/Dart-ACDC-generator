@@ -53,7 +53,7 @@ This follows OpenAPI Generator conventions where generator names are short (e.g.
 **Why**:
 - Clean slate for ACDC-specific patterns
 - Full control over template structure
-- [ADR-001](../../../research/adr-001-generated-code-architecture.md) defines different naming conventions (`*RemoteDataSource`) than dart-dio
+- [ADR-001](../../../../docs/architecture/adr-001-generated-code-architecture.md) defines different naming conventions (`*RemoteDataSource`) than dart-dio
 - Avoid inheriting patterns that conflict with our architecture
 
 **Alternatives considered**:

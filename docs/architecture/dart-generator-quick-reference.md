@@ -278,7 +278,7 @@ class {{classname}} {
 
 ### Step 5: Create Config File
 
-**Location**: `./bin/configs/dart-custom-petstore.yaml`
+**Location**: `./configs/dart-custom-petstore.yaml`
 
 ```yaml
 generatorName: dart-custom
@@ -299,7 +299,7 @@ additionalProperties:
 mvn clean package -DskipTests
 
 # Generate sample code
-./bin/generate-samples.sh ./bin/configs/dart-custom-petstore.yaml
+./scripts/generate-samples.sh ./configs/dart-custom-petstore.yaml
 
 # Check the generated code
 cd samples/client/petstore/dart-custom
@@ -383,7 +383,7 @@ Create tests in `modules/openapi-generator/src/test/java/org/openapitools/codege
 ### 2. Integration Tests
 Use the Petstore spec to validate:
 ```bash
-./bin/generate-samples.sh ./bin/configs/dart-custom-petstore.yaml
+./scripts/generate-samples.sh ./configs/dart-custom-petstore.yaml
 cd samples/client/petstore/dart-custom
 dart analyze
 dart test
@@ -443,6 +443,6 @@ public String toVarName(String name) {
 
 ## Resources
 
-- Main guide: `research/creating-generators.md`
+- Main guide: `docs/architecture/creating-generators.md`
 - OpenAPI Generator repo: https://github.com/OpenAPITools/openapi-generator
 - Dart-dio generator source: `modules/openapi-generator/src/main/java/org/openapitools/codegen/languages/DartDioClientCodegen.java`

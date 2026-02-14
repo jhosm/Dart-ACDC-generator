@@ -5,7 +5,7 @@
 # Certificate pinning and offline support are disabled for simplicity.
 #
 # Usage:
-#   openapi-generator-cli generate -c bin/configs/dart-acdc-example-standard.yaml
+#   openapi-generator-cli generate -c configs/dart-acdc-example-standard.yaml
 
 generatorName: dart-acdc
 inputSpec: openapi.yaml

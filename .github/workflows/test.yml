@@ -6,15 +6,15 @@ on:
     paths:
       - 'generator/**'
       - 'scripts/**'
-      - 'bin/configs/**'
-      - 'samples/*.yaml'
+      - 'configs/**'
+      - 'samples/specs/*.yaml'
   pull_request:
     branches: [main]
     paths:
       - 'generator/**'
       - 'scripts/**'
-      - 'bin/configs/**'
-      - 'samples/*.yaml'
+      - 'configs/**'
+      - 'samples/specs/*.yaml'
 
 jobs:
   java-tests:

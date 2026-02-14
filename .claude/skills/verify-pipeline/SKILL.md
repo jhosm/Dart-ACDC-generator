@@ -27,7 +27,7 @@ Classify changes:
 - **Template changes**: Files in `generator/src/main/resources/dart-acdc/` — skip Java build, run generate + test
 - **Test template changes**: Files matching `*test*.mustache` — skip generate, re-run build_runner + tests
 - **Script changes**: Files in `scripts/` — run full pipeline
-- **Config changes**: Files in `bin/configs/` — run generate + test
+- **Config changes**: Files in `configs/` — run generate + test
 - **No code changes**: Skip pipeline, report current state
 
 ### Stage 1: Build (Java)
@@ -86,7 +86,7 @@ If all stages pass, also run:
 | Java source | RUN | RUN | RUN |
 | Mustache templates | SKIP | RUN | RUN |
 | Test templates only | SKIP | SKIP | RUN (with build_runner) |
-| bin/configs/ | SKIP | RUN | RUN |
+| configs/ | SKIP | RUN | RUN |
 | scripts/ | RUN | RUN | RUN |
 | Dart test files | SKIP | SKIP | RUN |
 | Nothing | SKIP | SKIP | SKIP (report state) |
