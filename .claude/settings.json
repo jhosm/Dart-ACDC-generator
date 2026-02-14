@@ -24,6 +24,7 @@
     ]
   },
   "enabledPlugins": {
-    "beads@beads-marketplace": true
+    "beads@beads-marketplace": true,
+    "claude-md-management@claude-plugins-official": true
   }
 }
