@@ -37,11 +37,8 @@ jobs:
           key: maven-${{ hashFiles('generator/pom.xml') }}
           restore-keys: maven-
 
-      - name: Run tests with coverage
-        run: cd generator && mvn test jacoco:report
-
-      - name: Check coverage threshold
-        run: cd generator && mvn jacoco:check
+      - name: Run tests with coverage and threshold check
+        run: cd generator && mvn verify
 
       - name: Upload coverage report
         if: always()
