@@ -1,0 +1,47 @@
+#!/usr/bin/env sh
+# Pre-commit hook that mimics the Test GitHub Action.
+#
+# Checks staged files — if any generator, config, script, or spec files
+# changed, it runs the Java unit tests with coverage verification.
+#
+# Install:
+#   git config core.hooksPath .githooks
+#
+# To bypass (emergency only):
+#   git commit --no-verify
+
+set -e
+
+# ── 1. Chain the beads pre-commit hook (if bd is available) ──────────
+if command -v bd >/dev/null 2>&1; then
+    bd hooks run pre-commit "$@" || exit $?
+fi
+
+# ── 2. Check if generator-related files are staged ───────────────────
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR)
+
+needs_test=false
+for file in $STAGED; do
+    case "$file" in
+        generator/*|scripts/*|configs/*|samples/specs/*.yaml)
+            needs_test=true
+            break
+            ;;
+    esac
+done
+
+if [ "$needs_test" = false ]; then
+    exit 0
+fi
+
+# ── 3. Run Java tests with coverage (mirrors CI) ─────────────────────
+echo ""
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║  Pre-commit: Running Java tests with coverage check...     ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
+
+cd generator && mvn verify -DskipITs=true -q
+
+echo ""
+echo "✓ All tests passed, coverage threshold met."

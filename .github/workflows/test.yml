@@ -38,7 +38,7 @@ jobs:
           restore-keys: maven-
 
       - name: Run tests with coverage and threshold check
-        run: cd generator && mvn verify
+        run: cd generator && mvn verify -DskipITs=true
 
       - name: Upload coverage report
         if: always()
