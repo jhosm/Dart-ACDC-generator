@@ -60,6 +60,12 @@ Dart-ACDC-generator/
 ├── samples/                            # OpenAPI spec files + generated output
 │   ├── *.yaml                          # Test specs (petstore, minimal, etc.)
 │   └── generated/                      # Generated Dart packages
+├── mcp-server/                         # MCP server for AI tool integration (TypeScript)
+│   ├── src/
+│   │   ├── index.ts                    # Server entry point (stdio transport)
+│   │   ├── tools/                      # generate, list-options, validate tools
+│   │   └── utils/runner.ts             # CLI runner (JAR discovery, auto-build)
+│   └── test/                           # Vitest tests
 ├── research/                           # Architecture research & decisions
 ├── docs/                               # HOW-TO and README
 ├── openspec/                           # Change proposal specs
@@ -227,8 +233,9 @@ object → Map<String, dynamic>
 1. ✅ **Study & Research** — Completed
 2. ✅ **Generator Development** — Completed (23 Java classes, 21 templates, 19 test classes)
 3. 🔄 **Refinement & ACDC Integration** — In Progress (adding ACDC features, tests, edge cases)
-4. **Documentation** — Next
-5. **Distribution** — Future
+4. ✅ **MCP Server** — Completed (TypeScript MCP server with generate, list-options, validate tools)
+5. **Documentation** — Next
+6. **Distribution** — Future
 
 ## Research Documentation
 
